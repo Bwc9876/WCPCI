@@ -8,14 +8,12 @@ This is a work in progress thing for the WCPC. It's a thing. It's a work in prog
 1. `nix develop`
 2. `just setup`
 3. Fill `.dev.env` file with the correct values for your setup
-4. `just dev`
 
-This will start mprocs with two commands running:
+Now run `just-dev` to build the frontend and start the backend.
 
-- `pnpm watch`: Will watch for changes in the frontend and rebuild the frontend on changes
-- `cargo run`: Will start the backend server
+If you need to auto-rebuild the frontend on changes too, run `just dev-watch`.
 
-Once run connect to `http://localhost:8000` to see the frontend
+Once either are run, connect to `http://localhost:8000` to see the frontend
 
 ## Production Setup
 

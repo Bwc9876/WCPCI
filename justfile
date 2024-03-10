@@ -3,8 +3,12 @@ setup:
     cargo sqlx database setup
     -cp -n .dev.env.template .dev.env
 
-dev:
+dev-watch:
     mprocs "cargo run" "cd frontend && pnpm watch"
+
+dev:
+    cd frontend && pnpm build
+    cargo run
 
 format:
     cargo fmt
