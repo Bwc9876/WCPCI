@@ -1,0 +1,21 @@
+[package]
+name = "wcpc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.80"
+chrono = "0.4.35"
+clap = { version = "4.5.2", features = ["derive"] }
+dotenvy = "0.15.7"
+log = "0.4.21"
+rand = "0.8.5"
+reqwest = { version = "0.11.25", default-features = false, features = ["rustls-tls", "json"] }
+rocket = "0.5.0"
+rocket_db_pools = { version = "0.1.0", features = ["sqlx_sqlite"] }
+rocket_oauth2 = "0.5.0"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+sqlx = { version = "0.7.3", features = ["migrate", "time"] }
