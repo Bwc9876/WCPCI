@@ -4,6 +4,7 @@ use rocket::{
     get, launch, routes, Build, Rocket,
 };
 use rocket_db_pools::{Connection, Database as R_Database};
+use rocket_dyn_templates::{context, Template};
 
 mod auth;
 
@@ -19,8 +20,9 @@ pub type DbConnection = Connection<Database>;
 pub type DbPool = sqlx::pool::PoolConnection<Sqlite>;
 
 #[get("/")]
-async fn index() -> &'static str {
-    "Hello, world!"
+async fn index(user: Option<&User>) -> Template {
+    let name = user.map(|u| u.display_name()).unwrap_or("Guest");
+    Template::render("index", context! { name })
 }
 
 // Testing the User request guard
@@ -55,6 +57,7 @@ fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index, username,])
         .attach(Database::init())
+        .attach(Template::fairing())
         .attach(AdHoc::try_on_ignite("SQLx Migrations", run_migrations))
         .attach(auth::stage())
 }

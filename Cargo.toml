@@ -15,7 +15,9 @@ rand = "0.8.5"
 reqwest = { version = "0.11.25", default-features = false, features = ["rustls-tls", "json"] }
 rocket = "0.5.0"
 rocket_db_pools = { version = "0.1.0", features = ["sqlx_sqlite"] }
+rocket_dyn_templates = { version = "0.1.0", features = ["tera"] }
 rocket_oauth2 = "0.5.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 sqlx = { version = "0.7.3", features = ["migrate", "time"] }
+tera = "1.19.1"

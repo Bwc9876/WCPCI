@@ -23,6 +23,12 @@ pub struct User {
 }
 
 impl User {
+    pub fn display_name(&self) -> &str {
+        self.display_name
+            .as_ref()
+            .unwrap_or(&self.default_display_name)
+    }
+
     pub fn temporary(email: String, display_name: String) -> Self {
         Self {
             id: 0,

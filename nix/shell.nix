@@ -10,6 +10,8 @@ pkgs.mkShell {
     nodePackages.pnpm
     gcc
     sqlx-cli
+    just
+    mprocs
   ];
   shellHook = '''';
 }

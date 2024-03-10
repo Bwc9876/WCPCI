@@ -6,6 +6,17 @@ This is a work in progress thing for the WCPC. It's a thing. It's a work in prog
 ## Dev Setup
 
 1. `nix develop`
-2. `cargo sqlx database setup`
-3. Copy `.dev.env.template` and make a `.dev.env` file with the correct values for your local setup
-4. `cargo run`
+2. `just setup`
+3. Fill `.dev.env` file with the correct values for your setup
+4. `just dev`
+
+This will start mprocs with two commands running:
+
+- `pnpm watch`: Will watch for changes in the frontend and rebuild the frontend on changes
+- `cargo run`: Will start the backend server
+
+Once run connect to `http://localhost:8000` to see the frontend
+
+## Production Setup
+
+--TODO
