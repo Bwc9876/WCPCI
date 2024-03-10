@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "astro dev",
         "start": "astro dev",
-        "build": "astro check && astro build && pnpm _build",
+        "build": "astro check && pnpm _build",
         "_build": "astro build && renamer --find html --replace html.tera ./dist/**",
         "preview": "astro preview",
         "astro": "astro",
