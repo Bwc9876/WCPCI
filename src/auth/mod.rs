@@ -125,6 +125,6 @@ trait CallbackHandler {
             }
         }
 
-        Redirect::to("/username")
+        Redirect::to("/")
     }
 }
