@@ -1,16 +1,13 @@
 use anyhow::Result;
-use rocket::http::Cookie;
-use rocket::http::CookieJar;
-use rocket::http::SameSite;
-use rocket::http::Status;
-use rocket::outcome::IntoOutcome;
-use rocket::request;
-use rocket::request::FromRequest;
-use rocket::time::OffsetDateTime;
-use rocket::Request;
+use rocket::{
+    http::{Cookie, CookieJar, SameSite, Status},
+    outcome::IntoOutcome,
+    request::{self, FromRequest},
+    time::OffsetDateTime,
+    Request,
+};
 
-use crate::DbConnection;
-use crate::DbPool;
+use crate::db::{DbConnection, DbPool};
 
 use super::sessions::Session;
 

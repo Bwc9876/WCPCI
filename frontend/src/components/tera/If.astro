@@ -3,11 +3,21 @@ import Tag from "./Tag.astro";
 
 export interface Props {
     expression: string;
+    debugEval?: boolean;
 }
 
-const { expression } = Astro.props as Props;
+const { debugEval = false, expression } = Astro.props as Props;
 ---
 
-<Tag expression={`if ${expression}`} />
-<slot />
-<Tag expression="endif" />
+{
+    import.meta.env.PROD ? (
+        <>
+            <Tag expression={`if ${expression}`} />
+            <slot />
+            <slot name="else" />
+            <Tag expression="endif" />
+        </>
+    ) : (
+        (debugEval && <slot />) || <slot name="else" />
+    )
+}

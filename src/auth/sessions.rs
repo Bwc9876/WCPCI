@@ -2,7 +2,7 @@ use anyhow::Result;
 use rand::{rngs::OsRng, RngCore};
 use rocket::time::OffsetDateTime;
 
-use crate::DbPool;
+use crate::db::DbPool;
 
 pub struct Session {
     pub id: i64,

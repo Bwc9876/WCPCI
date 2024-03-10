@@ -2,5 +2,13 @@
 import Tag from "./Tag.astro";
 ---
 
-<Tag expression="else" />
-<slot />
+{
+    import.meta.env.PROD ? (
+        <>
+            <Tag expression="else" />
+            <slot />
+        </>
+    ) : (
+        <slot />
+    )
+}

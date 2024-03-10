@@ -5,3 +5,4 @@ singleQuote: false
 trailingComma: none
 printWidth: 100
 endOfLine: lf
+plugins: [prettier-plugin-astro, prettier-plugin-tailwindcss]

@@ -2,7 +2,7 @@ use log::error;
 use rocket::{catch, catchers, fairing::AdHoc, get, http::CookieJar, response::Redirect, routes};
 use rocket_oauth2::{OAuth2, TokenResponse};
 
-use crate::{DbConnection, DbPool};
+use crate::db::{DbConnection, DbPool};
 
 use self::{github::GitHubLogin, google::GoogleLogin, users::User};
 
