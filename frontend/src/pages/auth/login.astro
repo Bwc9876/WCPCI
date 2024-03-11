@@ -1,0 +1,42 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import ButtonLink from "@/components/ButtonLink.astro";
+import { Icon } from "astro-icon/components";
+import Debug from "@/components/tera/Debug.astro";
+---
+
+<Layout title="Login">
+    <div class="flex h-full flex-col items-center justify-center">
+        <div class="max-w-1/2 flex flex-col justify-center gap-5 rounded-lg bg-secondary p-4">
+            <h1 class="text-center text-3xl font-bold">Login</h1>
+            <p class="wrap text-center">Choose a service to login or sign up with to continue</p>
+            <ButtonLink
+                class="flex w-full bg-[#120E0F] align-middle hover:bg-[hsl(345,13%,8%)]"
+                href="/auth/login/github"
+            >
+                <Icon class="inline" size={30} name="tabler:brand-github" />
+                <span class="mx-auto mt-1">Login with GitHub</span>
+            </ButtonLink>
+            <ButtonLink
+                class="flex w-full bg-[#FFFFFF] align-middle text-background hover:bg-[#DDDDDD]"
+                href="/auth/login/google"
+            >
+                <Icon class="inline" size={30} name="tabler:brand-google" />
+                <span class="mx-auto mt-1">Login with Google</span>
+            </ButtonLink>
+            <Debug>
+                <form class="flex flex-row gap-2" method="post" action="/auth/login/debug">
+                    <input
+                        name="email"
+                        type="email"
+                        placeholder="Email"
+                        class="mb-2 h-full w-full rounded border border-background-300 bg-background-200 p-2"
+                    />
+                    <button class="w-50 whitespace-nowrap rounded bg-primary px-2"
+                        >Debug Login</button
+                    >
+                </form>
+            </Debug>
+        </div>
+    </div>
+</Layout>

@@ -6,7 +6,7 @@
         "dev": "astro dev",
         "start": "astro dev",
         "build": "astro check && pnpm _build",
-        "_build": "astro build && renamer --find html --replace html.tera ./dist/**",
+        "_build": "astro build && renamer --find html --replace html.tera \"./dist/**\"",
         "preview": "astro preview",
         "astro": "astro",
         "format": "prettier --write .",

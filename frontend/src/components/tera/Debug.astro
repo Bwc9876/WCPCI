@@ -2,6 +2,6 @@
 import If from "./If.astro";
 ---
 
-<If expression="in_debug()">
+<If debugEval={true} expression="in_debug()">
     <slot />
 </If>

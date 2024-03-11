@@ -1,8 +1,17 @@
+#![allow(clippy::blocks_in_conditions)] // Needed for the derive of FromForm, rocket is weird
+
 use log::error;
-use rocket::{catch, catchers, fairing::AdHoc, get, http::CookieJar, response::Redirect, routes};
+use rocket::{
+    catch, catchers, fairing::AdHoc, form::Form, get, http::CookieJar, post, response::Redirect,
+    routes, FromForm,
+};
+use rocket_dyn_templates::Template;
 use rocket_oauth2::{OAuth2, TokenResponse};
 
-use crate::db::{DbConnection, DbPool};
+use crate::{
+    context, context_with_base,
+    db::{DbConnection, DbPool},
+};
 
 use self::{github::GitHubLogin, google::GoogleLogin, users::User};
 
@@ -18,17 +27,18 @@ async fn unauthorized() -> Redirect {
 }
 
 #[get("/login")]
-async fn login() -> &'static str {
-    "Login pls lol"
+async fn login(user: Option<&User>) -> Template {
+    let ctx = context_with_base!(user,);
+    Template::render("auth/login", ctx)
 }
 
 #[get("/login/github")]
-pub fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> Redirect {
+fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> Redirect {
     oauth2.get_redirect(cookies, &["user:read"]).unwrap()
 }
 
 #[get("/callback/github")]
-pub async fn github_callback(
+async fn github_callback(
     mut db: DbConnection,
     token: TokenResponse<GitHubLogin>,
     cookies: &CookieJar<'_>,
@@ -38,7 +48,7 @@ pub async fn github_callback(
 }
 
 #[get("/login/google")]
-pub fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> Redirect {
+fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> Redirect {
     oauth2
         .get_redirect(
             cookies,
@@ -51,7 +61,7 @@ pub fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> Red
 }
 
 #[get("/callback/google")]
-pub async fn google_callback(
+async fn google_callback(
     mut db: DbConnection,
     token: TokenResponse<GoogleLogin>,
     cookies: &CookieJar<'_>,
@@ -60,9 +70,29 @@ pub async fn google_callback(
     handler.handle_callback(&mut db, cookies).await
 }
 
+
+#[derive(FromForm)]
+struct DebugLoginForm<'r> {
+    email: &'r str,
+}
+
+#[post("/login/debug", data = "<debug_login_form>")]
+async fn debug_login(
+    mut db: DbConnection,
+    debug_login_form: Form<DebugLoginForm<'_>>,
+    cookies: &CookieJar<'_>,
+) -> Redirect {
+    let email = debug_login_form.email;
+    let user = User::temporary(email.to_string(), email.to_string());
+    if let Err(why) = User::login_oauth(&mut db, cookies, user).await {
+        error!("Failed to log in user: {:?}", why);
+    }
+    Redirect::to("/")
+}
+
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Auth App", |rocket| async {
-        rocket
+        let rocket = rocket
             .attach(OAuth2::<GitHubLogin>::fairing("github"))
             .attach(OAuth2::<GoogleLogin>::fairing("google"))
             .register("/", catchers![unauthorized])
@@ -75,7 +105,13 @@ pub fn stage() -> AdHoc {
                     google_login,
                     google_callback
                 ],
-            )
+            );
+
+        if cfg!(debug_assertions) {
+            rocket.mount("/auth", routes![debug_login])
+        } else {
+            rocket
+        }
     })
 }
 

@@ -7,7 +7,6 @@ export default {
             colors: {
                 transparent: "transparent",
                 current: "currentColor",
-                black: "black",
                 white: "white",
                 text: {
                     DEFAULT: "var(--text-900)",
@@ -38,6 +37,7 @@ export default {
                     950: "var(--background-950)"
                 },
                 primary: {
+                    DEFAULT: "var(--primary-300)",
                     50: "var(--primary-50)",
                     100: "var(--primary-100)",
                     200: "var(--primary-200)",
@@ -51,6 +51,7 @@ export default {
                     950: "var(--primary-950)"
                 },
                 secondary: {
+                    DEFAULT: "var(--secondary-200)",
                     50: "var(--secondary-50)",
                     100: "var(--secondary-100)",
                     200: "var(--secondary-200)",
