@@ -1,8 +1,163 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import Debug from "@/components/tera/Debug.astro";
+
+import Link from "@/components/Link.astro";
+import Button from "@/components/Button.astro";
+import Avatar from "@/components/Avatar.astro";
+import Form from "@/components/Form.astro";
+import Field from "@/components/Field.astro";
+import Tile from "@/components/Tile.astro";
+import Spinner from "@/components/Spinner.astro";
+import If from "@/components/tera/If.astro";
 ---
 
-<Layout title="Home">
-    <Debug>I'm a debug value!!</Debug>
+<Layout class="flex flex-col gap-10" title="Home">
+    <Tile class="text-2xl"> This is all just for testing my styles, don't mind me. </Tile>
+    <Tile class="flex flex-row gap-5">
+        Links:
+        <Link href="#">Accent</Link>
+        <Link color="primary" href="#">Primary</Link>
+        <Link color="secondary" href="#">Secondary</Link>
+        <Link color="white" href="#">White</Link>
+        <Link color="inherit" href="#">Inherit</Link>
+    </Tile>
+    <Tile>
+        Small:
+        <Button size="sm">Primary</Button>
+        <Button size="sm" color="secondary">Secondary</Button>
+        <Button size="sm" color="accent">Accent</Button>
+        <Button size="sm" color="danger">Danger</Button>
+        <Button size="sm" icon="tabler:user">With Icon</Button>
+        <Button size="sm" loadOnClick forceLoad>With Loading</Button>
+    </Tile>
+    <Tile>
+        Medium:
+        <Button>Primary</Button>
+        <Button color="secondary">Secondary</Button>
+        <Button color="accent">Accent</Button>
+        <Button color="danger">Danger</Button>
+        <Button loadOnClick loadingText="Secret!" icon="tabler:user">With Icon</Button>
+        <Button loadOnClick forceLoad>With Loading</Button>
+    </Tile>
+    <Tile>
+        Large:
+        <Button size="lg">Primary</Button>
+        <Button size="lg" color="secondary">Secondary</Button>
+        <Button size="lg" color="accent">Accent</Button>
+        <Button size="lg" color="danger">Danger</Button>
+        <Button size="lg" icon="tabler:user">With Icon</Button>
+        <Button size="lg" loadOnClick forceLoad>With Loading</Button>
+    </Tile>
+    <Tile>
+        Extra Large:
+        <Button size="xl">Primary</Button>
+        <Button size="xl" color="secondary">Secondary</Button>
+        <Button size="xl" color="accent">Accent</Button>
+        <Button size="xl" color="danger">Danger</Button>
+        <Button size="xl" icon="tabler:user">With Icon</Button>
+        <Button size="xl" loadOnClick forceLoad>With Loading</Button>
+        <Button as="button" disabled size="xl">Disabled</Button>
+    </Tile>
+    <Tile>
+        2 Extra Large:
+        <Button size="2xl">Primary</Button>
+        <Button size="2xl" color="secondary">Secondary</Button>
+        <Button size="2xl" color="accent">Accent</Button>
+        <Button size="2xl" color="danger">Danger</Button>
+        <Button size="2xl" icon="tabler:user">With Icon</Button>
+        <Button size="2xl" loadOnClick forceLoad>With Loading</Button>
+    </Tile>
+    <Tile class="flex flex-row gap-1">
+        As Link:
+        <Button as="a" href="#">Primary</Button>
+        <Button as="a" href="#" color="secondary">Secondary</Button>
+    </Tile>
+    <If debugEval={true} expression="logged_in">
+        <Tile class="flex flex-row gap-1">
+            Avatars:
+            <Avatar class="ms-3" size={96} />
+        </Tile>
+    </If>
+    <Tile class="flex flex-row gap-2 align-middle">
+        Spinner:
+        <Spinner class="my-auto" size="sm" />
+        <Spinner class="my-auto" />
+        <Spinner class="my-auto" size="lg" />
+        <Spinner class="my-auto" size="xl" />
+        <Spinner class="my-auto" size="2xl" />
+    </Tile>
+    <Tile>
+        DA FORM:
+        <Form noTemplate action="#" method="get" showCancel>
+            <Field
+                noTemplate
+                forceInvalid
+                value="Bleh"
+                help="I'm a text field!"
+                name="text"
+                type="text"
+                maxlength={10}
+            />
+            <Field
+                noTemplate
+                value="guh@guh.com"
+                name="email.g"
+                type="email"
+                help="I'm an email field!"
+            />
+            <Field
+                noTemplate
+                value="guh@guh.com"
+                name="email.guy_bleh-fuck"
+                type="email"
+                help="I'm an email field that's read only!"
+                readonly
+            />
+            <Field
+                noTemplate
+                value="guh@guh.com"
+                label="Disabled Email Field"
+                name="email"
+                type="email"
+                help="I'm an email field that's disabled :("
+                disabled
+            />
+            <Field
+                noTemplate
+                value="Secret!!!"
+                name="password"
+                type="password"
+                help="I'm a password field!"
+            />
+            <Field noTemplate value={22} name="number" type="number" help="I'm a number field!" />
+            <Field noTemplate label="Date" name="date" type="date" />
+            <Field noTemplate label="File" name="file" type="file" />
+            <Field
+                noTemplate
+                label="Checkbox"
+                name="checkbox"
+                type="checkbox"
+                help="I'm a checkbox field!"
+            />
+            <Field
+                noTemplate
+                label="Textarea"
+                name="textarea"
+                type="textarea"
+                help="I'm a textarea field!"
+            />
+            <Field
+                noTemplate
+                label="Select"
+                name="select"
+                type="select"
+                options={[
+                    ["uno", "One"],
+                    ["dos", "Two"],
+                    ["tres", "Three"]
+                ]}
+                help="I'm a select field!"
+            />
+        </Form>
+    </Tile>
 </Layout>

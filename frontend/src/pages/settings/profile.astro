@@ -1,0 +1,44 @@
+---
+import Settings from "@/layouts/Settings.astro";
+import Form from "@/components/Form.astro";
+import Field from "@/components/Field.astro";
+import { variable } from "@/lib/tera";
+import Label from "@/components/Label.astro";
+import Button from "@/components/Button.astro";
+---
+
+<Settings title="Profile">
+    <Form data-astro-reload action="/settings/profile">
+        <Field
+            placeholder={variable("user.default_display_name")}
+            label="Display Name"
+            name="display_name"
+            type="text"
+            help="This will be the public name shown on the web interface, rankings, etc. Leave blank to use a default"
+        />
+        <Field
+            rows={4}
+            placeholder="Year, Major, Interests, Favorite Language, etc..."
+            label="Bio"
+            name="bio"
+            type="textarea"
+            help="Write a little about yourself, this will be public when someone views your profile"
+        />
+        <Label
+            label="Profile Picture"
+            help="Profile pictures are taken from Gravatar, click the button above to login/create a gravatar account and set your picture"
+        >
+            <Button
+                class="my-1 w-fit"
+                as="a"
+                size="md"
+                color="secondary"
+                icon="tabler:brand-gravatar"
+                href="https://gravatar.com/connect"
+                target="_blank"
+            >
+                Set Profile Picture on Gravatar.com
+            </Button>
+        </Label>
+    </Form>
+</Settings>

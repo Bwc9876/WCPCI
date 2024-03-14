@@ -1,0 +1,25 @@
+---
+import { Icon } from "astro-icon/components";
+import Link from "../Link.astro";
+
+export interface Props {
+    title: string;
+    icon: string;
+    href: string;
+    class?: string;
+    isActive?: boolean;
+}
+
+const { class: className, title, href, icon, isActive = false } = Astro.props;
+
+const activeClass = isActive ? "text-accent bg-secondary" : "";
+---
+
+<Link
+    href={href}
+    color={isActive ? "accent" : "white"}
+    class=`first:rounded-t-2xl last:rounded-b-2xl flex flex-row gap-2 p-3 ${activeClass} ${className ?? ""}`
+>
+    <Icon class="text-accent" name={icon} size={24} />
+    {title}
+</Link>

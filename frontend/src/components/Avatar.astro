@@ -1,0 +1,28 @@
+---
+import { variable } from "@/lib/tera";
+import type { HTMLAttributes } from "astro/types";
+
+export interface Props extends HTMLAttributes<"img"> {
+    emailVar?: string;
+    name?: string;
+    size?: number;
+}
+
+const { name, emailVar = "user.email", size = 40, class: className, ...rest }: Props = Astro.props;
+
+const src = import.meta.env.DEV
+    ? `https://gravatar.com/avatar/5aec02087368de589b8d33275c370ca7e876c956006aebc96d1bbc6c90e5e340?size=${size}&d=identicon&r=pg`
+    : variable(`gravatar(email=${emailVar}, size=${size})`);
+---
+
+<img
+    class:list={[
+        "rounded-full border-2 border-transparent bg-secondary-300 text-transparent",
+        className ?? ""
+    ]}
+    width={size}
+    height={size}
+    src={src}
+    alt={`${name ?? variable("name")}'s Avatar'`}
+    {...rest}
+/>

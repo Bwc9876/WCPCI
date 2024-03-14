@@ -9,11 +9,11 @@ use rocket_dyn_templates::Template;
 use rocket_oauth2::{OAuth2, TokenResponse};
 
 use crate::{
-    context, context_with_base,
+    context_with_base,
     db::{DbConnection, DbPool},
 };
 
-use self::{github::GitHubLogin, google::GoogleLogin, users::User};
+use self::{github::GitHubLogin, google::GoogleLogin, sessions::Session, users::User};
 
 mod github;
 mod google;
@@ -32,6 +32,25 @@ async fn login(user: Option<&User>) -> Template {
     Template::render("auth/login", ctx)
 }
 
+#[get("/logout")]
+async fn logout(mut db: DbConnection, cookies: &CookieJar<'_>) -> Redirect {
+    if let Some(token) = cookies
+        .get_private(Session::TOKEN_COOKIE_NAME)
+        .map(|c| c.value().to_string())
+    {
+        if let Some(session) = Session::from_token(&mut db, &token).await {
+            let res = sqlx::query!("DELETE FROM session WHERE id = ?", session.id)
+                .execute(&mut **db)
+                .await;
+            if let Err(why) = res {
+                error!("Failed to delete session {}: {:?}", session.id, why);
+            }
+        }
+        cookies.remove_private(Session::TOKEN_COOKIE_NAME);
+    }
+    Redirect::to("/")
+}
+
 #[get("/login/github")]
 fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> Redirect {
     oauth2.get_redirect(cookies, &["user:read"]).unwrap()
@@ -43,8 +62,10 @@ async fn github_callback(
     token: TokenResponse<GitHubLogin>,
     cookies: &CookieJar<'_>,
 ) -> Redirect {
+    //println!("State cookie is: {:?}", cookies.get_private("rocket_oauth2_state"));
     let handler = GitHubLogin(token.access_token().to_string());
     handler.handle_callback(&mut db, cookies).await
+    //Redirect::to("/")
 }
 
 #[get("/login/google")]
@@ -69,7 +90,6 @@ async fn google_callback(
     let handler = GoogleLogin(token.access_token().to_string());
     handler.handle_callback(&mut db, cookies).await
 }
-
 
 #[derive(FromForm)]
 struct DebugLoginForm<'r> {
@@ -100,6 +120,7 @@ pub fn stage() -> AdHoc {
                 "/auth",
                 routes![
                     login,
+                    logout,
                     github_login,
                     github_callback,
                     google_login,

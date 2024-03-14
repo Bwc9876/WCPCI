@@ -1,0 +1,124 @@
+---
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes, HTMLTag } from "astro/types";
+import Spinner from "./Spinner.astro";
+
+export type Color = "primary" | "secondary" | "accent" | "danger" | "custom";
+type Size = "sm" | "md" | "lg" | "xl" | "2xl";
+
+export type Props<T extends HTMLTag> = HTMLAttributes<T> & {
+    icon?: string;
+    loadOnClick?: boolean;
+    forceLoad?: boolean;
+    loadingText?: string;
+    color?: Color;
+    size?: Size;
+    as?: T;
+};
+
+const {
+    as: Component = "button",
+    size = "md",
+    color = "primary",
+    icon,
+    forceLoad = false,
+    loadOnClick = false,
+    loadingText = "Loading...",
+    class: className,
+    ...rest
+} = Astro.props;
+
+const ColorMap = {
+    primary: "bg-primary-400 enabled:hover:bg-primary-500 text-white",
+    secondary: "bg-secondary enabled:hover:bg-secondary-300 text-white",
+    accent: "bg-accent-400 enabled:hover:bg-accent-500 text-white",
+    danger: "bg-red-500 enabled:hover:bg-red-400 text-white",
+    custom: ""
+} as Record<Color, string>;
+
+const SizeMap = {
+    sm: "text-sm",
+    md: "text-md",
+    lg: "text-lg",
+    xl: "text-xl",
+    "2xl": "text-2xl"
+} as Record<Size, string>;
+
+const IconSizeMap = {
+    sm: 15,
+    md: 20,
+    lg: 25,
+    xl: 30,
+    "2xl": 35
+} as Record<Size, number>;
+
+const wrapperIconClass = "flex flex-row gap-1 pe-1";
+---
+
+<Component
+    class:list={[
+        "disabled:bg-initial rounded-xl p-2 disabled:opacity-75",
+        ColorMap[color as Color],
+        SizeMap[size as Size],
+        className ?? ""
+    ]}
+    {...rest}
+>
+    {
+        icon !== undefined || loadOnClick ? (
+            <span
+                data-loading-text={loadingText}
+                class:list={[wrapperIconClass, loadOnClick ? "load-on-click" : ""]}
+            >
+                {icon && (
+                    <Icon
+                        name={icon}
+                        size={IconSizeMap[size as Size]}
+                        class="action-icon my-auto"
+                    />
+                )}
+                {loadOnClick && (
+                    <Spinner
+                        class:list={[
+                            "relative top-0.5 m-0",
+                            forceLoad ? "" : "loading-icon hidden"
+                        ]}
+                    />
+                )}
+                <span class="loc-text my-auto">
+                    <slot />
+                </span>
+            </span>
+        ) : (
+            <slot />
+        )
+    }
+</Component>
+
+<!-- <script>
+    document.addEventListener("astro:page-load", () => {
+        const buttons = document.querySelectorAll(".load-on-click");
+
+        buttons.forEach((button) => {
+            button.addEventListener("click", (e) => {
+                e.set
+                const icon = button.querySelector(`:scope .action-icon`);
+                const loading = button.querySelector(`:scope .loading-icon`);
+                const text = button.querySelector(`:scope .loc-text`);
+
+                button.parentElement?.setAttribute("disabled", "true");
+                if (text) {
+                    text.textContent =
+                        button.attributes.getNamedItem("data-loading-text")?.value ?? "Loading...";
+                }
+
+                if (icon) {
+                    icon.classList.add("hidden");
+                }
+                if (loading) {
+                    loading.classList.remove("hidden");
+                }
+            });
+        });
+    });
+</script> -->

@@ -1,13 +1,21 @@
 ---
 import { ViewTransitions } from "astro:transitions";
 
-import NavBar from "@/components/layout/nav/NavBar.astro";
+import Link from "@/components/Link.astro";
+import { Icon } from "astro-icon/components";
+import Avatar from "@/components/Avatar.astro";
+import Else from "@/components/tera/Else.astro";
+import If from "@/components/tera/If.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Tile from "@/components/Tile.astro";
 
-interface Props {
+export interface Props {
     title: string;
+    animate?: boolean;
+    class?: string;
 }
 
-const { title } = Astro.props;
+const { title, class: className, animate = true } = Astro.props;
 ---
 
 <!doctype html>
@@ -16,148 +24,213 @@ const { title } = Astro.props;
         <meta charset="UTF-8" />
         <meta name="description" content="Astro description" />
         <meta name="viewport" content="width=device-width" />
-        <meta name="generator" content={Astro.generator} />
+        <meta name="generator" content=`${Astro.generator} & Tera` />
         <title>{title}</title>
         <ViewTransitions />
     </head>
-    <body class="mx-5 flex h-screen flex-col overflow-hidden bg-background text-text">
+    <body
+        class="container mx-auto flex min-h-screen flex-col justify-center bg-background px-2 text-text md:px-5"
+    >
         <header>
-            <NavBar currentTitle={title} />
+            <Tile as="nav" class="my-4 flex justify-center gap-3">
+                <Link href="/" class="me-4 flex flex-row gap-2">
+                    <Icon class="my-auto" size={30} name="tabler:trophy-filled" />
+                    <span class="my-auto">WCPC</span>
+                </Link>
+                <Link color="white" class="my-auto" href="/contests">Contests</Link>
+                <Link color="white" class="my-auto" href="/about">About</Link>
+                <span class="flex-grow"></span>
+                <If debugEval={true} expression="logged_in">
+                    <Link
+                        href="/settings/profile"
+                        color="inherit"
+                        class="group flex flex-row gap-2 rounded-full bg-secondary p-1 hover:text-accent md:pe-5"
+                    >
+                        <Avatar
+                            class="group-hover:border-2 group-hover:border-solid group-hover:border-accent-600"
+                        />
+                        <span class="my-auto hidden md:block"
+                            ><Variable expression="name" debugEval="Ben C" /></span
+                        >
+                    </Link>
+                    <Link
+                        aria-label="Logout"
+                        href="/auth/logout"
+                        class="group flex rounded-full bg-secondary py-1 pe-2 ps-3"
+                    >
+                        <Icon
+                            size={30}
+                            name="tabler:logout"
+                            class="my-auto text-text group-hover:text-red-500"
+                        />
+                    </Link>
+                    <Else slot="else">
+                        <Link
+                            href="/auth/login"
+                            class="flex gap-1 rounded-full bg-secondary p-1 px-3"
+                        >
+                            <Icon class="text-accent" size={30} name="tabler:login-2" />
+                            Login / Sign-Up
+                        </Link>
+                    </Else>
+                </If>
+            </Tile>
         </header>
-        <main class="grow" transition:name="main" transition:animate="slide">
+        <main
+            class:list={["grow", className ?? ""]}
+            transition:animate={animate ? "slide" : "none"}
+            transition:name="main"
+        >
             <slot />
         </main>
-        <footer class="mb-3">
-            <p class="text-center">© 2024</p>
-        </footer>
-    </body><style is:global>
-        @tailwind base;
-        @tailwind components;
-        @tailwind utilities;
+        <Tile as="footer" class="my-4 flex justify-center">
+            <Link
+                isExternal
+                class="flex flex-row gap-1"
+                href="https://github.com/Bwc9876/WCPCI"
+                color="white"
+            >
+                <Icon name="tabler:brand-github" size={25} />
+                <span class="my-auto">GitHub</span>
+            </Link>
+        </Tile>
+        <style is:global>
+            @tailwind base;
+            @tailwind components;
+            @tailwind utilities;
 
-        @layer base {
-            :root {
-                --text-50: #f4f0f4;
-                --text-100: #e9e1ea;
-                --text-200: #d3c3d5;
-                --text-300: #bca5c0;
-                --text-400: #a688aa;
-                --text-500: #906a95;
-                --text-600: #735577;
-                --text-700: #563f5a;
-                --text-800: #3a2a3c;
-                --text-900: #1d151e;
-                --text-950: #0e0b0f;
+            @layer base {
+                * {
+                    transition:
+                        color var(--color-transition-duration) linear,
+                        background-color var(--color-transition-duration) linear,
+                        border-color var(--color-transition-duration) linear;
+                }
 
-                --background-50: #f4f0f4;
-                --background-100: #eae1ea;
-                --background-200: #d4c4d4;
-                --background-300: #bfa6bf;
-                --background-400: #a989a9;
-                --background-500: #946b94;
-                --background-600: #765676;
-                --background-700: #594059;
-                --background-800: #3b2b3b;
-                --background-900: #1e151e;
-                --background-950: #0f0b0f;
+                :root {
+                    --color-transition-duration: 100ms;
+                    --text-50: #f4f0f4;
+                    --text-100: #e9e1ea;
+                    --text-200: #d3c3d5;
+                    --text-300: #bca5c0;
+                    --text-400: #a688aa;
+                    --text-500: #906a95;
+                    --text-600: #735577;
+                    --text-700: #563f5a;
+                    --text-800: #3a2a3c;
+                    --text-900: #1d151e;
+                    --text-950: #0e0b0f;
 
-                --primary-50: #fce5ff;
-                --primary-100: #f9ccff;
-                --primary-200: #f399ff;
-                --primary-300: #ed66ff;
-                --primary-400: #e733ff;
-                --primary-500: #e100ff;
-                --primary-600: #b400cc;
-                --primary-700: #870099;
-                --primary-800: #5a0066;
-                --primary-900: #2d0033;
-                --primary-950: #17001a;
+                    --background-50: #f4f0f4;
+                    --background-100: #eae1ea;
+                    --background-200: #d4c4d4;
+                    --background-300: #bfa6bf;
+                    --background-400: #a989a9;
+                    --background-500: #946b94;
+                    --background-600: #765676;
+                    --background-700: #594059;
+                    --background-800: #3b2b3b;
+                    --background-900: #1e151e;
+                    --background-950: #0f0b0f;
 
-                --secondary-50: #f6eef7;
-                --secondary-100: #ecddee;
-                --secondary-200: #dabade;
-                --secondary-300: #c798cd;
-                --secondary-400: #b475bd;
-                --secondary-500: #a253ac;
-                --secondary-600: #81428a;
-                --secondary-700: #613267;
-                --secondary-800: #412145;
-                --secondary-900: #201122;
-                --secondary-950: #100811;
+                    --primary-50: #fce5ff;
+                    --primary-100: #f9ccff;
+                    --primary-200: #f399ff;
+                    --primary-300: #ed66ff;
+                    --primary-400: #e733ff;
+                    --primary-500: #e100ff;
+                    --primary-600: #b400cc;
+                    --primary-700: #870099;
+                    --primary-800: #5a0066;
+                    --primary-900: #2d0033;
+                    --primary-950: #17001a;
 
-                --accent-50: #fdf8e8;
-                --accent-100: #faf1d1;
-                --accent-200: #f5e2a3;
-                --accent-300: #f0d475;
-                --accent-400: #ecc546;
-                --accent-500: #e7b718;
-                --accent-600: #b99213;
-                --accent-700: #8a6e0f;
-                --accent-800: #5c490a;
-                --accent-900: #2e2505;
-                --accent-950: #171202;
+                    --secondary-50: #f6eef7;
+                    --secondary-100: #ecddee;
+                    --secondary-200: #dabade;
+                    --secondary-300: #c798cd;
+                    --secondary-400: #b475bd;
+                    --secondary-500: #a253ac;
+                    --secondary-600: #81428a;
+                    --secondary-700: #613267;
+                    --secondary-800: #412145;
+                    --secondary-900: #201122;
+                    --secondary-950: #100811;
+
+                    --accent-50: #fdf8e8;
+                    --accent-100: #faf1d1;
+                    --accent-200: #f5e2a3;
+                    --accent-300: #f0d475;
+                    --accent-400: #ecc546;
+                    --accent-500: #e7b718;
+                    --accent-600: #b99213;
+                    --accent-700: #8a6e0f;
+                    --accent-800: #5c490a;
+                    --accent-900: #2e2505;
+                    --accent-950: #171202;
+                }
+                :root.dark {
+                    --text-50: #0f0a0f;
+                    --text-100: #1d151e;
+                    --text-200: #3a293d;
+                    --text-300: #583e5b;
+                    --text-400: #755379;
+                    --text-500: #926798;
+                    --text-600: #a886ac;
+                    --text-700: #bea4c1;
+                    --text-800: #d3c2d6;
+                    --text-900: #e9e1ea;
+                    --text-950: #f4f0f5;
+
+                    --background-50: #0f0b0f;
+                    --background-100: #1e151e;
+                    --background-200: #3c2a3c;
+                    --background-300: #5a3f5a;
+                    --background-400: #775577;
+                    --background-500: #956a95;
+                    --background-600: #aa88aa;
+                    --background-700: #c0a5c0;
+                    --background-800: #d5c3d5;
+                    --background-900: #eae1ea;
+                    --background-950: #f4f0f4;
+
+                    --primary-50: #17001a;
+                    --primary-100: #2d0033;
+                    --primary-200: #5a0066;
+                    --primary-300: #870099;
+                    --primary-400: #b400cc;
+                    --primary-500: #e100ff;
+                    --primary-600: #e733ff;
+                    --primary-700: #ed66ff;
+                    --primary-800: #f399ff;
+                    --primary-900: #f9ccff;
+                    --primary-950: #fce5ff;
+
+                    --secondary-50: #100811;
+                    --secondary-100: #201122;
+                    --secondary-200: #412145;
+                    --secondary-300: #613267;
+                    --secondary-400: #81428a;
+                    --secondary-500: #a253ac;
+                    --secondary-600: #b475bd;
+                    --secondary-700: #c798cd;
+                    --secondary-800: #dabade;
+                    --secondary-900: #ecddee;
+                    --secondary-950: #f6eef7;
+
+                    --accent-50: #171202;
+                    --accent-100: #2e2505;
+                    --accent-200: #5c490a;
+                    --accent-300: #8a6e0f;
+                    --accent-400: #b99213;
+                    --accent-500: #e7b718;
+                    --accent-600: #ecc546;
+                    --accent-700: #f0d475;
+                    --accent-800: #f5e2a3;
+                    --accent-900: #faf1d1;
+                    --accent-950: #fdf8e8;
+                }
             }
-            :root.dark {
-                --text-50: #0f0a0f;
-                --text-100: #1d151e;
-                --text-200: #3a293d;
-                --text-300: #583e5b;
-                --text-400: #755379;
-                --text-500: #926798;
-                --text-600: #a886ac;
-                --text-700: #bea4c1;
-                --text-800: #d3c2d6;
-                --text-900: #e9e1ea;
-                --text-950: #f4f0f5;
-
-                --background-50: #0f0b0f;
-                --background-100: #1e151e;
-                --background-200: #3c2a3c;
-                --background-300: #5a3f5a;
-                --background-400: #775577;
-                --background-500: #956a95;
-                --background-600: #aa88aa;
-                --background-700: #c0a5c0;
-                --background-800: #d5c3d5;
-                --background-900: #eae1ea;
-                --background-950: #f4f0f4;
-
-                --primary-50: #17001a;
-                --primary-100: #2d0033;
-                --primary-200: #5a0066;
-                --primary-300: #870099;
-                --primary-400: #b400cc;
-                --primary-500: #e100ff;
-                --primary-600: #e733ff;
-                --primary-700: #ed66ff;
-                --primary-800: #f399ff;
-                --primary-900: #f9ccff;
-                --primary-950: #fce5ff;
-
-                --secondary-50: #100811;
-                --secondary-100: #201122;
-                --secondary-200: #412145;
-                --secondary-300: #613267;
-                --secondary-400: #81428a;
-                --secondary-500: #a253ac;
-                --secondary-600: #b475bd;
-                --secondary-700: #c798cd;
-                --secondary-800: #dabade;
-                --secondary-900: #ecddee;
-                --secondary-950: #f6eef7;
-
-                --accent-50: #171202;
-                --accent-100: #2e2505;
-                --accent-200: #5c490a;
-                --accent-300: #8a6e0f;
-                --accent-400: #b99213;
-                --accent-500: #e7b718;
-                --accent-600: #ecc546;
-                --accent-700: #f0d475;
-                --accent-800: #f5e2a3;
-                --accent-900: #faf1d1;
-                --accent-950: #fdf8e8;
-            }
-        }
-    </style>
+        </style>
+    </body>
 </html>

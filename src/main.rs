@@ -1,10 +1,15 @@
 use rocket::{get, launch, routes};
-use rocket_dyn_templates::context;
 use rocket_dyn_templates::Template;
 
+#[macro_use]
+extern crate rocket_dyn_templates;
+
 mod auth;
+mod csrf;
 mod db;
 mod serve;
+mod settings;
+#[macro_use]
 mod template;
 
 use crate::auth::users::User;
@@ -29,4 +34,6 @@ fn rocket() -> _ {
         .attach(template::stage())
         .attach(serve::stage())
         .attach(auth::stage())
+        .attach(csrf::stage())
+        .attach(settings::stage())
 }

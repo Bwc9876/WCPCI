@@ -1,17 +1,26 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 
+type Color = "primary" | "secondary" | "accent" | "white" | "inherit";
+
 export interface Props extends HTMLAttributes<"a"> {
-    color?: string;
+    color?: Color;
     isExternal?: boolean;
-    class?: string;
 }
 
-const { isExternal, color, class: className, ...rest } = Astro.props;
+const { isExternal, color = "accent", class: className, ...rest } = Astro.props;
+
+const ColorMap = {
+    primary: "text-primary hover:text-primary-500",
+    secondary: "text-secondary-400 hover:text-secondary-500",
+    accent: "text-accent hover:text-accent-600",
+    white: "text-white hover:text-gray-300",
+    inherit: ""
+} as Record<Color, string>;
 ---
 
 <a
-    class={`text-${color ?? "accent"} hover:text-accent ${className ?? ""}`}
+    class:list={[ColorMap[color], className ?? ""]}
     rel=`${isExternal ? "noreferrer" : undefined}`
     target=`${isExternal ? "_blank" : "_self"}`
     {...rest}

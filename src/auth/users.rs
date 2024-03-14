@@ -6,16 +6,20 @@ use rocket::{
     time::OffsetDateTime,
     Request,
 };
+use serde::Serialize;
 
 use crate::db::{DbConnection, DbPool};
 
 use super::sessions::Session;
 
+#[derive(Debug, Clone, Serialize)]
 pub struct User {
     pub id: i64,
     pub email: String,
+    pub bio: String,
     pub default_display_name: String,
     pub display_name: Option<String>,
+    #[serde(skip)] // Not implemented, I cry
     pub created_at: OffsetDateTime,
 }
 
@@ -29,6 +33,7 @@ impl User {
     pub fn temporary(email: String, display_name: String) -> Self {
         Self {
             id: 0,
+            bio: String::new(),
             email,
             default_display_name: display_name,
             display_name: None,
@@ -93,7 +98,7 @@ impl<'r> FromRequest<'r> for &'r User {
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let user_result = req.local_cache_async(async {
             let mut db = req.guard::<DbConnection>().await.succeeded()?;
-            if let Some(token) = req.cookies().get_private("token").map(|c| c.value().to_string()) {
+            if let Some(token) = req.cookies().get_private(Session::TOKEN_COOKIE_NAME).map(|c| c.value().to_string()) {
                 sqlx::query_as!(
                     User,
                     "SELECT user.* FROM user JOIN session ON user.id = session.user_id WHERE session.token = ? AND expires_at > CURRENT_TIMESTAMP",

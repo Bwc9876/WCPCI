@@ -4,11 +4,13 @@ import Tag from "./Tag.astro";
 export interface Props {
     itemName: string;
     sourceList: string;
+    debugEval?: boolean;
 }
 
-const { itemName, sourceList } = Astro.props as Props;
+const { itemName, debugEval = false, sourceList } = Astro.props as Props;
 ---
 
 <Tag expression={`for ${itemName} in ${sourceList}`} />
 <slot />
+{import.meta.env.DEV && debugEval && <slot name="debug" />}
 <Tag expression="endfor" />

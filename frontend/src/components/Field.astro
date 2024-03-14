@@ -1,0 +1,121 @@
+---
+import type { Props as LabelProps } from "@/components/Label.astro";
+import type { HTMLAttributes } from "astro/types";
+
+type BaseProps = {
+    label?: string;
+    noTemplate?: boolean;
+    fieldName?: string;
+    formObj?: string;
+    forceInvalid?: boolean;
+};
+
+type InputProps =
+    | ({ options?: undefined } & HTMLAttributes<"input">)
+    | ({ type: "textarea"; options?: undefined } & HTMLAttributes<"textarea">)
+    | ({ type: "select"; options: [string, string][] } & HTMLAttributes<"select">);
+
+export type Props = BaseProps & Omit<Omit<LabelProps, "isCheckbox">, "label"> & InputProps;
+
+import Label from "@/components/Label.astro";
+import { variable, tag } from "@/lib/tera";
+
+// Remove underscores, hyphens, and periods from a string and replace them with spaces
+// Capitalize the first letter of each word
+const makeLabel = (str: string) => {
+    return str.replaceAll(/[_\-\.]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const {
+    noTemplate = false,
+    name,
+    formObj = "form",
+    fieldName = name,
+    label = (name && makeLabel(name)) || "",
+    help,
+    type,
+    options,
+    forceInvalid,
+    value = noTemplate ? undefined : variable(`${formObj}.data.${fieldName}`),
+    class: className,
+    ...rest
+} = Astro.props;
+
+const isCheckbox = type === "checkbox";
+
+const errorVar = `${formObj}.errors.${fieldName} | default(value=[])`;
+
+const baseClass = [
+    "p-2",
+    "rounded-xl",
+    "border-2",
+    "bg-secondary-50",
+    "border-solid",
+    "border-primary-50",
+    "disabled:bg-primary-50",
+    "disabled:border-none",
+    "read-only:bg-primary-50",
+    "read-only:border-none",
+    "focus:outline-none",
+    "focus:ring",
+    "focus:ring-secondary-200",
+    "invalid:border-red-500",
+    "invalid:ring-red-600",
+    "invalid:text-red-600",
+    "data-[invalid=true]:border-red-500",
+    "data-[invalid=true]:ring-red-600",
+    "data-[invalid=true]:text-red-500"
+].join(" ");
+
+const fileClass =
+    "file:bg-secondary enabled:bg-secondary-50 file:hover:bg-secondary-300 file:rounded file:text-sm file:border-none file:text-white file:me-2";
+
+const checkClass = ""; // Empty for now, might make checkboxes fancier later
+
+const dataInvalid =
+    forceInvalid !== undefined
+        ? forceInvalid.toString()
+        : noTemplate
+          ? "false"
+          : `${tag(`if ${errorVar} | length == 0`)}false${tag("else")}true${tag("endif")}`;
+---
+
+<Label
+    errorVar={noTemplate ? undefined : errorVar}
+    label={label}
+    help={help}
+    isCheckbox={isCheckbox}
+>
+    {
+        type === "textarea" ? (
+            // Prettier likes to break the content of the textarea tag into multiple lines, which is not what we want
+            /* prettier-ignore */ <textarea name={name} data-invalid={dataInvalid} class:list={[baseClass, "resize-none", className ?? ""]} {...rest}>{value}</textarea>
+        ) : type === "select" ? (
+            <select
+                name={name}
+                data-invalid={dataInvalid}
+                value={value ?? options[0][0]}
+                class:list={[baseClass, "enabled:bg-secondary-50", className ?? ""]}
+                {...rest}
+            >
+                {options.map(([value, label]) => (
+                    <option value={value}>{label}</option>
+                ))}
+            </select>
+        ) : (
+            <input
+                value={value}
+                name={name}
+                data-invalid={dataInvalid}
+                type={type}
+                class:list={[
+                    baseClass,
+                    type === "checkbox" ? checkClass : "",
+                    type === "file" ? fileClass : "",
+                    className ?? ""
+                ]}
+                {...rest}
+            />
+        )
+    }
+</Label>

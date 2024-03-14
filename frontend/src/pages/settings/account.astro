@@ -1,0 +1,38 @@
+---
+import Settings from "@/layouts/Settings.astro";
+import Form from "@/components/Form.astro";
+import Field from "@/components/Field.astro";
+import { variable } from "@/lib/tera";
+import Button from "@/components/Button.astro";
+import Label from "@/components/Label.astro";
+---
+
+<Settings title="Account">
+    <Form>
+        <Field
+            noTemplate
+            label="Email"
+            type="email"
+            help="Your email comes from the service you used to initially sign in. To sign in with another service make sure it uses the same email"
+            value={variable("user.email")}
+            readonly
+        />
+        <Label
+            label="Delete Account"
+            help="This will delete your account and all associated data. This action is irreversible."
+        >
+            <Button
+                as="a"
+                size="md"
+                color="danger"
+                icon="tabler:user-x"
+                href="/settings/delete"
+                class="max-w-fit"
+            >
+                Delete Account
+            </Button>
+        </Label>
+        <Fragment slot="hr"></Fragment>
+        <Fragment slot="submit"></Fragment>
+    </Form>
+</Settings>

@@ -13,6 +13,7 @@ pub struct Session {
 }
 
 impl Session {
+    pub const TOKEN_COOKIE_NAME: &'static str = "token";
     const TOKEN_LENGTH: usize = 64;
     const EXPIRY_DAYS: i64 = 14;
 
@@ -40,5 +41,16 @@ impl Session {
             .fetch_one(&mut **db).await?;
 
         Ok(session)
+    }
+
+    pub async fn from_token(db: &mut DbPool, token: &str) -> Option<Session> {
+        sqlx::query_as!(
+            Session,
+            "SELECT * FROM session WHERE session.token = ? AND expires_at > CURRENT_TIMESTAMP",
+            token
+        )
+        .fetch_one(&mut **db)
+        .await
+        .ok()
     }
 }

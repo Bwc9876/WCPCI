@@ -1,4 +1,7 @@
 
+[default]
+ident = "WCPC"
+
 [default.databases.sqlite_db]
 url = "./database.sqlite"
 

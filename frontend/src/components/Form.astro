@@ -1,0 +1,75 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import Button from "@/components/Button.astro";
+import If from "./tera/If.astro";
+import { variable } from "@/lib/tera";
+import Else from "./tera/Else.astro";
+import { Icon } from "astro-icon/components";
+
+export interface Props extends HTMLAttributes<"form"> {
+    method?: string;
+    class?: string;
+    submitWord?: string;
+    showCancel?: boolean;
+    cancelWord?: string;
+    noTemplate?: boolean;
+    successMessage?: string;
+    errorMessage?: string;
+    formObj?: string;
+}
+
+const {
+    class: className,
+    showCancel = false,
+    cancelWord = "Cancel",
+    submitWord = "Submit",
+    method = "post",
+    noTemplate = false,
+    formObj = "form",
+    successMessage = "Your Changes Were Saved Successfully",
+    errorMessage = "Please Check Your Inputs And Try Again",
+    action = "",
+    ...rest
+} = Astro.props;
+
+const baseClass = "flex flex-col gap-4 max-w-screen-sm min-w-min";
+
+const status = `${formObj}.status`;
+const alertClass =
+    "flex align-middle gap-2 p-2 rounded-xl text-white border-solid border-2 data-[status=success]:bg-green-600 data-[status=success]:border-green-700 data-[status=error]:bg-red-500 data-[status=error]:border-red-600";
+---
+
+<form action={action} method={method} class:list={[baseClass, className ?? ""]} {...rest}>
+    {
+        !noTemplate && (
+            <If debugEval={true} expression={`${status} != "none"`}>
+                <div class={alertClass} data-status={variable(status)}>
+                    <If expression={`${status} == "success"`}>
+                        <Icon class="my-auto" name="tabler:check" size={20} />
+                        <span class="my-auto">{successMessage}</span>
+                        <Else slot="else">
+                            <Icon class="my-auto" name="tabler:x" size={20} />
+                            <span class="my-auto">{errorMessage}</span>
+                        </Else>
+                    </If>
+                </div>
+            </If>
+        )
+    }
+    <slot />
+    <slot name="hr">
+        <hr class="border-t border-background-200" />
+    </slot>
+    <slot name="submit">
+        <div class="flex flex-row gap-2">
+            <Button loadOnClick class="w-fit px-4" as="button" type="submit">{submitWord}</Button>
+            {
+                showCancel && (
+                    <Button color="secondary" class="w-fit px-4" as="button" type="reset">
+                        {cancelWord}
+                    </Button>
+                )
+            }
+        </div>
+    </slot>
+</form>

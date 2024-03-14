@@ -3,6 +3,9 @@ export default {
     content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
     theme: {
         extend: {
+            gridTemplateColumns: {
+                settings: "0.5fr 1fr"
+            },
             accentColor: "var(--accent-500)",
             colors: {
                 transparent: "transparent",
