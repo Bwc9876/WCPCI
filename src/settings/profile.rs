@@ -21,11 +21,7 @@ impl TemplatedForm for ProfileFormTemplate<'_> {
             ("bio".to_string(), self.user.bio.clone()),
             (
                 "display_name".to_string(),
-                self.user
-                    .display_name
-                    .as_ref()
-                    .unwrap_or(&self.user.default_display_name)
-                    .clone(),
+                self.user.display_name.as_deref().unwrap_or("").to_string(),
             ),
         ])
     }
@@ -57,12 +53,8 @@ pub async fn profile_post(
     let mut user = user.clone();
     if let Some(ref value) = form.value {
         let name = value.display_name.trim();
-        let display_name = if name.is_empty() {
-            &user.default_display_name
-        } else {
-            name
-        };
-        user.display_name = Some(display_name.to_string());
+        let display_name = if name.is_empty() { None } else { Some(name) };
+        user.display_name = display_name.map(|s| s.to_string());
         user.bio = value.bio.to_string();
         let res = sqlx::query!(
             "UPDATE user SET bio = ?, display_name = ? WHERE id = ?",
