@@ -11,5 +11,5 @@ export default defineConfig({
     },
     prefetch: false,
     compressHTML: false,
-    integrations: [tailwind(), icon()]
+    integrations: [tailwind({ nesting: true }), icon()]
 });

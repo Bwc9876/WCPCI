@@ -1,0 +1,13 @@
+---
+import For from "@/components/tera/For.astro";
+
+export type Props = { formObj?: string; listName: string };
+
+const { formObj = "form", listName } = Astro.props;
+
+const listExpr = `range(end=len_of_form_data_list(list="${listName}", data=${formObj}.fields))`;
+---
+
+<For forceHide itemName="i" sourceList={listExpr}>
+    <slot />
+</For>

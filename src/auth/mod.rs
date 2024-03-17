@@ -10,7 +10,7 @@ use rocket_oauth2::{OAuth2, TokenResponse};
 
 use crate::{
     context_with_base,
-    db::{DbConnection, DbPool},
+    db::{DbConnection, DbPoolConnection},
 };
 
 use self::{github::GitHubLogin, google::GoogleLogin, sessions::Session, users::User};
@@ -18,6 +18,7 @@ use self::{github::GitHubLogin, google::GoogleLogin, sessions::Session, users::U
 mod github;
 mod google;
 
+pub mod csrf;
 pub mod sessions;
 pub mod users;
 
@@ -115,6 +116,7 @@ pub fn stage() -> AdHoc {
         let rocket = rocket
             .attach(OAuth2::<GitHubLogin>::fairing("github"))
             .attach(OAuth2::<GoogleLogin>::fairing("google"))
+            .attach(csrf::stage())
             .register("/", catchers![unauthorized])
             .mount(
                 "/auth",
@@ -145,7 +147,7 @@ trait CallbackHandler {
 
     async fn handle_callback(
         &self,
-        db: &mut DbPool,
+        db: &mut DbPoolConnection,
         cookies: &CookieJar<'_>,
     ) -> rocket::response::Redirect {
         match self.get_request_client().send().await {

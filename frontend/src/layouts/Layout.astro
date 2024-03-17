@@ -8,14 +8,17 @@ import Else from "@/components/tera/Else.astro";
 import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Tile from "@/components/Tile.astro";
+import Button from "@/components/Button.astro";
 
 export interface Props {
     title: string;
     animate?: boolean;
     class?: string;
+    makeTile?: boolean;
+    noGrow?: boolean;
 }
 
-const { title, class: className, animate = true } = Astro.props;
+const { title, class: className, makeTile = false, animate = true, noGrow = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -25,20 +28,23 @@ const { title, class: className, animate = true } = Astro.props;
         <meta name="description" content="Astro description" />
         <meta name="viewport" content="width=device-width" />
         <meta name="generator" content=`${Astro.generator} & Tera` />
+        <link rel="icon" href="/favicon.ico" />
         <title>{title}</title>
         <ViewTransitions />
     </head>
     <body
-        class="container mx-auto flex min-h-screen flex-col justify-center bg-background px-2 text-text md:px-5"
+        class:list={[
+            noGrow ? "h-screen max-h-screen overflow-hidden" : "min-h-screen",
+            "container mx-auto flex flex-col justify-stretch bg-background px-2 text-text md:px-5"
+        ]}
     >
         <header>
             <Tile as="nav" class="my-4 flex justify-center gap-3">
-                <Link href="/" class="me-4 flex flex-row gap-2">
+                <Link href="/" class="flex flex-row gap-2 sm:me-4">
                     <Icon class="my-auto" size={30} name="tabler:trophy-filled" />
-                    <span class="my-auto">WCPC</span>
+                    <span class="my-auto hidden sm:inline">WCPC</span>
                 </Link>
-                <Link color="white" class="my-auto" href="/contests">Contests</Link>
-                <Link color="white" class="my-auto" href="/about">About</Link>
+                <Link color="white" class="my-auto" href="/problems">Problems</Link>
                 <span class="flex-grow"></span>
                 <If debugEval={true} expression="logged_in">
                     <Link
@@ -65,19 +71,26 @@ const { title, class: className, animate = true } = Astro.props;
                         />
                     </Link>
                     <Else slot="else">
-                        <Link
+                        <Button
+                            as="a"
                             href="/auth/login"
-                            class="flex gap-1 rounded-full bg-secondary p-1 px-3"
+                            color="primary"
+                            icon="tabler:login-2"
+                            class="my-auto"
+                            size="lg">Login / Sign-Up</Button
                         >
-                            <Icon class="text-accent" size={30} name="tabler:login-2" />
-                            Login / Sign-Up
-                        </Link>
                     </Else>
                 </If>
             </Tile>
         </header>
         <main
-            class:list={["grow", className ?? ""]}
+            id="main"
+            class:list={[
+                "grow",
+                noGrow ? "overflow-y-hidden" : "",
+                makeTile ? "flex flex-col gap-2 rounded-2xl bg-background-100 p-4" : "",
+                className ?? ""
+            ]}
             transition:animate={animate ? "slide" : "none"}
             transition:name="main"
         >
@@ -88,7 +101,7 @@ const { title, class: className, animate = true } = Astro.props;
                 isExternal
                 class="flex flex-row gap-1"
                 href="https://github.com/Bwc9876/WCPCI"
-                color="white"
+                color="accent"
             >
                 <Icon name="tabler:brand-github" size={25} />
                 <span class="my-auto">GitHub</span>

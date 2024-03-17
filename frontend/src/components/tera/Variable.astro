@@ -1,18 +1,22 @@
 ---
 import { variable } from "@/lib/tera";
+import { loremIpsum } from "lorem-ipsum";
 
 export interface Props {
     expression: string;
     debugEval?: string;
+    debugLorem?: number;
 }
 
-const { debugEval, expression } = Astro.props as Props;
+const { debugEval, debugLorem, expression } = Astro.props as Props;
 ---
 
 {
     import.meta.env.PROD ? (
         <Fragment set:html={variable(expression)} />
     ) : (
-        <Fragment set:html={debugEval ?? expression} />
+        <Fragment
+            set:html={debugEval ?? (debugLorem && loremIpsum({ count: debugLorem })) ?? expression}
+        />
     )
 }

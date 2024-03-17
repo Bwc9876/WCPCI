@@ -1,0 +1,103 @@
+---
+import Field from "@/components/Field.astro";
+import Form from "@/components/Form.astro";
+import type { ComponentProps } from "astro/types";
+import FormFor from "../tera/FormFor.astro";
+import TestCaseForm from "./TestCaseForm.astro";
+import Button from "../Button.astro";
+import { variable } from "@/lib/tera";
+
+export type Props = Omit<ComponentProps<typeof Form>, "slot">;
+
+const { ...props } = Astro.props;
+---
+
+<TestCaseForm class="!hidden" id="test-case-form-template" noTemplate />
+<Form class="!w-full !max-w-full" {...props}>
+    <div class="relative flex w-full flex-col gap-2 lg:flex-row">
+        <div class="flex grow flex-col lg:w-2/6">
+            <Field required name="name" maxlength={32} type="text" help="Max length: 32" />
+            <Field
+                name="description"
+                type="textarea"
+                rows={20}
+                help="Markdown formatting is supported"
+            />
+            <Field
+                required
+                name="cpu_time"
+                label="CPU Time"
+                type="number"
+                min={1}
+                max={100}
+                help="Max wall time in seconds"
+            />
+        </div>
+        <!-- <hr class="border-t border-background-200 lg:hidden" /> -->
+        <div class="flex flex-col lg:w-4/6 lg:px-8">
+            <h2 class="mb-2 text-lg lg:mb-0">Test Cases</h2>
+            <div class="flex flex-col gap-2">
+                <div
+                    id="test-case-clone-target"
+                    class="flex flex-col gap-2 overflow-y-scroll lg:h-[60vh] lg:pe-2"
+                >
+                    <FormFor listName="test_cases">
+                        <TestCaseForm id={`test-case-form-${variable("i+1", "1")}`} />
+                    </FormFor>
+                </div>
+                <Button
+                    id="add-test-case-button"
+                    class="lg:me-2"
+                    color="secondary"
+                    as="button"
+                    type="button">Add Test Case</Button
+                >
+            </div>
+        </div>
+    </div>
+</Form>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        const btn = document.querySelector("#add-test-case-button");
+
+        const addRemoveListener = (btn: Element) => {
+            btn.addEventListener(
+                "click",
+                (e) => {
+                    const target = e.target as HTMLElement;
+                    const form = target.closest(".test-case-form")!;
+                    form.remove();
+                },
+                { once: true }
+            );
+        };
+
+        btn!.addEventListener("click", () => {
+            const target = document.querySelector("#test-case-clone-target");
+            const highestNumber = Math.max(
+                0,
+                ...Array.from(target!.children).map((el) => parseInt(el.id.split("-").pop()!))
+            );
+            const form = document.querySelector("#test-case-form-template");
+            const clone = form!.cloneNode(true);
+            const cloneElem = clone as HTMLElement;
+            cloneElem.classList.remove("!hidden");
+            cloneElem.id = `test-case-form-${highestNumber + 1}`;
+            cloneElem.setAttribute("open", "true");
+            cloneElem.innerHTML = cloneElem.innerHTML.replaceAll(/##i##/g, `${highestNumber + 1}`);
+            addRemoveListener(cloneElem.querySelector(".remove-test-case-button")!);
+            target!.appendChild(clone);
+            for (const form of document.querySelectorAll(
+                `.test-case-form:not(#${cloneElem.id}):not(#test-case-form-template)`
+            )) {
+                form.removeAttribute("open");
+            }
+            target!.scrollTop = target!.scrollHeight;
+        });
+
+        const removeButtons = document.querySelectorAll(".remove-test-case-button");
+
+        removeButtons.forEach(addRemoveListener);
+    });
+</script>

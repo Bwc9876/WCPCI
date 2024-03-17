@@ -1,0 +1,46 @@
+---
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
+
+export type Status = "idle" | "loading" | "success" | "error" | "empty" | string;
+
+export interface Props extends HTMLAttributes<"span"> {
+    class?: string;
+    size?: number;
+    status?: Status;
+}
+
+const { size = 25, class: className, status = "idle", ...rest } = Astro.props;
+
+const baseClass = ["hidden"].join(" ");
+
+const idleLoadClass = [
+    "group-[[data-status=idle]]:inline",
+    "group-[[data-status=idle]]:text-gray-500",
+    "group-[[data-status=loading]]:inline",
+    "group-[[data-status=loading]]:text-accent-600",
+    "group-[[data-status=loading]]:animate-spin"
+].join(" ");
+
+const successClass = [
+    "group-[[data-status=success]]:inline",
+    "group-[[data-status=success]]:text-green-600"
+].join(" ");
+
+const errorClass = [
+    "group-[[data-status=error]]:inline",
+    "group-[[data-status=error]]:text-red-600"
+].join(" ");
+
+const emptyClass = [
+    "group-[[data-status=empty]]:inline",
+    "group-[[data-status=empty]]:text-gray-500"
+].join(" ");
+---
+
+<span class:list={["group", className ?? ""]} data-status={status} {...rest}>
+    <Icon size={size} name="tabler:circle-dashed" class:list={[baseClass, idleLoadClass]} />
+    <Icon size={size} name="tabler:circle-check" class:list={[baseClass, successClass]} />
+    <Icon size={size} name="tabler:circle-x" class:list={[baseClass, errorClass]} />
+    <Icon size={size} name="tabler:circle-dot" class:list={[baseClass, emptyClass]} />
+</span>

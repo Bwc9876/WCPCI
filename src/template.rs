@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use markdown::{CompileOptions, Constructs, Options, ParseOptions};
 use rocket::{fairing::AdHoc, form::Context, http::Status};
 use rocket_dyn_templates::Template;
 use tera::Value;
@@ -22,15 +23,19 @@ pub trait TemplatedForm {
 pub struct FormTemplateObject {
     data: HashMap<String, String>,
     errors: HashMap<String, Vec<String>>,
-    status: FormStatus,
+    fields: Vec<String>,
+    pub status: FormStatus,
 }
 
 impl FormTemplateObject {
     pub fn get(mut form: impl TemplatedForm) -> Self {
+        let defaults = form.get_defaults();
+        let keys = defaults.keys().cloned().collect::<Vec<_>>();
         FormTemplateObject {
-            data: form.get_defaults(),
+            data: defaults,
             errors: HashMap::new(),
             status: FormStatus::None,
+            fields: keys,
         }
     }
 
@@ -44,10 +49,12 @@ impl FormTemplateObject {
             400 | 413 => FormStatus::Error,
             _ => FormStatus::None,
         };
+        let fields = data.keys().cloned().collect::<Vec<_>>();
         FormTemplateObject {
             data,
             errors,
             status,
+            fields,
         }
     }
 
@@ -98,6 +105,74 @@ fn gravatar_function(args: FunctionArgs) -> Result<Value, tera::Error> {
     Ok(tera::Value::String(gravatar_url(email, size)))
 }
 
+fn fake_attr(args: FunctionArgs) -> Result<Value, tera::Error> {
+    let attr = args.get("attr").and_then(|o| o.as_str()).unwrap_or("");
+    let val = args.get("val").and_then(|o| o.as_str()).unwrap_or("");
+    Ok(tera::Value::String(format!("\"{attr}=\"{val}")))
+}
+
+fn render_markdown(args: FunctionArgs) -> Result<Value, tera::Error> {
+    let text = args
+        .get("md")
+        .and_then(|o| o.as_str())
+        .ok_or(tera::Error::msg("md not passed!"))?;
+    let options = Options {
+        parse: ParseOptions {
+            constructs: Constructs {
+                math_text: true,
+                math_flow: true,
+                ..Constructs::gfm()
+            },
+            ..ParseOptions::gfm()
+        },
+        compile: CompileOptions::gfm(),
+    };
+
+    let rendered = markdown::to_html_with_options(text, &options)
+        .map_err(|e| tera::Error::msg(format!("Failed to render markdown: {:?}", e)))?;
+    Ok(tera::Value::String(rendered))
+}
+
+fn len_of_form_data_list(args: FunctionArgs) -> Result<Value, tera::Error> {
+    let data = args
+        .get("data")
+        .and_then(|o| o.as_array())
+        .ok_or(tera::Error::msg("data not passed!"))
+        .and_then(|v| {
+            v.iter()
+                .map(|s| {
+                    s.as_str()
+                        .ok_or(tera::Error::msg("data must be list of str!"))
+                })
+                .collect::<Result<Vec<&str>, _>>()
+        })?;
+    let list = args
+        .get("list")
+        .and_then(|s| s.as_str())
+        .ok_or(tera::Error::msg("list not passed!"))?;
+
+    Ok(tera::Value::Number(
+        data.into_iter()
+            .filter_map(|name| {
+                if name.starts_with(&format!("{list}[")) {
+                    Some(
+                        name[list.len() + 1..]
+                            .split(']')
+                            .next()
+                            .and_then(|s| s.parse().ok())
+                            .map(|g: i64| g + 1)
+                            .unwrap_or(0),
+                    )
+                } else {
+                    None
+                }
+            })
+            .max()
+            .unwrap_or(0)
+            .into(),
+    ))
+}
+
 #[macro_export]
 macro_rules! context_with_base {
     ($usr:expr, $($key:ident $(: $value:expr)?),*$(,)?) => {
@@ -127,6 +202,10 @@ pub fn stage() -> AdHoc {
         rocket.attach(Template::custom(|e| {
             e.tera.register_function("in_debug", in_debug);
             e.tera.register_function("gravatar", gravatar_function);
+            e.tera.register_function("fake_attr", fake_attr);
+            e.tera.register_function("render_markdown", render_markdown);
+            e.tera
+                .register_function("len_of_form_data_list", len_of_form_data_list);
         }))
     })
 }

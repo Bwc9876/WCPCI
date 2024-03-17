@@ -1,0 +1,57 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import For from "@/components/tera/For.astro";
+import CaseIndicator from "./CaseIndicator.astro";
+import { tag, variable } from "@/lib/tera";
+import If from "./tera/If.astro";
+import Variable from "./tera/Variable.astro";
+import { Icon } from "astro-icon/components";
+import ElseIf from "./tera/ElseIf.astro";
+
+export interface Props extends HTMLAttributes<"div"> {
+    objName: string;
+    casesName: string;
+    size?: number;
+}
+
+const { class: className, objName, casesName, size = 30, ...rest } = Astro.props;
+
+const listExpr = `range(end=${objName}.total_cases | default(value=${casesName}))`;
+const statusExprExists = `${tag(`if ${objName}.error and i == ${objName}.amount_run`)}error${tag(`elif ${objName}.error and i > ${objName}.amount_run or not ${objName}.error and ${objName}.amount_run == 0`)}empty${tag("else")}success${tag("endif")}`;
+const statusExpr = `${tag(`if ${objName}`)}${statusExprExists}${tag("else")}empty${tag("endif")}`;
+---
+
+<div class:list={["flex flex-row gap-2 rounded-2xl", className ?? ""]} {...rest}>
+    <div class="my-auto flex flex-row flex-wrap gap-2">
+        <For sourceList={listExpr} itemName="i">
+            <CaseIndicator size={size} data-case-number={variable("i")} status={statusExpr} />
+        </For>
+    </div>
+    <span class="grow"></span>
+    <span
+        id="runs-msg-wrapper"
+        data-status={`${tag(`if ${objName}.error`)}error${tag(`elif ${objName}`)}success${tag("else")}empty${tag("endif")}`}
+        class:list={[
+            "group my-auto flex-row gap-1 text-lg font-bold",
+            "hidden data-[status=error]:flex data-[status=loading]:flex data-[status=success]:flex data-[status=loading]:animate-pulse data-[status=error]:text-red-500 data-[status=success]:text-green-500"
+        ]}
+    >
+        <span id="runs-msg" class="my-auto">
+            <If expression={`${objName}.error`}>
+                <Variable expression={`${objName}.error`} />
+                <ElseIf expression={`${objName}`}> Passed! </ElseIf>
+            </If>
+        </span>
+        <Icon name="tabler:x" class="my-auto hidden group-data-[status=error]:inline" size={25} />
+        <Icon
+            name="tabler:check"
+            class="my-auto hidden group-data-[status=success]:inline"
+            size={25}
+        />
+        <Icon
+            name="tabler:hourglass"
+            class="my-auto hidden group-data-[status=loading]:inline"
+            size={25}
+        />
+    </span>
+</div>

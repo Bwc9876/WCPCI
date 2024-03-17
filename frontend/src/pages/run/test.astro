@@ -1,0 +1,29 @@
+---
+import Field from "@/components/Field.astro";
+import Form from "@/components/Form.astro";
+import Layout from "@/layouts/Layout.astro";
+---
+
+<Layout makeTile title="Test Run">
+    <Form buttonLoadOnClick={false} class="w-100" noTemplate>
+        <Field rows={20} type="textarea" name="program" noTemplate />
+    </Form>
+    <p id="response" class="text-3xl">Response Here</p>
+</Layout>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        const form = document.querySelector("form");
+        form!.addEventListener("submit", (e) => {
+            e.preventDefault();
+            fetch(window.location.href, {
+                method: "POST",
+                body: new FormData(form!)
+            })
+                .then((res) => res.text())
+                .then((res) => {
+                    document.querySelector("#response")!.textContent = res;
+                });
+        });
+    });
+</script>

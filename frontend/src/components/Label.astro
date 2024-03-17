@@ -6,21 +6,27 @@ export interface Props {
     label: string;
     help?: string;
     isCheckbox?: boolean;
+    isRequired?: boolean;
     class?: string;
     errorVar?: string;
 }
 
-const { label, help, errorVar, isCheckbox, class: className } = Astro.props;
+const { label, help, errorVar, isCheckbox, isRequired, class: className } = Astro.props;
 ---
 
 <label class:list={["group flex flex-col gap-1", className ?? ""]}>
     <span class:list={["flex", isCheckbox ? "w-fit flex-row-reverse gap-1" : "flex-col"]}>
-        <span class="text-lg">{label}</span>
+        <span
+            class:list={[
+                "text-lg",
+                isRequired ? "after:ml-0.5 after:text-red-500 after:content-['*']" : ""
+            ]}>{label}</span
+        >
         <slot />
     </span>
     {
         errorVar && (
-            <ul class="hidden text-sm text-red-500 group-has-[:invalid]:block group-has-[[data-invalid=true]]:block">
+            <ul class="hidden text-sm text-red-500 group-has-[:user-invalid]:block group-has-[[data-invalid=true]]:block">
                 <For sourceList={errorVar} itemName="error">
                     <li class="capitalize">
                         <Variable expression="error" />

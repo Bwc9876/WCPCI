@@ -1,0 +1,11 @@
+---
+import type { Polymorphic } from "astro/types";
+
+export type Props<T extends "td" | "th"> = Polymorphic<{ as: T }>;
+
+const { as: Component = "td", class: className, ...rest } = Astro.props;
+---
+
+<Component class:list={["p-3 text-left first:font-bold", className ?? ""]} {...rest}
+    ><slot /></Component
+>

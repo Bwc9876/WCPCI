@@ -5,8 +5,9 @@ use rocket_dyn_templates::Template;
 extern crate rocket_dyn_templates;
 
 mod auth;
-mod csrf;
 mod db;
+mod problems;
+mod run;
 mod serve;
 mod settings;
 #[macro_use]
@@ -34,6 +35,6 @@ fn rocket() -> _ {
         .attach(template::stage())
         .attach(serve::stage())
         .attach(auth::stage())
-        .attach(csrf::stage())
         .attach(settings::stage())
+        .attach(problems::stage())
 }

@@ -8,7 +8,7 @@ use rocket::{
 };
 use serde::Serialize;
 
-use crate::db::{DbConnection, DbPool};
+use crate::db::{DbConnection, DbPoolConnection};
 
 use super::sessions::Session;
 
@@ -42,7 +42,7 @@ impl User {
     }
 
     pub async fn login_oauth<'a>(
-        db: &mut DbPool,
+        db: &mut DbPoolConnection,
         cookies: &'a CookieJar<'a>,
         data: impl Into<User>,
     ) -> Result<()> {
@@ -68,7 +68,7 @@ impl User {
         Ok(())
     }
 
-    pub async fn write_to_db(self, db: &mut DbPool) -> Result<User> {
+    pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<User> {
         let new = sqlx::query_as!(
             User,
             "INSERT INTO user (email, default_display_name) VALUES (?, ?) RETURNING *",
@@ -81,7 +81,7 @@ impl User {
         Ok(new)
     }
 
-    async fn get_by_email(db: &mut DbPool, username: &str) -> Result<Option<User>> {
+    async fn get_by_email(db: &mut DbPoolConnection, username: &str) -> Result<Option<User>> {
         let user: Option<User> =
             sqlx::query_as!(User, "SELECT * FROM user WHERE email = ?", username)
                 .fetch_optional(&mut **db)

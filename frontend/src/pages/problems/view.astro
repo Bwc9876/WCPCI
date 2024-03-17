@@ -1,0 +1,374 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Button from "@/components/Button.astro";
+import CaseIndicator from "@/components/CaseIndicator.astro";
+import Field from "@/components/Field.astro";
+import Link from "@/components/Link.astro";
+import ProblemRun from "@/components/ProblemRun.astro";
+import Tile from "@/components/Tile.astro";
+import Debug from "@/components/tera/Debug.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Layout from "@/layouts/Layout.astro";
+import { variable } from "@/lib/tera";
+import { Icon } from "astro-icon/components";
+---
+
+<Layout noGrow class="flex flex-col justify-stretch gap-4" title=`${variable("problem.name")}`>
+    <Tile>
+        <BreadCrumb
+            entries={[
+                ["Problems", "/problems"],
+                [variable("problem.name"), "/problems/" + variable("problem.id", "view")]
+            ]}
+        />
+    </Tile>
+    <Tile class="flex flex-row gap-4">
+        <span class="my-auto text-xl">Progress:</span>
+        <ProblemRun casesName="case_count" class="grow" objName="last_run" />
+        <div class="flex flex-row gap-1">
+            <Button
+                as="button"
+                disabled
+                data-problem-id={variable("problem.id")}
+                class="my-auto w-fit"
+                id="submit"
+                color="primary"
+                icon="tabler:star">Submit!</Button
+            >
+            <Button
+                size="lg"
+                as="a"
+                href=`/problems/${variable("problem.id")}/runs`
+                class="my-auto w-fit"
+                justIcon
+                icon="tabler:clock"
+                color="secondary"
+            />
+        </div>
+    </Tile>
+    <div class="flex grow flex-row gap-4 overflow-hidden">
+        <Tile class="flex w-2/5 flex-col gap-2 overflow-hidden">
+            <h1 class="text-2xl"><Variable expression="problem.name" /></h1>
+            <small class="text-gray-500">CPU Time: <Variable expression="problem.cpu_time" /></small
+            >
+            <Debug
+                >{
+                    (
+                        <Link
+                            href={
+                                import.meta.env.DEV
+                                    ? "/problems/edit"
+                                    : `/problems/${variable("problem.id")}/edit`
+                            }
+                        >
+                            Edit
+                        </Link>
+                    )
+                }</Debug
+            >
+            <div class="overflow-y-auto">
+                <div class="overflow-y-scroll pe-2" id="rendered-md">
+                    <Variable
+                        expression="render_markdown(md=problem.description) | safe"
+                        debugLorem={50}
+                    />
+                </div>
+            </div>
+        </Tile>
+        <div class="flex w-3/5 grow flex-col gap-4">
+            <Tile id="editor" class="align-center flex h-2/3 justify-center !p-0">
+                <Icon class="my-auto animate-pulse text-blue-300" name="tabler:pencil" size={60} />
+            </Tile>
+            <Tile class="align-center flex h-1/3 w-full flex-row gap-4">
+                <div class="flex h-full grow flex-col gap-2">
+                    <Field
+                        spellcheck="false"
+                        data-gramm="false"
+                        data-gramm_editor="false"
+                        data-enable-grammarly="false"
+                        rows={8}
+                        class="h-full"
+                        type="textarea"
+                        noTemplate
+                        id="debug-input"
+                        label="Input"
+                    />
+                </div>
+                <div class="flex basis-1/6 flex-col justify-center gap-2 align-middle">
+                    <CaseIndicator
+                        class="mx-auto -mb-8 mt-auto"
+                        id="test-indicator"
+                        status="idle"
+                        size={40}
+                    />
+                    <Button
+                        class="mx-auto mb-1 mt-auto w-fit"
+                        as="button"
+                        disabled
+                        id="run-debug"
+                        color="secondary"
+                        icon="tabler:bug">Test</Button
+                    >
+                </div>
+                <div class="flex h-full grow flex-col gap-2">
+                    <Field
+                        id="debug-output"
+                        rows={8}
+                        type="textarea"
+                        noTemplate
+                        readonly
+                        label="Output"
+                    />
+                </div>
+            </Tile>
+        </div>
+    </div>
+</Layout>
+
+<style is:global>
+    #rendered-md > * {
+        @apply !my-1 !py-2;
+    }
+
+    #rendered-md a {
+        @apply text-accent underline hover:text-accent-600;
+    }
+
+    #rendered-md h1 {
+        @apply text-3xl font-bold;
+    }
+
+    #rendered-md h2 {
+        @apply text-2xl font-bold;
+    }
+
+    #rendered-md h3 {
+        @apply text-xl font-bold;
+    }
+
+    #rendered-md h4 {
+        @apply text-lg font-bold;
+    }
+
+    #rendered-md h5 {
+        @apply text-base font-bold;
+    }
+
+    #rendered-md h6 {
+        @apply text-sm font-bold;
+    }
+
+    #rendered-md p {
+        @apply text-base;
+    }
+
+    #rendered-md ul {
+        @apply list-inside list-disc;
+    }
+
+    #rendered-md ol {
+        @apply list-inside list-decimal;
+    }
+
+    #rendered-md blockquote {
+        @apply border-l-4 border-l-accent pl-2;
+    }
+
+    :not(pre) > code:not(.language-math) {
+        @apply rounded bg-secondary-50 p-1 font-mono;
+    }
+
+    pre code.hljs {
+        @apply rounded-lg !bg-secondary-50;
+    }
+
+    pre code:is([class*=" language-"], [class^="language-"]):not(.language-math):not(.hljs) {
+        @apply opacity-0;
+    }
+</style>
+
+<script>
+    import loader from "@monaco-editor/loader";
+
+    import "katex/dist/katex.css";
+    import katex from "katex";
+
+    import "highlight.js/styles/default.css";
+    import "highlight.js/styles/an-old-hope.css";
+    import hljs from "highlight.js/lib/core";
+    import javascript from "highlight.js/lib/languages/javascript";
+    import python from "highlight.js/lib/languages/python";
+
+    import type { WebSocketRequest, WebSocketMessage, JobState, CaseStatus } from "@/lib/ws";
+    import type { Status } from "@/components/CaseIndicator.astro";
+
+    const stateIsComplete = (state: JobState) => {
+        switch (state.type) {
+            case "judging":
+                return !state.cases.some((c) => c.status === "pending" || c.status === "running");
+            case "testing":
+                return state.status.status !== "pending" && state.status.status !== "running";
+        }
+    };
+
+    const typeToStatus: Record<CaseStatus["status"], Status> = {
+        failed: "error",
+        passed: "success",
+        notRun: "empty",
+        pending: "idle",
+        running: "loading"
+    };
+
+    const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
+    const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
+    const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
+    const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
+    const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
+    const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
+    const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
+
+    const toggleButtons = (disabled: boolean) => {
+        submitButton.disabled = disabled;
+        runDebugButton.disabled = disabled;
+    };
+
+    const problemId = submitButton.dataset.problemId;
+
+    const url = `ws://localhost:8000/run/ws/${problemId}`;
+
+    console.debug("Connecting to WebSocket at", url);
+
+    const ws = new WebSocket(url);
+
+    ws.onopen = () => {
+        console.debug("WebSocket connection established");
+        toggleButtons(false);
+    };
+
+    ws.onmessage = (event) => {
+        const message: WebSocketMessage = JSON.parse(event.data);
+        console.debug("Received message", message);
+
+        switch (message.type) {
+            case "stateUpdate":
+                const state = message.state as JobState;
+                const complete = stateIsComplete(state);
+                toggleButtons(!complete);
+                switch (state.type) {
+                    case "judging":
+                        for (const [i, c] of state.cases.entries()) {
+                            document
+                                .querySelector(`[data-case-number='${i}']`)!
+                                .setAttribute("data-status", typeToStatus[c.status]);
+                        }
+                        if (complete) {
+                            const firstWithErr = state.cases.find((c) => c.status === "failed");
+                            if (firstWithErr && firstWithErr.status === "failed") {
+                                runMessageWrapper.setAttribute("data-status", "error");
+                                runMessage.innerText = firstWithErr.content;
+                            } else {
+                                runMessageWrapper.setAttribute("data-status", "success");
+                                runMessage.innerText = "Passed!";
+                            }
+                        } else {
+                            runMessageWrapper.setAttribute("data-status", "loading");
+                            runMessage.innerText = "Running...";
+                        }
+                        break;
+                    case "testing":
+                        debugCaseIndicator.setAttribute(
+                            "data-status",
+                            typeToStatus[state.status.status]
+                        );
+                        switch (state.status.status) {
+                            case "passed":
+                                testOutput.value = state.status.content ?? "";
+                                break;
+                            case "failed":
+                                testOutput.value = state.status.content ?? "";
+                                break;
+                        }
+                }
+                break;
+            case "invalid":
+                console.error("Invalid message sent", message);
+                break;
+            case "runDenied":
+                toggleButtons(true);
+                break;
+            case "runStarted":
+                toggleButtons(true);
+                break;
+        }
+    };
+
+    ws.onclose = () => {
+        console.debug("WebSocket connection closed");
+        toggleButtons(true);
+    };
+
+    ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+    };
+
+    declare global {
+        interface Window {
+            monaco: {
+                getValue: () => string;
+            };
+        }
+    }
+
+    runDebugButton.onclick = () => {
+        if (window.monaco) {
+            const req: WebSocketRequest = {
+                type: "test",
+                input: testInput.value,
+                program: window.monaco.getValue()
+            };
+            console.debug("Sending request", req);
+            ws.send(JSON.stringify(req));
+        }
+    };
+
+    submitButton.onclick = () => {
+        const req: WebSocketRequest = {
+            type: "judge",
+            program: window.monaco.getValue()
+        };
+        console.debug("Sending request", req);
+        ws.send(JSON.stringify(req));
+    };
+
+    // Monaco Initialization
+    const editorElem = document.getElementById("editor");
+    loader.init().then((monaco) => {
+        window.monaco = monaco.editor.create(editorElem as HTMLElement, {
+            value: '\nprint("Answer")\n',
+            theme: "vs-dark",
+            language: "python",
+            automaticLayout: true,
+            minimap: { enabled: false },
+            extraEditorClassName: "h-full w-full"
+        });
+    });
+
+    // Katex Initialization
+    document.querySelectorAll("#rendered-md code.math-inline").forEach((block) => {
+        katex.render(block.textContent ?? "", block as HTMLElement, { throwOnError: true });
+    });
+    document.querySelectorAll("#rendered-md pre code.math-display").forEach((block) => {
+        katex.render(block.textContent ?? "", block as HTMLElement, {
+            throwOnError: true,
+            displayMode: true
+        });
+    });
+
+    // Highlight.js Initialization
+    hljs.registerLanguage("javascript", javascript);
+    hljs.registerLanguage("python", python);
+
+    document.querySelectorAll("#rendered-md pre code:not(.language-math)").forEach((block) => {
+        hljs.highlightElement(block as HTMLElement);
+    });
+</script>

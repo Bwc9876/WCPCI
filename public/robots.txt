@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /settings/
+Disallow: /auth/login/github/
+Disallow: /auth/login/google/
+Disallow: /auth/logout/

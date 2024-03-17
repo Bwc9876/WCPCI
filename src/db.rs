@@ -8,10 +8,11 @@ use sqlx::Sqlite;
 
 #[derive(R_Database)]
 #[database("sqlite_db")]
-pub struct Database(sqlx::SqlitePool);
+pub struct Database(pub sqlx::SqlitePool);
 
+pub type DbPool = sqlx::SqlitePool;
 pub type DbConnection = Connection<Database>;
-pub type DbPool = sqlx::pool::PoolConnection<Sqlite>;
+pub type DbPoolConnection = sqlx::pool::PoolConnection<Sqlite>;
 
 async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
     match Database::fetch(&rocket) {
@@ -31,5 +32,6 @@ pub fn stage() -> AdHoc {
         rocket
             .attach(Database::init())
             .attach(AdHoc::try_on_ignite("SQLx Migrations", run_migrations))
+            .attach(super::run::stage()) // Needs to be here to ensure the database is initialized
     })
 }

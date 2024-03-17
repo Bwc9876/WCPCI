@@ -13,18 +13,18 @@ const { title, ...rest } = Astro.props;
 ---
 
 <Layout
-    class="flex h-full w-full flex-col gap-3 md:flex-row"
+    class="flex h-full w-full flex-col gap-3 lg:flex-row"
     animate={false}
     title={`Settings - ${title}`}
     {...rest}
 >
     <div class="flex basis-60 flex-col justify-between gap-3">
         <Tile
-            class="flex w-full flex-col justify-center gap-2 text-center align-middle text-2xl md:py-4"
+            class="flex flex-col justify-center gap-2 overflow-hidden text-center align-middle text-2xl lg:max-w-sm lg:py-4"
         >
-            <Avatar class="mx-auto md:w-1/2" size={150} />
-            <span>
-                <Variable expression="name" debugEval="Ben C" />
+            <Avatar class="mx-auto w-1/4 lg:w-1/2" size={150} />
+            <span class="w-100 break-words">
+                <Variable expression="name" debugEval={"Ben C"} />
             </span>
         </Tile>
         <Tile class="flex w-full flex-col justify-center gap-2 align-middle">

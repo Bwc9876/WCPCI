@@ -2,7 +2,7 @@ use anyhow::Result;
 use rand::{rngs::OsRng, RngCore};
 use rocket::time::OffsetDateTime;
 
-use crate::db::DbPool;
+use crate::db::DbPoolConnection;
 
 pub struct Session {
     pub id: i64,
@@ -30,7 +30,7 @@ impl Session {
         token.join("")
     }
 
-    pub async fn create(db: &mut DbPool, user_id: i64) -> Result<Session> {
+    pub async fn create(db: &mut DbPoolConnection, user_id: i64) -> Result<Session> {
         let token = Self::gen_token();
         let now = OffsetDateTime::now_utc();
         let expires = OffsetDateTime::from_unix_timestamp(
@@ -43,7 +43,7 @@ impl Session {
         Ok(session)
     }
 
-    pub async fn from_token(db: &mut DbPool, token: &str) -> Option<Session> {
+    pub async fn from_token(db: &mut DbPoolConnection, token: &str) -> Option<Session> {
         sqlx::query_as!(
             Session,
             "SELECT * FROM session WHERE session.token = ? AND expires_at > CURRENT_TIMESTAMP",

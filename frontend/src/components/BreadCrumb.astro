@@ -1,0 +1,27 @@
+---
+import Link from "@/components/Link.astro";
+
+export interface Props {
+    entries: [string, string][];
+    class?: string;
+}
+
+const { entries, class: className } = Astro.props;
+---
+
+<ul class:list={["flex flex-row gap-2", className ?? ""]}>
+    {
+        entries.map(([name, link], i) => (
+            <>
+                <li class="capitalize">
+                    {i === entries.length - 1 ? (
+                        <span class="m-0 text-gray-400">{name}</span>
+                    ) : (
+                        <Link href={link}>{name}</Link>
+                    )}
+                </li>
+                {i !== entries.length - 1 && <span class="m-0 text-gray-400">/</span>}
+            </>
+        ))
+    }
+</ul>

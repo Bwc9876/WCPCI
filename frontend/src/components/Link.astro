@@ -1,7 +1,7 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 
-type Color = "primary" | "secondary" | "accent" | "white" | "inherit";
+export type Color = "primary" | "secondary" | "accent" | "white" | "inherit";
 
 export interface Props extends HTMLAttributes<"a"> {
     color?: Color;

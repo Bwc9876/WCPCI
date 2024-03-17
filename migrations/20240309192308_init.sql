@@ -41,9 +41,30 @@ CREATE TABLE IF NOT EXISTS participant (
 
 CREATE TABLE IF NOT EXISTS problem (
     id INTEGER PRIMARY KEY NOT NULL,
-    contest_id INTEGER NOT NULL,
     name VARCHAR(100) NOT NULL,
-    description TEXT,
-    cpu_time INTEGER,
-    FOREIGN KEY (contest_id) REFERENCES contest(id) ON DELETE CASCADE
+    description TEXT NOT NULL,
+    cpu_time INTEGER NOT NULL
 );
+
+CREATE TABLE test_case (
+    id INTEGER PRIMARY KEY NOT NULL,
+    problem_id INTEGER NOT NULL,
+    ord INTEGER NOT NULL,
+    stdin TEXT NOT NULL,
+    expected_pattern TEXT NOT NULL,
+    use_regex BOOLEAN NOT NULL,
+    case_insensitive BOOLEAN NOT NULL,
+    FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE
+    UNIQUE (problem_id, ord)
+);
+
+CREATE TABLE judge_run (
+    id INTEGER PRIMARY KEY NOT NULL,
+    problem_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    amount_run INTEGER NOT NULL,
+    total_cases INTEGER NOT NULL,
+    error TEXT,
+    ran_at TIMESTAMP NOT NULL
+);
+

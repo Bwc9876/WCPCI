@@ -5,12 +5,13 @@ export interface Props {
     itemName: string;
     sourceList: string;
     debugEval?: boolean;
+    forceHide?: boolean;
 }
 
-const { itemName, debugEval = false, sourceList } = Astro.props as Props;
+const { itemName, debugEval = false, sourceList, forceHide } = Astro.props as Props;
 ---
 
-<Tag expression={`for ${itemName} in ${sourceList}`} />
+<Tag forceHide={forceHide} expression={`for ${itemName} in ${sourceList}`} />
 <slot />
 {import.meta.env.DEV && debugEval && <slot name="debug" />}
-<Tag expression="endfor" />
+<Tag forceHide={forceHide} expression="endfor" />

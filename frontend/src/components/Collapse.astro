@@ -1,0 +1,41 @@
+---
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
+
+export type Props = HTMLAttributes<"details">;
+
+const { class: className, ...rest } = Astro.props;
+---
+
+<details
+    class:list={[
+        "border-b-solid border-x-solid group flex flex-col rounded-xl border-x-2 border-b-2 border-x-transparent border-b-transparent !transition-none open:border-background-200",
+        className ?? ""
+    ]}
+    {...rest}
+>
+    <summary
+        class="relative z-10 flex scale-[100.5%] transform cursor-pointer flex-row gap-1 rounded-b-xl rounded-t-xl border-2 border-solid border-transparent bg-background-200 p-2 !transition-none group-open:rounded-b-none group-open:!border-transparent group-has-[:user-invalid]:border-red-500 group-has-[[data-invalid=true]]:border-red-500"
+    >
+        <Icon
+            size={20}
+            name="tabler:chevron-down"
+            class="my-auto rotate-[-90deg] transform text-accent transition-transform group-open:rotate-0"
+        />
+        <Icon
+            name="tabler:x"
+            size={20}
+            class={`hidden my-auto text-red-600 group-has-[:user-invalid]:inline group-has-[[data-invalid=true]]:inline`}
+        />
+        <span
+            class="my-auto !transition-none group-open:!text-white group-has-[:user-invalid]:text-red-500 group-has-[[data-invalid=true]]:text-red-500"
+        >
+            <slot name="summary" />
+        </span>
+        <span class="grow"></span>
+        <slot name="summary_right" />
+    </summary>
+    <div class="bg-secondary-100 p-4">
+        <slot />
+    </div>
+</details>

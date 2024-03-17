@@ -6,7 +6,7 @@ import { variable } from "@/lib/tera";
 import Else from "./tera/Else.astro";
 import { Icon } from "astro-icon/components";
 
-export interface Props extends HTMLAttributes<"form"> {
+type BaseProps = {
     method?: string;
     class?: string;
     submitWord?: string;
@@ -16,7 +16,10 @@ export interface Props extends HTMLAttributes<"form"> {
     successMessage?: string;
     errorMessage?: string;
     formObj?: string;
-}
+    buttonLoadOnClick?: boolean;
+};
+
+export type Props = HTMLAttributes<"form"> & BaseProps;
 
 const {
     class: className,
@@ -29,6 +32,7 @@ const {
     successMessage = "Your Changes Were Saved Successfully",
     errorMessage = "Please Check Your Inputs And Try Again",
     action = "",
+    buttonLoadOnClick = true,
     ...rest
 } = Astro.props;
 
@@ -42,7 +46,7 @@ const alertClass =
 <form action={action} method={method} class:list={[baseClass, className ?? ""]} {...rest}>
     {
         !noTemplate && (
-            <If debugEval={true} expression={`${status} != "none"`}>
+            <If debugEval={false} expression={`${status} != "none"`}>
                 <div class={alertClass} data-status={variable(status)}>
                     <If expression={`${status} == "success"`}>
                         <Icon class="my-auto" name="tabler:check" size={20} />
@@ -62,7 +66,12 @@ const alertClass =
     </slot>
     <slot name="submit">
         <div class="flex flex-row gap-2">
-            <Button loadOnClick class="w-fit px-4" as="button" type="submit">{submitWord}</Button>
+            <Button
+                loadOnFormSubmit={buttonLoadOnClick}
+                class="w-fit px-4"
+                as="button"
+                type="submit">{submitWord}</Button
+            >
             {
                 showCancel && (
                     <Button color="secondary" class="w-fit px-4" as="button" type="reset">

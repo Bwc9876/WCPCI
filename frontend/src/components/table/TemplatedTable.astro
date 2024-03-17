@@ -1,0 +1,162 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { Color as LinkColor } from "@/components/Link.astro";
+import Table from "@/components/table/Table.astro";
+import TableRow from "@/components/table/TableRow.astro";
+import TableCol from "@/components/table/TableCol.astro";
+import Variable from "@/components/tera/Variable.astro";
+import For from "@/components//tera/For.astro";
+import Link from "@/components/Link.astro";
+import { tag, variable } from "@/lib/tera";
+import { Icon } from "astro-icon/components";
+import Else from "@/components/tera/Else.astro";
+import Tag from "../tera/Tag.astro";
+
+export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
+    listName: string;
+    itemName?: string;
+    idColName?: string;
+    emptyText?: string;
+    columns: string[];
+    itemLink?: {
+        class?: string;
+        color?: LinkColor;
+        action: (id: string) => string;
+    };
+    actions?: {
+        class?: string;
+        color?: LinkColor;
+        condition?: string;
+        name: string;
+        icon?: string;
+        action: (id: string) => string;
+    }[];
+    columnNames?: Record<string, string>;
+    class?: string;
+}
+
+const {
+    listName,
+    itemName = "item",
+    idColName = "id",
+    emptyText = "No items to display",
+    columns,
+    itemLink,
+    actions,
+    columnNames,
+    class: className,
+    ...rest
+} = Astro.props;
+
+const makeLabel = (str: string) => {
+    return str.replaceAll(/[_\-\.]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const prettyColumns = columns.map((col) => columnNames?.[col] ?? makeLabel(col));
+
+type RenderAction = "static" | "template" | false;
+
+const renderAction: RenderAction =
+    actions === undefined || actions.length === 0
+        ? false
+        : actions.some((action) => action.condition !== undefined)
+          ? "template"
+          : "static";
+
+const renderActionCondition =
+    renderAction === "template"
+        ? actions!.map((action) => action.condition ?? "true").join(" or ")
+        : "";
+
+const emptyColSpan = renderAction
+    ? renderAction === "static"
+        ? columns.length + 1
+        : `${tag(`if ${renderActionCondition}`)}${variable(`${columns.length} + 1`)}${tag("else")}${variable(`${columns.length}`)}${tag("endif")}`
+    : columns.length;
+---
+
+<Table class:list={["", className ?? ""]} {...rest}>
+    <Fragment slot="header">
+        {
+            prettyColumns.map((col) => (
+                <TableCol scope="col" as="th" class="text-left">
+                    {col}
+                </TableCol>
+            ))
+        }
+        {
+            renderAction && (
+                <>
+                    {renderAction === "template" && (
+                        <Tag expression={`if ${renderActionCondition}`} />
+                    )}
+                    <TableCol scope="col" as="th" class="text-left">
+                        Actions
+                    </TableCol>
+                    {renderAction === "template" && <Tag expression="endif" />}
+                </>
+            )
+        }
+    </Fragment>
+    <For sourceList={listName} itemName={itemName}>
+        <TableRow>
+            {
+                columns.map((col, i) => (
+                    <TableCol scope={i === 0 ? "row" : undefined} as={i === 0 ? "th" : "td"}>
+                        {i === 0 && itemLink !== undefined ? (
+                            <Link
+                                class={itemLink.class}
+                                color={itemLink.color}
+                                href={itemLink.action(variable(`${itemName}.${idColName}`))}
+                            >
+                                <Variable expression={`${itemName}.${col}`} />
+                            </Link>
+                        ) : (
+                            <Variable expression={`${itemName}.${col}`} />
+                        )}
+                    </TableCol>
+                ))
+            }
+            {
+                renderAction && (
+                    <>
+                        {renderAction === "template" && (
+                            <Tag expression={`if ${renderActionCondition}`} />
+                        )}
+                        <TableCol class="flex flex-row gap-2">
+                            {actions!.map((action) => (
+                                <>
+                                    {action.condition && (
+                                        <Tag expression={`if ${action.condition}`} />
+                                    )}
+                                    <Link
+                                        class:list={[
+                                            "flex flex-row gap-1 align-middle",
+                                            action.class ?? ""
+                                        ]}
+                                        color={action.color}
+                                        href={action.action(variable(`${itemName}.${idColName}`))}
+                                    >
+                                        {action.icon !== undefined && (
+                                            <Icon name={action.icon} class="my-auto" />
+                                        )}
+                                        <span class="my-auto">{action.name}</span>
+                                    </Link>
+                                    {action.condition && <Tag expression="endif" />}
+                                </>
+                            ))}
+                        </TableCol>
+                        {renderAction === "template" && <Tag expression="endif" />}
+                    </>
+                )
+            }
+        </TableRow>
+        <Else>
+            <TableRow>
+                <TableCol class="py-4 text-center" colspan={emptyColSpan}>
+                    {emptyText}
+                </TableCol>
+            </TableRow>
+        </Else>
+    </For>
+</Table>

@@ -7,9 +7,15 @@ use rocket::form::{Contextual, Form, FromForm};
 use rocket::{get, post};
 use rocket_dyn_templates::Template;
 
-use crate::csrf::{CsrfToken, VerifyCsrfToken};
 use crate::template::{FormTemplateObject, TemplatedForm};
-use crate::{auth::users::User, context_with_base_authed, db::DbConnection};
+use crate::{
+    auth::{
+        csrf::{CsrfToken, VerifyCsrfToken},
+        users::User,
+    },
+    context_with_base_authed,
+    db::DbConnection,
+};
 
 struct ProfileFormTemplate<'r> {
     user: &'r User,

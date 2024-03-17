@@ -1,0 +1,29 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Button from "@/components/Button.astro";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import If from "@/components/tera/If.astro";
+---
+
+<Layout class="!gap-3" title="Problems" makeTile>
+    <h1 class="mb-2 text-2xl">Problems</h1>
+    <TemplatedTable
+        itemLink={{ action: (id: string) => `/problems/${id}` }}
+        actions={[
+            {
+                name: "Edit",
+                condition: "logged_in",
+                action: (id: string) => `/problems/${id}/edit`,
+                icon: "tabler:pencil"
+            }
+        ]}
+        listName="problems"
+        itemName="problem"
+        columns={["name", "cpu_time"]}
+        emptyText="No Problems Have Been Made Yet."
+        columnNames={{ cpu_time: "CPU Time (seconds)" }}
+    />
+    <If debugEval={true} expression="logged_in">
+        <Button class="w-fit self-end" as="a" href="/problems/new">Create New Problem</Button>
+    </If>
+</Layout>

@@ -8,6 +8,7 @@ type BaseProps = {
     fieldName?: string;
     formObj?: string;
     forceInvalid?: boolean;
+    required?: boolean;
 };
 
 type InputProps =
@@ -19,6 +20,7 @@ export type Props = BaseProps & Omit<Omit<LabelProps, "isCheckbox">, "label"> & 
 
 import Label from "@/components/Label.astro";
 import { variable, tag } from "@/lib/tera";
+import { Icon } from "astro-icon/components";
 
 // Remove underscores, hyphens, and periods from a string and replace them with spaces
 // Capitalize the first letter of each word
@@ -35,18 +37,27 @@ const {
     help,
     type,
     options,
+    required = false,
     forceInvalid,
-    value = noTemplate ? undefined : variable(`${formObj}.data.${fieldName}`),
+    value = noTemplate
+        ? undefined
+        : variable(
+              `${formObj}.data | get(key='${fieldName}'${type === "checkbox" ? ",default='false'" : ""})`
+          ),
     class: className,
     ...rest
 } = Astro.props;
 
 const isCheckbox = type === "checkbox";
 
-const errorVar = `${formObj}.errors.${fieldName} | default(value=[])`;
+const valueNoBraces = isCheckbox ? (value as string)?.replace?.(/{{\s|\s}}/g, "") ?? "" : "";
+
+const errorVar = `${formObj}.errors | get(key='${fieldName}', default=[])`;
 
 const baseClass = [
+    "peer",
     "p-2",
+    "w-full",
     "rounded-xl",
     "border-2",
     "bg-secondary-50",
@@ -59,9 +70,9 @@ const baseClass = [
     "focus:outline-none",
     "focus:ring",
     "focus:ring-secondary-200",
-    "invalid:border-red-500",
-    "invalid:ring-red-600",
-    "invalid:text-red-600",
+    "[&:user-invalid]:border-red-500",
+    "[&:user-invalid]:ring-red-600",
+    "[&:user-invalid]:text-red-600",
     "data-[invalid=true]:border-red-500",
     "data-[invalid=true]:ring-red-600",
     "data-[invalid=true]:text-red-500"
@@ -78,44 +89,72 @@ const dataInvalid =
         : noTemplate
           ? "false"
           : `${tag(`if ${errorVar} | length == 0`)}false${tag("else")}true${tag("endif")}`;
+
+const bigRightTypes: (astroHTML.JSX.HTMLInputTypeAttribute | "textarea" | "select")[] = [
+    "number",
+    "date",
+    "datetime-local"
+];
 ---
 
 <Label
+    class="w-full"
     errorVar={noTemplate ? undefined : errorVar}
     label={label}
     help={help}
     isCheckbox={isCheckbox}
+    isRequired={required}
 >
-    {
-        type === "textarea" ? (
-            // Prettier likes to break the content of the textarea tag into multiple lines, which is not what we want
-            /* prettier-ignore */ <textarea name={name} data-invalid={dataInvalid} class:list={[baseClass, "resize-none", className ?? ""]} {...rest}>{value}</textarea>
-        ) : type === "select" ? (
-            <select
-                name={name}
-                data-invalid={dataInvalid}
-                value={value ?? options[0][0]}
-                class:list={[baseClass, "enabled:bg-secondary-50", className ?? ""]}
-                {...rest}
-            >
-                {options.map(([value, label]) => (
-                    <option value={value}>{label}</option>
-                ))}
-            </select>
-        ) : (
-            <input
-                value={value}
-                name={name}
-                data-invalid={dataInvalid}
-                type={type}
-                class:list={[
-                    baseClass,
-                    type === "checkbox" ? checkClass : "",
-                    type === "file" ? fileClass : "",
-                    className ?? ""
-                ]}
-                {...rest}
-            />
-        )
-    }
+    <div class="relative">
+        {
+            type === "textarea" ? (
+                <textarea
+                    set:html={value}
+                    required={required}
+                    name={name}
+                    data-invalid={dataInvalid}
+                    class:list={[baseClass, "resize-none", className ?? ""]}
+                    {...rest}
+                />
+            ) : type === "select" ? (
+                <select
+                    name={name}
+                    required={required}
+                    data-invalid={dataInvalid}
+                    value={value ?? options[0][0]}
+                    class:list={[baseClass, "enabled:bg-secondary-50", className ?? ""]}
+                    {...rest}
+                >
+                    {options.map(([value, label]) => (
+                        <option value={value}>{label}</option>
+                    ))}
+                </select>
+            ) : (
+                <input
+                    value={type === "checkbox" ? "true" : value}
+                    data-phantom={
+                        noTemplate || type !== "checkbox"
+                            ? ""
+                            : `${tag(`if ${valueNoBraces} == 'true'`)}${variable("fake_attr(attr='checked') | safe")}${tag("endif")}`
+                    }
+                    name={name}
+                    required={required}
+                    data-invalid={dataInvalid}
+                    type={type}
+                    class:list={[
+                        baseClass,
+                        type === "checkbox" ? checkClass : "",
+                        type === "file" ? fileClass : "",
+                        className ?? ""
+                    ]}
+                    {...rest}
+                />
+            )
+        }
+        <Icon
+            name="tabler:x"
+            size={22}
+            class={`hidden absolute ${type === "textarea" ? "top-2" : "inset-y-1/4"} ${type === "select" ? "right-4" : bigRightTypes.includes(type ?? "text") ? "right-8" : "right-2"} text-red-600 peer-[&:user-invalid]:inline peer-data-[invalid=true]:inline`}
+        />
+    </div>
 </Label>

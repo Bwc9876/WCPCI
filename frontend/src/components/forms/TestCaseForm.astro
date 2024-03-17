@@ -1,0 +1,81 @@
+---
+import Field from "@/components/Field.astro";
+import Collapse from "@/components/Collapse.astro";
+import { variable } from "@/lib/tera";
+import Button from "../Button.astro";
+import type { HTMLAttributes } from "astro/types";
+
+export interface Props extends Omit<HTMLAttributes<"details">, "slot"> {
+    noTemplate?: boolean;
+}
+
+const { noTemplate = false, class: className, ...rest } = Astro.props;
+
+const nameIn = (name: string) =>
+    variable(`'test_cases[${noTemplate ? "##i##" : "'~i~'"}].${name}'`);
+const fieldNameIn = (name: string) => `test_cases[${noTemplate ? "##i##" : "'~i~'"}].${name}`;
+const rows = 5;
+---
+
+<Collapse class:list={["test-case-form", className ?? ""]} {...rest}>
+    <Fragment slot="summary">Test Case {noTemplate ? "##i##" : variable("i+1", "1")}</Fragment>
+    <Button
+        class="remove-test-case-button"
+        slot="summary_right"
+        color="danger"
+        size="sm"
+        as="button"
+        type="button"
+        aria-label="Remove"
+        icon="tabler:trash"
+        justIcon
+    />
+    <div class="flex w-full flex-col items-stretch gap-2 lg:flex-row">
+        <Field
+            required
+            noTemplate={noTemplate}
+            spellcheck="false"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            placeholder="2+2"
+            rows={rows}
+            type="textarea"
+            label="Input"
+            name={nameIn("stdin")}
+            fieldName={fieldNameIn("stdin")}
+        />
+        <Field
+            required
+            noTemplate={noTemplate}
+            spellcheck="false"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            placeholder="4"
+            rows={rows}
+            type="textarea"
+            label="Expected Output"
+            name={nameIn("expected_pattern")}
+            fieldName={fieldNameIn("expected_pattern")}
+        />
+    </div>
+    <div class="mt-2 flex flex-col gap-2 lg:flex-row">
+        <Field
+            noTemplate={noTemplate}
+            type="checkbox"
+            label="Use Regex"
+            help="Use regex pattern to check output"
+            name={nameIn("use_regex")}
+            fieldName={fieldNameIn("use_regex")}
+        />
+        <Field
+            noTemplate={noTemplate}
+            type="checkbox"
+            label="Case Insensitive"
+            help="Ignore case when checking output"
+            name={nameIn("case_insensitive")}
+            fieldName={fieldNameIn("case_insensitive")}
+        />
+    </div>
+</Collapse>

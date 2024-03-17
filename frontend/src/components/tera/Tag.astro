@@ -4,14 +4,17 @@ import { tag } from "@/lib/tera";
 export interface Props {
     expression: string;
     debugEval?: string;
+    forceHide?: boolean;
 }
 
-const { debugEval, expression } = Astro.props as Props;
+const { debugEval, expression, forceHide = false } = Astro.props as Props;
 ---
 
 {
     import.meta.env.PROD ? (
         <Fragment set:html={tag(expression)} />
+    ) : forceHide ? (
+        <Fragment />
     ) : (
         <Fragment set:html={debugEval ?? expression} />
     )

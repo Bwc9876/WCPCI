@@ -96,7 +96,7 @@ impl CsrfTokens {
 pub struct CsrfToken(String);
 
 impl CsrfToken {
-    const TOKEN_LENGTH: usize = 16;
+    const TOKEN_LENGTH: usize = 32;
     pub const TOKEN_COOKIE_NAME: &'static str = "csrf_token";
     pub const TOKEN_COOKIE_LIFETIME_MINUTES: i64 = 60;
 

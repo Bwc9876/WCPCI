@@ -1,0 +1,21 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import ProblemForm from "@/components/forms/ProblemForm.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import { variable } from "@/lib/tera";
+import Variable from "@/components/tera/Variable.astro";
+
+const problemRoute = `/problems/${variable("problem_id", "view")}`;
+---
+
+<Layout title={`Edit Problem: ${variable("problem_name")}`} makeTile>
+    <BreadCrumb
+        entries={[
+            ["Problems", "/problems"],
+            [variable("problem_name"), problemRoute],
+            ["Edit", problemRoute + "/edit"]
+        ]}
+    />
+    <h1 class="text-2xl">Edit Problem: <Variable expression="problem_name" /></h1>
+    <ProblemForm submitWord="Save" />
+</Layout>
