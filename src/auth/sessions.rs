@@ -1,4 +1,3 @@
-use anyhow::Result;
 use rand::{rngs::OsRng, RngCore};
 use rocket::time::OffsetDateTime;
 
@@ -30,15 +29,16 @@ impl Session {
         token.join("")
     }
 
-    pub async fn create(db: &mut DbPoolConnection, user_id: i64) -> Result<Session> {
+    pub async fn create(db: &mut DbPoolConnection, user_id: i64) -> Result<Session, String> {
         let token = Self::gen_token();
         let now = OffsetDateTime::now_utc();
         let expires = OffsetDateTime::from_unix_timestamp(
             now.unix_timestamp() + 60 * 60 * 24 * Self::EXPIRY_DAYS,
-        )?;
+        )
+        .map_err(|e| e.to_string())?;
 
         let session = sqlx::query_as!(Session, "INSERT INTO session (user_id, token, created_at, expires_at) VALUES (?, ?, ?, ?) RETURNING *", user_id, token, now, expires)
-            .fetch_one(&mut **db).await?;
+            .fetch_one(&mut **db).await.map_err(|e| e.to_string())?;
 
         Ok(session)
     }

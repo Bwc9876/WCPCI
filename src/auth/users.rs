@@ -1,4 +1,3 @@
-use anyhow::Result;
 use rocket::{
     http::{Cookie, CookieJar, SameSite, Status},
     outcome::IntoOutcome,
@@ -45,7 +44,7 @@ impl User {
         db: &mut DbPoolConnection,
         cookies: &'a CookieJar<'a>,
         data: impl Into<User>,
-    ) -> Result<()> {
+    ) -> Result<(), String> {
         let user: User = data.into();
 
         let existing = Self::get_by_email(db, &user.email).await.unwrap();
@@ -53,7 +52,7 @@ impl User {
         let user = if let Some(user) = existing {
             user
         } else {
-            user.write_to_db(db).await?
+            user.write_to_db(db).await.map_err(|e| e.to_string())?
         };
 
         let session = Session::create(db, user.id).await?;
@@ -68,7 +67,7 @@ impl User {
         Ok(())
     }
 
-    pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<User> {
+    pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<User, String> {
         let new = sqlx::query_as!(
             User,
             "INSERT INTO user (email, default_display_name) VALUES (?, ?) RETURNING *",
@@ -76,16 +75,21 @@ impl User {
             self.default_display_name
         )
         .fetch_one(&mut **db)
-        .await?;
+        .await
+        .map_err(|e| e.to_string())?;
 
         Ok(new)
     }
 
-    async fn get_by_email(db: &mut DbPoolConnection, username: &str) -> Result<Option<User>> {
+    async fn get_by_email(
+        db: &mut DbPoolConnection,
+        username: &str,
+    ) -> Result<Option<User>, String> {
         let user: Option<User> =
             sqlx::query_as!(User, "SELECT * FROM user WHERE email = ?", username)
                 .fetch_optional(&mut **db)
-                .await?;
+                .await
+                .map_err(|e| e.to_string())?;
 
         Ok(user)
     }
