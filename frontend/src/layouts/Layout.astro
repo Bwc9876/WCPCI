@@ -30,6 +30,7 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
         <meta name="generator" content=`${Astro.generator} & Tera` />
         <link rel="icon" href="/favicon.ico" />
         <title>{title}</title>
+        <slot name="head" />
         <ViewTransitions />
     </head>
     <body

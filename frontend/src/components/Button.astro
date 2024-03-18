@@ -14,6 +14,7 @@ export type Props<T extends HTMLTag> = Polymorphic<{ as: T }> & {
     loadingText?: string;
     color?: Color;
     size?: Size;
+    forceMargin?: string;
 };
 
 const {
@@ -25,9 +26,15 @@ const {
     forceLoad = false,
     loadOnFormSubmit = false,
     loadingText = "Loading...",
+    forceMargin = "auto",
     class: className,
     ...rest
 } = Astro.props;
+
+const MarginMap = {
+    auto: "my-auto",
+    "2": "my-2"
+} as Record<string, string>;
 
 const ColorMap = {
     primary: "bg-primary-400 [&:not(:disabled)]:hover:bg-primary-500 text-white",
@@ -76,16 +83,19 @@ const wrapperIconClass = "flex flex-row";
                     <Icon
                         name={icon}
                         size={IconSizeMap[size as Size]}
-                        class="action-icon my-auto"
+                        class:list={["action-icon", MarginMap[forceMargin as string]]}
                     />
                 )}
                 {loadOnFormSubmit && (
                     <Spinner
                         size={size}
-                        class:list={["my-auto", forceLoad ? "" : "loading-icon hidden"]}
+                        class:list={[
+                            MarginMap[forceMargin as string],
+                            forceLoad ? "" : "loading-icon hidden"
+                        ]}
                     />
                 )}
-                <span class="loc-text my-auto">
+                <span class:list={["loc-text", MarginMap[forceMargin as string]]}>
                     <slot />
                 </span>
             </span>

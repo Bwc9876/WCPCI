@@ -14,36 +14,45 @@ import { Icon } from "astro-icon/components";
 ---
 
 <Layout noGrow class="flex flex-col justify-stretch gap-4" title=`${variable("problem.name")}`>
-    <Tile>
+    <Button
+        class="example-button absolute right-2 top-4 mx-auto mb-1 hidden w-fit"
+        disabled
+        as="button"
+        size="sm"
+        id="test-debug-template"
+        color="secondary"
+        icon="tabler:play">Run Example</Button
+    >
+    <Tile class="flex flex-col gap-2">
         <BreadCrumb
             entries={[
                 ["Problems", "/problems"],
                 [variable("problem.name"), "/problems/" + variable("problem.id", "view")]
             ]}
         />
-    </Tile>
-    <Tile class="flex flex-row gap-4">
-        <span class="my-auto text-xl">Progress:</span>
-        <ProblemRun casesName="case_count" class="grow" objName="last_run" />
-        <div class="flex flex-row gap-1">
-            <Button
-                as="button"
-                disabled
-                data-problem-id={variable("problem.id")}
-                class="my-auto w-fit"
-                id="submit"
-                color="primary"
-                icon="tabler:star">Submit!</Button
-            >
-            <Button
-                size="lg"
-                as="a"
-                href=`/problems/${variable("problem.id")}/runs`
-                class="my-auto w-fit"
-                justIcon
-                icon="tabler:clock"
-                color="secondary"
-            />
+        <div class="flex flex-row gap-4">
+            <span class="my-auto text-xl">Progress:</span>
+            <ProblemRun casesName="case_count" class="grow" objName="last_run" />
+            <div class="flex flex-row gap-1">
+                <Button
+                    as="button"
+                    disabled
+                    data-problem-id={variable("problem.id")}
+                    class="my-auto w-fit"
+                    id="submit"
+                    color="primary"
+                    icon="tabler:star">Submit!</Button
+                >
+                <Button
+                    size="lg"
+                    as="a"
+                    href=`/problems/${variable("problem.id")}/runs`
+                    class="my-auto w-fit"
+                    justIcon
+                    icon="tabler:clock"
+                    color="secondary"
+                />
+            </div>
         </div>
     </Tile>
     <div class="flex grow flex-row gap-4 overflow-hidden">
@@ -76,17 +85,26 @@ import { Icon } from "astro-icon/components";
             </div>
         </Tile>
         <div class="flex w-3/5 grow flex-col gap-4">
-            <Tile id="editor" class="align-center flex h-2/3 justify-center !p-0">
-                <Icon class="my-auto animate-pulse text-blue-300" name="tabler:pencil" size={60} />
+            <Tile class="align-center flex h-[60%] justify-center !p-1">
+                <div
+                    id="editor"
+                    class="align-center flex w-full justify-center rounded-2xl bg-background-50 p-2"
+                >
+                    <Icon
+                        class="my-auto animate-pulse text-blue-300"
+                        name="tabler:pencil"
+                        size={60}
+                    />
+                </div>
             </Tile>
-            <Tile class="align-center flex h-1/3 w-full flex-row gap-4">
+            <Tile class="align-center flex h-[40%] w-full flex-row gap-4">
                 <div class="flex h-full grow flex-col gap-2">
                     <Field
                         spellcheck="false"
                         data-gramm="false"
                         data-gramm_editor="false"
                         data-enable-grammarly="false"
-                        rows={8}
+                        rows={9}
                         class="h-full"
                         type="textarea"
                         noTemplate
@@ -113,7 +131,7 @@ import { Icon } from "astro-icon/components";
                 <div class="flex h-full grow flex-col gap-2">
                     <Field
                         id="debug-output"
-                        rows={8}
+                        rows={9}
                         type="textarea"
                         noTemplate
                         readonly
@@ -174,21 +192,28 @@ import { Icon } from "astro-icon/components";
         @apply border-l-4 border-l-accent pl-2;
     }
 
-    :not(pre) > code:not(.language-math) {
+    #rendered-md :not(pre) > code:not(.language-math) {
         @apply rounded bg-secondary-50 p-1 font-mono;
     }
 
-    pre code.hljs {
+    #rendered-md pre code.hljs {
         @apply rounded-lg !bg-secondary-50;
     }
 
-    pre code:is([class*=" language-"], [class^="language-"]):not(.language-math):not(.hljs) {
+    #rendered-md
+        pre
+        code:is([class*=" language-"], [class^="language-"]):not(.language-example):not(
+            .language-math
+        ):not(.hljs) {
         @apply opacity-0;
     }
 </style>
 
 <script>
-    import loader from "@monaco-editor/loader";
+    import * as monaco from "monaco-editor";
+    import monacoTheme from "@/lib/wcpc-monaco.json";
+
+    monaco.editor.defineTheme("wcpc", monacoTheme as any);
 
     import "katex/dist/katex.css";
     import katex from "katex";
@@ -197,10 +222,22 @@ import { Icon } from "astro-icon/components";
     import "highlight.js/styles/an-old-hope.css";
     import hljs from "highlight.js/lib/core";
     import javascript from "highlight.js/lib/languages/javascript";
+    import plaintext from "highlight.js/lib/languages/plaintext";
     import python from "highlight.js/lib/languages/python";
 
     import type { WebSocketRequest, WebSocketMessage, JobState, CaseStatus } from "@/lib/ws";
     import type { Status } from "@/components/CaseIndicator.astro";
+
+    type MonacoEditor = monaco.editor.IStandaloneCodeEditor;
+
+    declare global {
+        interface Window {
+            ws?: WebSocket;
+            stylesClone?: HTMLStyleElement;
+            codeEditor?: MonacoEditor;
+            require?: (mods: string[], cb: (...mods: any[]) => void, err: any) => void;
+        }
+    }
 
     const stateIsComplete = (state: JobState) => {
         switch (state.type) {
@@ -219,156 +256,236 @@ import { Icon } from "astro-icon/components";
         running: "loading"
     };
 
-    const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
-    const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
-    const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
-    const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
-    const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
-    const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
-    const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
-
-    const toggleButtons = (disabled: boolean) => {
-        submitButton.disabled = disabled;
-        runDebugButton.disabled = disabled;
-    };
-
-    const problemId = submitButton.dataset.problemId;
-
-    const url = `ws://localhost:8000/run/ws/${problemId}`;
-
-    console.debug("Connecting to WebSocket at", url);
-
-    const ws = new WebSocket(url);
-
-    ws.onopen = () => {
-        console.debug("WebSocket connection established");
-        toggleButtons(false);
-    };
-
-    ws.onmessage = (event) => {
-        const message: WebSocketMessage = JSON.parse(event.data);
-        console.debug("Received message", message);
-
-        switch (message.type) {
-            case "stateUpdate":
-                const state = message.state as JobState;
-                const complete = stateIsComplete(state);
-                toggleButtons(!complete);
-                switch (state.type) {
-                    case "judging":
-                        for (const [i, c] of state.cases.entries()) {
-                            document
-                                .querySelector(`[data-case-number='${i}']`)!
-                                .setAttribute("data-status", typeToStatus[c.status]);
-                        }
-                        if (complete) {
-                            const firstWithErr = state.cases.find((c) => c.status === "failed");
-                            if (firstWithErr && firstWithErr.status === "failed") {
-                                runMessageWrapper.setAttribute("data-status", "error");
-                                runMessage.innerText = firstWithErr.content;
-                            } else {
-                                runMessageWrapper.setAttribute("data-status", "success");
-                                runMessage.innerText = "Passed!";
-                            }
-                        } else {
-                            runMessageWrapper.setAttribute("data-status", "loading");
-                            runMessage.innerText = "Running...";
-                        }
-                        break;
-                    case "testing":
-                        debugCaseIndicator.setAttribute(
-                            "data-status",
-                            typeToStatus[state.status.status]
-                        );
-                        switch (state.status.status) {
-                            case "passed":
-                                testOutput.value = state.status.content ?? "";
-                                break;
-                            case "failed":
-                                testOutput.value = state.status.content ?? "";
-                                break;
-                        }
-                }
-                break;
-            case "invalid":
-                console.error("Invalid message sent", message);
-                break;
-            case "runDenied":
-                toggleButtons(true);
-                break;
-            case "runStarted":
-                toggleButtons(true);
-                break;
+    document.addEventListener("astro:page-load", async () => {
+        if (window.codeEditor) {
+            window.codeEditor.dispose();
+            window.codeEditor = undefined;
         }
-    };
-
-    ws.onclose = () => {
-        console.debug("WebSocket connection closed");
-        toggleButtons(true);
-    };
-
-    ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-    };
-
-    declare global {
-        interface Window {
-            monaco: {
-                getValue: () => string;
-            };
+        if (window.ws) {
+            window.ws.close();
+            window.ws = undefined;
         }
-    }
 
-    runDebugButton.onclick = () => {
-        if (window.monaco) {
-            const req: WebSocketRequest = {
-                type: "test",
-                input: testInput.value,
-                program: window.monaco.getValue()
-            };
-            console.debug("Sending request", req);
-            ws.send(JSON.stringify(req));
+        if (!window.location.pathname.match(/\/problems\/\d+\/?$/)) {
+            return;
         }
-    };
 
-    submitButton.onclick = () => {
-        const req: WebSocketRequest = {
-            type: "judge",
-            program: window.monaco.getValue()
+        const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
+        const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
+        const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
+        const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
+        const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
+        const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
+        const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
+        const testButtonTemplate = (document.querySelector(
+            "#test-debug-template"
+        ) as HTMLButtonElement)!;
+
+        const toggleButtons = (disabled: boolean) => {
+            submitButton.disabled = disabled;
+            runDebugButton.disabled = disabled;
+            document.querySelectorAll(".example-button").forEach((b) => {
+                (b as HTMLButtonElement).disabled = disabled;
+            });
         };
-        console.debug("Sending request", req);
-        ws.send(JSON.stringify(req));
-    };
 
-    // Monaco Initialization
-    const editorElem = document.getElementById("editor");
-    loader.init().then((monaco) => {
-        window.monaco = monaco.editor.create(editorElem as HTMLElement, {
-            value: '\nprint("Answer")\n',
-            theme: "vs-dark",
-            language: "python",
-            automaticLayout: true,
-            minimap: { enabled: false },
-            extraEditorClassName: "h-full w-full"
+        const problemId = submitButton.dataset.problemId;
+
+        const url = `ws://${window.location.host}/run/ws/${problemId}`;
+
+        console.debug("Connecting to WebSocket at", url);
+
+        const ws = new WebSocket(url);
+
+        window.ws = ws;
+
+        ws.onopen = () => {
+            console.debug("WebSocket connection established");
+            toggleButtons(false);
+        };
+
+        ws.onmessage = (event) => {
+            const message: WebSocketMessage = JSON.parse(event.data);
+            console.debug("Received message", message);
+
+            switch (message.type) {
+                case "stateUpdate":
+                    const state = message.state as JobState;
+                    const complete = stateIsComplete(state);
+                    toggleButtons(!complete);
+                    switch (state.type) {
+                        case "judging":
+                            for (const [i, c] of state.cases.entries()) {
+                                document
+                                    .querySelector(`[data-case-number='${i}']`)!
+                                    .setAttribute("data-status", typeToStatus[c.status]);
+                            }
+                            if (complete) {
+                                const firstWithErr = state.cases.find((c) => c.status === "failed");
+                                if (firstWithErr && firstWithErr.status === "failed") {
+                                    runMessageWrapper.setAttribute("data-status", "error");
+                                    runMessage.innerText = firstWithErr.content;
+                                } else {
+                                    runMessageWrapper.setAttribute("data-status", "success");
+                                    runMessage.innerText = "Passed!";
+                                }
+                            } else {
+                                runMessageWrapper.setAttribute("data-status", "loading");
+                                runMessage.innerText = "Running...";
+                            }
+                            break;
+                        case "testing":
+                            debugCaseIndicator.setAttribute(
+                                "data-status",
+                                typeToStatus[state.status.status]
+                            );
+                            switch (state.status.status) {
+                                case "passed":
+                                    testOutput.value = state.status.content ?? "";
+                                    break;
+                                case "failed":
+                                    testOutput.value = state.status.content ?? "";
+                                    break;
+                            }
+                    }
+                    break;
+                case "invalid":
+                    console.error("Invalid message sent", message);
+                    break;
+                case "runDenied":
+                    toggleButtons(true);
+                    break;
+                case "runStarted":
+                    toggleButtons(true);
+                    break;
+            }
+        };
+
+        ws.onclose = () => {
+            console.debug("WebSocket connection closed");
+            toggleButtons(true);
+        };
+
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
+
+        runDebugButton.onclick = () => {
+            if (window.codeEditor) {
+                const req: WebSocketRequest = {
+                    type: "test",
+                    input: testInput.value,
+                    program: window.codeEditor.getValue()
+                };
+                console.debug("Sending request", req);
+                ws.send(JSON.stringify(req));
+            }
+        };
+
+        submitButton.onclick = () => {
+            if (window.codeEditor) {
+                const req: WebSocketRequest = {
+                    type: "judge",
+                    program: window.codeEditor.getValue()
+                };
+                console.debug("Sending request", req);
+                ws.send(JSON.stringify(req));
+            }
+        };
+
+        // Monaco Initialization
+        const editorElem = document.getElementById("editor");
+        setTimeout(async () => {
+            console.debug("Initializing Monaco", editorElem);
+            //let monaco = await loadMonaco();
+            console.debug("Monaco initialized", monaco);
+
+            const [storedCode, storedLang] = JSON.parse(
+                window.localStorage.getItem(`problem-${problemId}-code`) ?? '["", "python"]'
+            );
+
+            window.codeEditor = monaco!.editor.create(editorElem as HTMLElement, {
+                value: storedCode ?? '\nprint("Answer")\n',
+                theme: "wcpc",
+                language: storedLang ?? "python",
+                automaticLayout: true,
+                minimap: { enabled: false }
+            });
+            if (window.stylesClone) {
+                const newStyles = window.stylesClone.cloneNode(true) as HTMLStyleElement;
+                document.head.appendChild(newStyles);
+            } else {
+                window.stylesClone = document.head.querySelector(
+                    ".monaco-colors"
+                ) as HTMLStyleElement;
+            }
+            let currentTimeout: number | undefined = undefined;
+            window.codeEditor!.onDidChangeModelContent(() => {
+                if (currentTimeout) {
+                    clearTimeout(currentTimeout);
+                }
+                currentTimeout = setTimeout(() => {
+                    if (window.codeEditor) {
+                        const text = window.codeEditor.getValue();
+                        const language = window.codeEditor.getModel()?.getLanguageId();
+                        window.localStorage.setItem(
+                            `problem-${problemId}-code`,
+                            JSON.stringify([text, language])
+                        );
+                    }
+                }, 1000) as unknown as number;
+            });
+            console.debug("Instantiated Monaco editor", window.codeEditor);
+        }, 100);
+
+        // Katex Initialization
+        document.querySelectorAll("#rendered-md code.math-inline").forEach((block) => {
+            katex.render(block.textContent ?? "", block as HTMLElement, { throwOnError: true });
         });
-    });
-
-    // Katex Initialization
-    document.querySelectorAll("#rendered-md code.math-inline").forEach((block) => {
-        katex.render(block.textContent ?? "", block as HTMLElement, { throwOnError: true });
-    });
-    document.querySelectorAll("#rendered-md pre code.math-display").forEach((block) => {
-        katex.render(block.textContent ?? "", block as HTMLElement, {
-            throwOnError: true,
-            displayMode: true
+        document.querySelectorAll("#rendered-md pre code.math-display").forEach((block) => {
+            katex.render(block.textContent ?? "", block as HTMLElement, {
+                throwOnError: true,
+                displayMode: true
+            });
         });
-    });
 
-    // Highlight.js Initialization
-    hljs.registerLanguage("javascript", javascript);
-    hljs.registerLanguage("python", python);
+        // Highlight.js Initialization
+        hljs.registerLanguage("javascript", javascript);
+        hljs.registerLanguage("js", javascript);
+        hljs.registerLanguage("python", python);
+        hljs.registerLanguage("py", python);
+        hljs.registerLanguage("example", plaintext);
 
-    document.querySelectorAll("#rendered-md pre code:not(.language-math)").forEach((block) => {
-        hljs.highlightElement(block as HTMLElement);
+        document
+            .querySelectorAll("#rendered-md pre code:not(.language-math):not(language-example)")
+            .forEach((block) => {
+                hljs.highlightElement(block as HTMLElement);
+            });
+
+        const makePreCode = (text: string): HTMLPreElement => {
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.classList.add("language-example");
+            code.textContent = text;
+            pre.appendChild(code);
+            return pre;
+        };
+
+        document.querySelectorAll("#rendered-md pre code.language-example").forEach((block) => {
+            const wrapperElem = document.createElement("div");
+            wrapperElem.classList.add("relative");
+            const clonedButton = testButtonTemplate.cloneNode(true) as HTMLButtonElement;
+            clonedButton.removeAttribute("id");
+            clonedButton.classList.remove("hidden");
+            clonedButton.onclick = () => {
+                testInput.value = block.textContent ?? "";
+                runDebugButton.click();
+            };
+            wrapperElem.appendChild(clonedButton);
+            const newBlock = makePreCode(block.textContent ?? "");
+            wrapperElem.appendChild(newBlock);
+            block.parentElement!.replaceWith(wrapperElem);
+            hljs.highlightElement(newBlock.childNodes[0] as HTMLElement);
+        });
     });
 </script>
