@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS user (
     bio TEXT NOT NULL DEFAULT '',
     default_display_name VARCHAR(100) NOT NULL,
     display_name VARCHAR(32),
+    default_language TEXT NOT NULL,
+    color_scheme TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 

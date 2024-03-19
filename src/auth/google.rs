@@ -1,4 +1,7 @@
-use super::{users::User, CallbackHandler};
+use super::{
+    users::{User, UserMigration},
+    CallbackHandler,
+};
 
 pub struct GoogleLogin(pub String);
 
@@ -22,16 +25,15 @@ pub struct UserInfo {
     pub names: Vec<Name>,
 }
 
-impl From<UserInfo> for User {
-    fn from(val: UserInfo) -> Self {
-        let email = val.email_addresses.first().unwrap().value.clone();
-        let name = val
+impl UserMigration for UserInfo {
+    fn migrate(self, default_language: &str) -> User {
+        let email = self.email_addresses.first().unwrap().value.clone();
+        let name = self
             .names
             .first()
             .map(|n| format!("{} {}", n.given_name, n.family_name))
             .unwrap_or_else(|| email.clone());
-
-        User::temporary(email, name)
+        User::temporary(email, name, default_language)
     }
 }
 

@@ -9,6 +9,7 @@ type BaseProps = {
     formObj?: string;
     forceInvalid?: boolean;
     required?: boolean;
+    hideLabel?: boolean;
 };
 
 type InputProps =
@@ -38,6 +39,7 @@ const {
     type,
     options,
     required = false,
+    hideLabel = false,
     forceInvalid,
     value = noTemplate
         ? undefined
@@ -50,7 +52,7 @@ const {
 
 const isCheckbox = type === "checkbox";
 
-const valueNoBraces = isCheckbox ? (value as string)?.replace?.(/{{\s|\s}}/g, "") ?? "" : "";
+const valueNoBraces = noTemplate ? "" : (value as string)?.replace?.(/{{\s|\s}}/g, "") ?? "";
 
 const errorVar = `${formObj}.errors | get(key='${fieldName}', default=[])`;
 
@@ -98,7 +100,8 @@ const bigRightTypes: (astroHTML.JSX.HTMLInputTypeAttribute | "textarea" | "selec
 ---
 
 <Label
-    class="w-full"
+    class:list={["w-full"]}
+    hideText={hideLabel}
     errorVar={noTemplate ? undefined : errorVar}
     label={label}
     help={help}
@@ -121,13 +124,23 @@ const bigRightTypes: (astroHTML.JSX.HTMLInputTypeAttribute | "textarea" | "selec
                     name={name}
                     required={required}
                     data-invalid={dataInvalid}
-                    value={value ?? options[0][0]}
+                    data-dbg-value={value}
                     class:list={[baseClass, "enabled:bg-secondary-50", className ?? ""]}
                     {...rest}
                 >
-                    {options.map(([value, label]) => (
-                        <option value={value}>{label}</option>
+                    {options.map(([optValue, label]) => (
+                        <option
+                            value={optValue}
+                            data-phantom={
+                                noTemplate
+                                    ? ""
+                                    : `${tag(`if ${valueNoBraces} == '${optValue}'`)}${variable("fake_attr(attr='selected') | safe")}${tag("endif")}`
+                            }
+                        >
+                            {label}
+                        </option>
                     ))}
+                    <slot name="options_templated" />
                 </select>
             ) : (
                 <input

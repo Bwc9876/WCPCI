@@ -17,3 +17,32 @@ redirect_uri = "http://localhost:8000/auth/callback/google"
 secret_key = "12345678901234567890123456789012345678901234"
 template_dir = "frontend/dist"
 public_dir = "public"
+
+[debug.run]
+default_language = "python"
+
+[debug.run.languages.python]
+name = "Python"
+default_code = """
+
+print("Hello, World!")
+
+"""
+tabler_icon = "brand-python"
+monaco_contribution = "python"
+file_name = "main.py"
+compile_cmd = ""
+run_cmd = "python main.py"
+
+[debug.run.languages.rust]
+name = "Rust"
+default_code = """
+pub fn main() {
+    println!("Hello, World!");
+}
+"""
+tabler_icon = "brand-rust"
+monaco_contribution = "rust"
+file_name = "main.rs"
+compile_cmd = "rustc main.rs -o main"
+run_cmd = "./main"

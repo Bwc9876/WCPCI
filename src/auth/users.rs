@@ -3,13 +3,60 @@ use rocket::{
     outcome::IntoOutcome,
     request::{self, FromRequest},
     time::OffsetDateTime,
-    Request,
+    FromFormField, Request,
 };
 use serde::Serialize;
+use sqlx::{encode::IsNull, Encode, Type};
 
 use crate::db::{DbConnection, DbPoolConnection};
 
 use super::sessions::Session;
+
+#[derive(Debug, Clone, Serialize, FromFormField)]
+pub enum ColorScheme {
+    Light,
+    Dark,
+    UseSystem,
+}
+
+impl Default for ColorScheme {
+    fn default() -> Self {
+        Self::UseSystem
+    }
+}
+
+impl From<String> for ColorScheme {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "Light" => Self::Light,
+            "Dark" => Self::Dark,
+            "UseSystem" => Self::UseSystem,
+            _ => Self::UseSystem,
+        }
+    }
+}
+
+impl From<ColorScheme> for String {
+    fn from(s: ColorScheme) -> Self {
+        format!("{:?}", s)
+    }
+}
+
+impl Type<sqlx::Sqlite> for ColorScheme {
+    fn type_info() -> <sqlx::Sqlite as sqlx::Database>::TypeInfo {
+        <String as Type<sqlx::Sqlite>>::type_info()
+    }
+}
+
+impl Encode<'_, sqlx::Sqlite> for ColorScheme {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <sqlx::Sqlite as sqlx::database::HasArguments<'_>>::ArgumentBuffer,
+    ) -> IsNull {
+        let val = format!("{:?}", self);
+        <std::string::String as Encode<'_, sqlx::Sqlite>>::encode_by_ref(&val, buf)
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct User {
@@ -18,8 +65,14 @@ pub struct User {
     pub bio: String,
     pub default_display_name: String,
     pub display_name: Option<String>,
+    pub color_scheme: ColorScheme,
+    pub default_language: String,
     #[serde(skip)] // Not implemented, I cry
     pub created_at: OffsetDateTime,
+}
+
+pub trait UserMigration {
+    fn migrate(self, default_language: &str) -> User;
 }
 
 impl User {
@@ -29,12 +82,14 @@ impl User {
             .unwrap_or(&self.default_display_name)
     }
 
-    pub fn temporary(email: String, display_name: String) -> Self {
+    pub fn temporary(email: String, display_name: String, default_language: &str) -> Self {
         Self {
             id: 0,
             bio: String::new(),
             email,
             default_display_name: display_name,
+            color_scheme: ColorScheme::default(),
+            default_language: default_language.to_string(),
             display_name: None,
             created_at: OffsetDateTime::now_utc(),
         }
@@ -43,9 +98,10 @@ impl User {
     pub async fn login_oauth<'a>(
         db: &mut DbPoolConnection,
         cookies: &'a CookieJar<'a>,
-        data: impl Into<User>,
+        data: impl UserMigration,
+        default_language: &str,
     ) -> Result<(), String> {
-        let user: User = data.into();
+        let user: User = data.migrate(default_language);
 
         let existing = Self::get_by_email(db, &user.email).await.unwrap();
 
@@ -70,9 +126,11 @@ impl User {
     pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<User, String> {
         let new = sqlx::query_as!(
             User,
-            "INSERT INTO user (email, default_display_name) VALUES (?, ?) RETURNING *",
+            "INSERT INTO user (email, default_display_name, color_scheme, default_language) VALUES (?, ?, ?, ?) RETURNING *",
             self.email,
-            self.default_display_name
+            self.default_display_name,
+            self.color_scheme,
+            self.default_language
         )
         .fetch_one(&mut **db)
         .await

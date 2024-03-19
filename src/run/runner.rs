@@ -1,5 +1,6 @@
-use std::process::Stdio;
+use std::{path::PathBuf, process::Stdio};
 
+use log::error;
 use tokio::io::AsyncWriteExt;
 
 use crate::problems::TestCase;
@@ -11,7 +12,7 @@ pub enum CaseError {
     Logic,
     //TimeLimitExceeded,
     Runtime(String),
-    //Compilation(String),
+    Compilation(String),
     Judge(String),
 }
 
@@ -21,7 +22,7 @@ impl From<CaseError> for CaseStatus {
             CaseError::Logic => "Logic error".to_string(),
             //CaseError::TimeLimitExceeded => "Time limit exceeded".to_string(),
             CaseError::Runtime(_) => "Runtime error".to_string(),
-            //CaseError::Compilation(_) => "Compile error".to_string(),
+            CaseError::Compilation(_) => "Compile error".to_string(),
             CaseError::Judge(_) => "Judge error".to_string(),
         })
     }
@@ -30,32 +31,69 @@ impl From<CaseError> for CaseStatus {
 pub type CaseResult<T = ()> = Result<T, CaseError>;
 
 pub struct Runner {
-    temp_file: async_tempfile::TempFile,
+    run_cmd: String,
+    file_name: String,
+    temp_path: PathBuf,
     #[allow(dead_code)]
     max_cpu_time: i64,
 }
 
 impl Runner {
-    pub async fn new(program: &str, max_cpu_time: i64) -> CaseResult<Self> {
-        let temp_file = async_tempfile::TempFile::new()
-            .await
-            .map_err(|e| CaseError::Judge(format!("Couldn't create temp file: {e:?}")))?;
-        let path = temp_file.file_path();
+    pub async fn new(
+        compile_cmd: &str,
+        run_cmd: &str,
+        file_name: &str,
+        program: &str,
+        max_cpu_time: i64,
+    ) -> CaseResult<Self> {
+        let now_nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| CaseError::Judge(format!("Couldn't get time: {e:?}")))?
+            .as_nanos();
 
-        tokio::fs::write(path, program.as_bytes())
+        let dir_name = format!("run_{}", now_nanos);
+
+        let temp_path = std::env::temp_dir().join(dir_name);
+
+        tokio::fs::create_dir(&temp_path)
             .await
-            .map_err(|e| CaseError::Judge(format!("Couldn't write to temp file: {e:?}")))?;
+            .map_err(|e| CaseError::Judge(format!("Couldn't create temp dir: {e:?}")))?;
+
+        tokio::fs::write(temp_path.join(file_name), program.as_bytes())
+            .await
+            .map_err(|e| CaseError::Judge(format!("Couldn't write to program file: {e:?}")))?;
+
+        if !compile_cmd.is_empty() {
+            let mut cmd = tokio::process::Command::new("bash");
+            cmd.arg("-c")
+                .arg(compile_cmd)
+                .current_dir(&temp_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            let output = cmd
+                .output()
+                .await
+                .map_err(|e| CaseError::Judge(format!("Couldn't run compile command: {e:?}")))?;
+            if !output.status.success() {
+                let std_err = String::from_utf8_lossy(&output.stderr).to_string();
+                return Err(CaseError::Compilation(std_err));
+            }
+        }
 
         Ok(Self {
-            temp_file,
+            run_cmd: run_cmd.to_string(),
+            file_name: file_name.to_string(),
+            temp_path,
             max_cpu_time,
         })
     }
 
     pub async fn run_cmd(&self, input: &str) -> CaseResult<String> {
-        let mut cmd = tokio::process::Command::new("python");
+        let mut cmd = tokio::process::Command::new("bash");
 
-        cmd.arg(self.temp_file.file_path())
+        cmd.arg("-c")
+            .arg(&self.run_cmd)
+            .current_dir(&self.temp_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -68,6 +106,7 @@ impl Runner {
             .stdin
             .as_mut()
             .ok_or(CaseError::Judge("Couldn't open stdin".to_string()))?;
+
         stdin
             .write_all(input.as_bytes())
             .await
@@ -79,16 +118,21 @@ impl Runner {
             .map_err(|e| CaseError::Judge(format!("Couldn't get output: {e:?}")))?;
 
         // Sleep for a bit for pizzaz
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
-            let path_str = self.temp_file.file_path().to_string_lossy().to_string();
+            let path_str = self
+                .temp_path
+                .join(&self.file_name)
+                .to_string_lossy()
+                .to_string();
             let std_err = String::from_utf8_lossy(&output.stderr)
                 .to_string()
                 .replace(&path_str, "<your program>");
             let code = output.status.code().unwrap_or(-1);
+            error!("Process exited with error {code}:\n\n {std_err}");
             Err(CaseError::Runtime(format!(
                 "Process exited with error {code}:\n\n {std_err}"
             )))

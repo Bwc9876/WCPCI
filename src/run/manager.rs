@@ -10,6 +10,7 @@ use crate::problems::JudgeRun;
 
 use super::job::{Job, JobRequest};
 
+use super::languages::RunConfig;
 use super::{JobState, JobStateReceiver};
 
 type UserId = i64;
@@ -23,6 +24,7 @@ pub type JobStartedSender = tokio::sync::broadcast::Sender<JobStartedMessage>;
 pub type ShutdownReceiver = tokio::sync::watch::Receiver<bool>;
 
 pub struct RunManager {
+    config: RunConfig,
     id_counter: u64,
     jobs: HashMap<UserId, RunHandle>,
     db_pool: DbPool,
@@ -31,9 +33,10 @@ pub struct RunManager {
 }
 
 impl RunManager {
-    pub fn new(pool: DbPool, shutdown_rx: ShutdownReceiver) -> Self {
+    pub fn new(config: RunConfig, pool: DbPool, shutdown_rx: ShutdownReceiver) -> Self {
         let (tx, rx) = tokio::sync::broadcast::channel(10);
         Self {
+            config,
             id_counter: 1,
             jobs: HashMap::with_capacity(10),
             db_pool: pool,
@@ -50,14 +53,21 @@ impl RunManager {
         self.shutdown_rx.clone()
     }
 
-    async fn start_job(&mut self, request: JobRequest) {
+    async fn start_job(&mut self, request: JobRequest) -> Result<(), String> {
         let id = self.id_counter;
         self.id_counter += 1;
 
         let user_id = request.user_id;
         let problem_id = request.problem_id;
 
-        let (job, state_rx) = Job::new(id, request, self.shutdown_rx.clone()).await;
+        let language_config = self
+            .config
+            .languages
+            .get(&request.language)
+            .ok_or_else(|| format!("Language {} not supported by runner", request.language))?;
+
+        let (job, state_rx) =
+            Job::new(id, request, self.shutdown_rx.clone(), language_config).await;
 
         let handle = Arc::new(Mutex::new(Some((problem_id, state_rx.clone()))));
 
@@ -91,6 +101,8 @@ impl RunManager {
             .0
             .send((user_id, problem_id, state_rx))
             .ok();
+
+        Ok(())
     }
 
     pub async fn get_handle(&self, user_id: UserId, problem_id: i64) -> Option<JobStateReceiver> {
@@ -105,19 +117,17 @@ impl RunManager {
         }
     }
 
-    pub async fn request_job(&mut self, request: JobRequest) -> bool {
+    pub async fn request_job(&mut self, request: JobRequest) -> Result<(), String> {
         if let Some(handle) = self.jobs.get(&request.user_id) {
             let handle = handle.lock().await;
             if handle.is_some() {
-                false
+                Err("User already has a job running".to_string())
             } else {
                 drop(handle);
-                self.start_job(request).await;
-                true
+                self.start_job(request).await
             }
         } else {
-            self.start_job(request).await;
-            true
+            self.start_job(request).await
         }
     }
 }

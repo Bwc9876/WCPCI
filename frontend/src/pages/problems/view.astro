@@ -14,6 +14,7 @@ import { Icon } from "astro-icon/components";
 ---
 
 <Layout noGrow class="flex flex-col justify-stretch gap-4" title=`${variable("problem.name")}`>
+    <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea>
     <Button
         class="example-button absolute right-2 top-4 mx-auto mb-1 hidden w-fit"
         disabled
@@ -38,6 +39,7 @@ import { Icon } from "astro-icon/components";
                     as="button"
                     disabled
                     data-problem-id={variable("problem.id")}
+                    data-default-language={variable("default_language")}
                     class="my-auto w-fit"
                     id="submit"
                     color="primary"
@@ -60,21 +62,6 @@ import { Icon } from "astro-icon/components";
             <h1 class="text-2xl"><Variable expression="problem.name" /></h1>
             <small class="text-gray-500">CPU Time: <Variable expression="problem.cpu_time" /></small
             >
-            <Debug
-                >{
-                    (
-                        <Link
-                            href={
-                                import.meta.env.DEV
-                                    ? "/problems/edit"
-                                    : `/problems/${variable("problem.id")}/edit`
-                            }
-                        >
-                            Edit
-                        </Link>
-                    )
-                }</Debug
-            >
             <div class="overflow-y-auto">
                 <div class="overflow-y-scroll pe-2" id="rendered-md">
                     <Variable
@@ -85,10 +72,28 @@ import { Icon } from "astro-icon/components";
             </div>
         </Tile>
         <div class="flex w-3/5 grow flex-col gap-4">
-            <Tile class="align-center flex h-[60%] justify-center !p-1">
+            <Tile class="flex h-[60%] flex-col gap-2">
+                <div class="flex flex-row gap-2">
+                    <img
+                        class="select-none opacity-0 invert"
+                        width="32"
+                        height="32"
+                        class="hidden"
+                        id="language-icon"
+                    />
+                    <Field
+                        hideLabel
+                        noTemplate
+                        id="language-dropdown"
+                        name="Language"
+                        value=""
+                        type="select"
+                        options={[]}
+                    />
+                </div>
                 <div
                     id="editor"
-                    class="align-center flex w-full justify-center rounded-2xl bg-background-50 p-2"
+                    class="align-center flex h-full w-full justify-center rounded-2xl bg-background-50 p-2"
                 >
                     <Icon
                         class="my-auto animate-pulse text-blue-300"
@@ -104,7 +109,7 @@ import { Icon } from "astro-icon/components";
                         data-gramm="false"
                         data-gramm_editor="false"
                         data-enable-grammarly="false"
-                        rows={9}
+                        rows={10}
                         class="h-full"
                         type="textarea"
                         noTemplate
@@ -131,7 +136,7 @@ import { Icon } from "astro-icon/components";
                 <div class="flex h-full grow flex-col gap-2">
                     <Field
                         id="debug-output"
-                        rows={9}
+                        rows={10}
                         type="textarea"
                         noTemplate
                         readonly
@@ -207,6 +212,16 @@ import { Icon } from "astro-icon/components";
         ):not(.hljs) {
         @apply opacity-0;
     }
+
+    #language-icon {
+        user-drag: none;
+        -webkit-user-drag: none;
+        user-select: none;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        pointer-events: none;
+    }
 </style>
 
 <script>
@@ -224,9 +239,20 @@ import { Icon } from "astro-icon/components";
     import javascript from "highlight.js/lib/languages/javascript";
     import plaintext from "highlight.js/lib/languages/plaintext";
     import python from "highlight.js/lib/languages/python";
+    import rust from "highlight.js/lib/languages/rust";
 
     import type { WebSocketRequest, WebSocketMessage, JobState, CaseStatus } from "@/lib/ws";
     import type { Status } from "@/components/CaseIndicator.astro";
+
+    type CodeInfo = {
+        [lang: string]: {
+            name: string;
+            tablerIcon: string;
+            monacoContribution: string;
+            defaultCode: string;
+            fileName: string;
+        };
+    };
 
     type MonacoEditor = monaco.editor.IStandaloneCodeEditor;
 
@@ -235,6 +261,7 @@ import { Icon } from "astro-icon/components";
             ws?: WebSocket;
             stylesClone?: HTMLStyleElement;
             codeEditor?: MonacoEditor;
+            currentLanguage?: string;
             require?: (mods: string[], cb: (...mods: any[]) => void, err: any) => void;
         }
     }
@@ -256,6 +283,9 @@ import { Icon } from "astro-icon/components";
         running: "loading"
     };
 
+    const makeIconUrl = (name: string) =>
+        `https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/${name}.svg`;
+
     document.addEventListener("astro:page-load", async () => {
         if (window.codeEditor) {
             window.codeEditor.dispose();
@@ -271,11 +301,16 @@ import { Icon } from "astro-icon/components";
         }
 
         const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
+        const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
         const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
         const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
         const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
         const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
         const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
+        const languageDropdown = (document.querySelector(
+            "#language-dropdown"
+        ) as HTMLSelectElement)!;
+        const languageIcon = (document.querySelector("#language-icon") as HTMLImageElement)!;
         const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
         const testButtonTemplate = (document.querySelector(
             "#test-debug-template"
@@ -289,7 +324,42 @@ import { Icon } from "astro-icon/components";
             });
         };
 
-        const problemId = submitButton.dataset.problemId;
+        const problemId = submitButton.dataset.problemId!;
+        const defaultLanguage = submitButton.dataset.defaultLanguage!;
+        const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
+
+        for (const name in codeInfo) {
+            const info = codeInfo[name];
+            const newElem = document.createElement("option");
+            newElem.value = name;
+            newElem.innerText = info.name;
+            languageDropdown.appendChild(newElem);
+        }
+
+        //languageDropdown.value = defaultLanguage;
+
+        languageDropdown.onchange = (e) => {
+            const lang = (e.target as HTMLSelectElement).value;
+            const langInfo = codeInfo[lang];
+            if (langInfo) {
+                window.currentLanguage = lang;
+                languageIcon.src = makeIconUrl(langInfo.tablerIcon);
+                if (window.codeEditor) {
+                    const storedCode = JSON.parse(
+                        window.localStorage.getItem(`problem-${problemId}-${lang}-code`) ?? "null"
+                    );
+                    window.codeEditor.setValue(storedCode ?? langInfo.defaultCode);
+                    monaco.editor.setModelLanguage(
+                        window.codeEditor.getModel()!,
+                        langInfo.monacoContribution
+                    );
+                    window.localStorage.setItem(
+                        `problem-${problemId}-code`,
+                        JSON.stringify([storedCode, lang])
+                    );
+                }
+            }
+        };
 
         const url = `ws://${window.location.host}/run/ws/${problemId}`;
 
@@ -364,6 +434,8 @@ import { Icon } from "astro-icon/components";
         ws.onclose = () => {
             console.debug("WebSocket connection closed");
             toggleButtons(true);
+            runMessageWrapper.setAttribute("data-status", "disconnected");
+            runMessage.innerText = "Disconnected, please refresh the page.";
         };
 
         ws.onerror = (error) => {
@@ -371,10 +443,11 @@ import { Icon } from "astro-icon/components";
         };
 
         runDebugButton.onclick = () => {
-            if (window.codeEditor) {
+            if (window.codeEditor && window.currentLanguage) {
                 const req: WebSocketRequest = {
                     type: "test",
                     input: testInput.value,
+                    language: window.currentLanguage,
                     program: window.codeEditor.getValue()
                 };
                 console.debug("Sending request", req);
@@ -383,10 +456,11 @@ import { Icon } from "astro-icon/components";
         };
 
         submitButton.onclick = () => {
-            if (window.codeEditor) {
+            if (window.codeEditor && window.currentLanguage) {
                 const req: WebSocketRequest = {
                     type: "judge",
-                    program: window.codeEditor.getValue()
+                    program: window.codeEditor.getValue(),
+                    language: window.currentLanguage
                 };
                 console.debug("Sending request", req);
                 ws.send(JSON.stringify(req));
@@ -401,13 +475,27 @@ import { Icon } from "astro-icon/components";
             console.debug("Monaco initialized", monaco);
 
             const [storedCode, storedLang] = JSON.parse(
-                window.localStorage.getItem(`problem-${problemId}-code`) ?? '["", "python"]'
+                window.localStorage.getItem(`problem-${problemId}-code`) ?? "[null, null]"
             );
 
+            const lang = Object.keys(codeInfo).includes(storedLang ?? "")
+                ? storedLang
+                : defaultLanguage;
+
+            const langInfo = codeInfo[lang];
+
+            window.currentLanguage = lang;
+
+            languageDropdown.value = lang;
+            languageIcon.src = makeIconUrl(langInfo.tablerIcon);
+            setTimeout(() => languageIcon.classList.remove("opacity-0"), 300);
+
+            console.debug(langInfo);
+
             window.codeEditor = monaco!.editor.create(editorElem as HTMLElement, {
-                value: storedCode ?? '\nprint("Answer")\n',
+                value: storedCode ?? langInfo.defaultCode,
                 theme: "wcpc",
-                language: storedLang ?? "python",
+                language: langInfo.monacoContribution,
                 automaticLayout: true,
                 minimap: { enabled: false }
             });
@@ -420,20 +508,26 @@ import { Icon } from "astro-icon/components";
                 ) as HTMLStyleElement;
             }
             let currentTimeout: number | undefined = undefined;
+            let currentLang = lang;
             window.codeEditor!.onDidChangeModelContent(() => {
                 if (currentTimeout) {
                     clearTimeout(currentTimeout);
                 }
                 currentTimeout = setTimeout(() => {
-                    if (window.codeEditor) {
+                    if (window.codeEditor && currentLang === window.currentLanguage) {
                         const text = window.codeEditor.getValue();
                         const language = window.codeEditor.getModel()?.getLanguageId();
                         window.localStorage.setItem(
                             `problem-${problemId}-code`,
                             JSON.stringify([text, language])
                         );
+                        window.localStorage.setItem(
+                            `problem-${problemId}-${window.currentLanguage}-code`,
+                            JSON.stringify(text)
+                        );
                     }
                 }, 1000) as unknown as number;
+                currentLang = window.currentLanguage!;
             });
             console.debug("Instantiated Monaco editor", window.codeEditor);
         }, 100);
@@ -454,6 +548,8 @@ import { Icon } from "astro-icon/components";
         hljs.registerLanguage("js", javascript);
         hljs.registerLanguage("python", python);
         hljs.registerLanguage("py", python);
+        hljs.registerLanguage("rust", rust);
+        hljs.registerLanguage("rs", rust);
         hljs.registerLanguage("example", plaintext);
 
         document

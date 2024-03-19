@@ -12,7 +12,8 @@ pub fn stage() -> AdHoc {
                 profile::profile_get,
                 profile::profile_post,
                 account::account_get,
-                contest::contest_settings_get
+                contest::contest_settings_get,
+                contest::contest_settings_post,
             ],
         )
     })

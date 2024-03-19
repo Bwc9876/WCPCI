@@ -118,15 +118,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-tempfile"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17d4a3286e6518d84be399efb8901aa74a183753b0bf4a8a4afe5bcfedcbb08"
-dependencies = [
- "tokio",
-]
-
-[[package]]
 name = "async-trait"
 version = "0.1.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3229,7 +3220,6 @@ checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
 name = "wcpc"
 version = "0.1.0"
 dependencies = [
- "async-tempfile",
  "chrono",
  "dotenvy",
  "log",

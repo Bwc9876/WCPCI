@@ -2,8 +2,7 @@
 
 use log::error;
 use rocket::{
-    catch, catchers, fairing::AdHoc, form::Form, get, http::CookieJar, post, response::Redirect,
-    routes, FromForm,
+    catch, catchers, fairing::AdHoc, get, http::CookieJar, response::Redirect, routes, State,
 };
 use rocket_dyn_templates::Template;
 use rocket_oauth2::{OAuth2, TokenResponse};
@@ -11,9 +10,15 @@ use rocket_oauth2::{OAuth2, TokenResponse};
 use crate::{
     context_with_base,
     db::{DbConnection, DbPoolConnection},
+    run::CodeInfo,
 };
 
-use self::{github::GitHubLogin, google::GoogleLogin, sessions::Session, users::User};
+use self::{
+    github::GitHubLogin,
+    google::GoogleLogin,
+    sessions::Session,
+    users::{User, UserMigration},
+};
 
 mod github;
 mod google;
@@ -62,10 +67,13 @@ async fn github_callback(
     mut db: DbConnection,
     token: TokenResponse<GitHubLogin>,
     cookies: &CookieJar<'_>,
+    code_info: &State<CodeInfo>,
 ) -> Redirect {
     //println!("State cookie is: {:?}", cookies.get_private("rocket_oauth2_state"));
     let handler = GitHubLogin(token.access_token().to_string());
-    handler.handle_callback(&mut db, cookies).await
+    handler
+        .handle_callback(&mut db, cookies, &code_info.run_config.default_language)
+        .await
     //Redirect::to("/")
 }
 
@@ -87,33 +95,17 @@ async fn google_callback(
     mut db: DbConnection,
     token: TokenResponse<GoogleLogin>,
     cookies: &CookieJar<'_>,
+    code_info: &State<CodeInfo>,
 ) -> Redirect {
     let handler = GoogleLogin(token.access_token().to_string());
-    handler.handle_callback(&mut db, cookies).await
-}
-
-#[derive(FromForm)]
-struct DebugLoginForm<'r> {
-    email: &'r str,
-}
-
-#[post("/login/debug", data = "<debug_login_form>")]
-async fn debug_login(
-    mut db: DbConnection,
-    debug_login_form: Form<DebugLoginForm<'_>>,
-    cookies: &CookieJar<'_>,
-) -> Redirect {
-    let email = debug_login_form.email;
-    let user = User::temporary(email.to_string(), email.to_string());
-    if let Err(why) = User::login_oauth(&mut db, cookies, user).await {
-        error!("Failed to log in user: {:?}", why);
-    }
-    Redirect::to("/")
+    handler
+        .handle_callback(&mut db, cookies, &code_info.run_config.default_language)
+        .await
 }
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Auth App", |rocket| async {
-        let rocket = rocket
+        rocket
             .attach(OAuth2::<GitHubLogin>::fairing("github"))
             .attach(OAuth2::<GoogleLogin>::fairing("google"))
             .attach(csrf::stage())
@@ -128,19 +120,13 @@ pub fn stage() -> AdHoc {
                     google_login,
                     google_callback
                 ],
-            );
-
-        if cfg!(debug_assertions) {
-            rocket.mount("/auth", routes![debug_login])
-        } else {
-            rocket
-        }
+            )
     })
 }
 
 #[rocket::async_trait]
 trait CallbackHandler {
-    type IntermediateUserInfo: serde::de::DeserializeOwned + Into<User> + Sync + Send;
+    type IntermediateUserInfo: serde::de::DeserializeOwned + UserMigration + Sync + Send;
     const SERVICE_NAME: &'static str;
 
     fn get_request_client(&self) -> reqwest::RequestBuilder;
@@ -149,6 +135,7 @@ trait CallbackHandler {
         &self,
         db: &mut DbPoolConnection,
         cookies: &CookieJar<'_>,
+        default_language: &str,
     ) -> rocket::response::Redirect {
         match self.get_request_client().send().await {
             Ok(resp) => {
@@ -156,7 +143,10 @@ trait CallbackHandler {
                     match resp.json::<Self::IntermediateUserInfo>().await {
                         Ok(user_info) => {
                             let db_conn = &mut *db;
-                            if let Err(why) = User::login_oauth(db_conn, cookies, user_info).await {
+                            if let Err(why) =
+                                User::login_oauth(db_conn, cookies, user_info, default_language)
+                                    .await
+                            {
                                 error!("Failed to log in user: {:?}", why);
                             }
                         }

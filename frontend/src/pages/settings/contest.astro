@@ -1,10 +1,40 @@
 ---
+import Field from "@/components/Field.astro";
 import Form from "@/components/Form.astro";
+import For from "@/components/tera/For.astro";
+import Variable from "@/components/tera/Variable.astro";
 import Settings from "@/layouts/Settings.astro";
+import { tag, variable } from "@/lib/tera";
 ---
 
 <Settings title="Contest">
     <Form>
-        <p>NGL I don't have anything to put here rn :P</p>
+        <Field
+            type="select"
+            label="Color Scheme"
+            name="color_scheme"
+            help="Select the color scheme for the website"
+            options={[
+                ["UseSystem", "Use System"],
+                ["Light", "Light"],
+                ["Dark", "Dark"]
+            ]}
+        />
+        <Field
+            type="select"
+            label="Programming Language"
+            name="default_language"
+            help="Select the default programming language for your editor"
+            options={[]}
+        >
+            <For sourceList="languages" itemName="language" slot="options_templated">
+                <option
+                    value={variable("language[0]")}
+                    data-phantom={`${tag(`if form.data.default_language == language[0]`)}${variable("fake_attr(attr='selected') | safe")}${tag("endif")}`}
+                >
+                    <Variable expression="language[1]" data-phantom={``} />
+                </option>
+            </For>
+        </Field>
     </Form>
 </Settings>

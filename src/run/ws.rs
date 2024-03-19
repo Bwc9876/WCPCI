@@ -28,15 +28,29 @@ pub enum WsHttpResponse {
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum WebSocketRequest {
-    Judge { program: String },
-    Test { program: String, input: String },
+    Judge {
+        program: String,
+        language: String,
+    },
+    Test {
+        program: String,
+        language: String,
+        input: String,
+    },
 }
 
 impl WebSocketRequest {
     pub fn program(&self) -> &str {
         match self {
-            Self::Judge { program } => program,
+            Self::Judge { program, .. } => program,
             Self::Test { program, .. } => program,
+        }
+    }
+
+    pub fn language(&self) -> &str {
+        match self {
+            Self::Judge { language, .. } => language,
+            Self::Test { language, .. } => language,
         }
     }
 }
@@ -119,6 +133,7 @@ async fn websocket_loop(
                                         user_id,
                                         problem_id: problem.id,
                                         program: request.program().to_string(),
+                                        language: request.language().to_string(),
                                         cpu_time: problem.cpu_time,
                                         op
                                     };
@@ -167,12 +182,9 @@ async fn websocket_loop(
             }
             LoopRes::JobStart(job) => {
                 let mut manager = manager.lock().await;
-                let msg = if manager.request_job(job).await {
-                    WebSocketMessage::RunStarted
-                } else {
-                    WebSocketMessage::RunDenied {
-                        reason: "Another job is in progress".to_string(),
-                    }
+                let msg = match manager.request_job(job).await {
+                    Ok(_) => WebSocketMessage::RunStarted,
+                    Err(why) => WebSocketMessage::RunDenied { reason: why },
                 };
                 drop(manager);
                 let msg = serde_json::to_string(&msg)

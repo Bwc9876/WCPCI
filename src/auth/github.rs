@@ -1,4 +1,7 @@
-use super::{users::User, CallbackHandler};
+use super::{
+    users::{User, UserMigration},
+    CallbackHandler,
+};
 
 pub struct GitHubLogin(pub String);
 
@@ -10,9 +13,9 @@ pub struct UserInfo {
     pub email: String,
 }
 
-impl From<UserInfo> for User {
-    fn from(val: UserInfo) -> Self {
-        User::temporary(val.email, val.name)
+impl UserMigration for UserInfo {
+    fn migrate(self, default_language: &str) -> User {
+        User::temporary(self.email, self.name, default_language)
     }
 }
 

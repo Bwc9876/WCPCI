@@ -33,7 +33,7 @@ const statusExpr = `${tag(`if ${objName}`)}${statusExprExists}${tag("else")}empt
         data-status={`${tag(`if ${objName}.error`)}error${tag(`elif ${objName}`)}success${tag("else")}empty${tag("endif")}`}
         class:list={[
             "group my-auto flex-row gap-1 text-lg font-bold",
-            "hidden data-[status=error]:flex data-[status=loading]:flex data-[status=success]:flex data-[status=loading]:animate-pulse data-[status=error]:text-red-500 data-[status=success]:text-green-500"
+            "hidden data-[status=disconnected]:flex data-[status=error]:flex data-[status=loading]:flex data-[status=success]:flex data-[status=loading]:animate-pulse data-[status=disconnected]:text-red-500 data-[status=error]:text-red-500 data-[status=success]:text-green-500"
         ]}
     >
         <span id="runs-msg" class="my-auto">
@@ -51,6 +51,11 @@ const statusExpr = `${tag(`if ${objName}`)}${statusExprExists}${tag("else")}empt
         <Icon
             name="tabler:hourglass"
             class="my-auto hidden group-data-[status=loading]:inline"
+            size={25}
+        />
+        <Icon
+            name="tabler:world-off"
+            class="my-auto hidden group-data-[status=disconnected]:inline"
             size={25}
         />
     </span>

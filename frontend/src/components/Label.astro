@@ -9,9 +9,18 @@ export interface Props {
     isRequired?: boolean;
     class?: string;
     errorVar?: string;
+    hideText?: boolean;
 }
 
-const { label, help, errorVar, isCheckbox, isRequired, class: className } = Astro.props;
+const {
+    label,
+    help,
+    errorVar,
+    isCheckbox,
+    isRequired,
+    hideText = false,
+    class: className
+} = Astro.props;
 ---
 
 <label class:list={["group flex flex-col gap-1", className ?? ""]}>
@@ -19,6 +28,7 @@ const { label, help, errorVar, isCheckbox, isRequired, class: className } = Astr
         <span
             class:list={[
                 "text-lg",
+                hideText ? "hidden" : "",
                 isRequired ? "after:ml-0.5 after:text-red-500 after:content-['*']" : ""
             ]}>{label}</span
         >

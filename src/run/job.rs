@@ -3,7 +3,10 @@ use rocket::time::OffsetDateTime;
 
 use crate::{problems::TestCase, run::runner::CaseError};
 
-use super::{manager::ShutdownReceiver, runner::Runner, JobStateReceiver, JobStateSender};
+use super::{
+    languages::LanguageConfig, manager::ShutdownReceiver, runner::Runner, JobStateReceiver,
+    JobStateSender,
+};
 
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(tag = "status", content = "content", rename_all = "camelCase")]
@@ -137,6 +140,7 @@ pub struct JobRequest {
     pub user_id: i64,
     pub problem_id: i64,
     pub program: String,
+    pub language: String,
     pub cpu_time: i64,
     pub op: JobOperation,
 }
@@ -157,23 +161,42 @@ impl Job {
         id: u64,
         request: JobRequest,
         shutdown_rx: ShutdownReceiver,
+        config: &LanguageConfig,
     ) -> (Self, JobStateReceiver) {
         let mut state = match request.op {
             JobOperation::Judging(ref cases) => JobState::new_judging(cases.len()),
             JobOperation::Testing(_) => JobState::new_testing(),
         };
-        let res = Runner::new(&request.program, request.cpu_time).await;
+        let res = Runner::new(
+            &config.compile_cmd,
+            &config.run_cmd,
+            &config.file_name,
+            &request.program,
+            request.cpu_time,
+        )
+        .await;
         let runner = match res {
             Ok(runner) => {
                 info!("Job {} Runner created", id);
                 Some(runner)
             }
             Err(e) => {
-                error!("Job {} Couldn't create runner: {:?}", id, e);
-                state.complete_case(
-                    0,
-                    CaseError::Judge("Couldn't create runner".to_string()).into(),
-                );
+                match &request.op {
+                    JobOperation::Judging(_) => {
+                        state.complete_case(0, e.into());
+                    }
+                    JobOperation::Testing(_) => {
+                        match &e {
+                            CaseError::Compilation(ref msg) => {
+                                state.complete_case(
+                                    0,
+                                    CaseStatus::Failed(format!("Compilation Error: {}", msg)),
+                                );
+                            }
+                            _ => state.complete_case(0, e.into()),
+                        };
+                    }
+                }
                 None
             }
         };

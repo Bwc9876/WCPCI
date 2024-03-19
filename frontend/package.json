@@ -5,12 +5,12 @@
     "scripts": {
         "dev": "astro dev",
         "start": "astro dev",
-        "build": "astro check && pnpm _build",
-        "_build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\"",
+        "check": "astro check",
+        "build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\"",
         "preview": "astro preview",
         "astro": "astro",
         "format": "prettier --write .",
-        "watch": "pnpm _build && chokidar \"**/*.astro\" \"**/*.mjs\" \"public/**\" -i \"node_modules\" -i \"dist\" -c \"pnpm _build\""
+        "watch": "pnpm build && chokidar \"**/*.astro\" \"**/*.mjs\" \"public/**\" -i \"node_modules\" -i \"dist\" -c \"pnpm build\""
     },
     "dependencies": {
         "@astrojs/check": "^0.5.9",

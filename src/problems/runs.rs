@@ -66,7 +66,7 @@ impl JudgeRun {
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             JudgeRun,
-            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC",
+            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 10",
             user_id,
             problem_id
         )

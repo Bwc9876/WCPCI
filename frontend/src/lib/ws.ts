@@ -2,10 +2,12 @@ export type WebSocketRequest =
     | {
           type: "judge";
           program: string;
+          language: string;
       }
     | {
           type: "test";
           program: string;
+          language: string;
           input: string;
       };
 
