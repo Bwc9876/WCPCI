@@ -3,13 +3,12 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
 import Button from "@/components/Button.astro";
 import CaseIndicator from "@/components/CaseIndicator.astro";
 import Field from "@/components/Field.astro";
-import Link from "@/components/Link.astro";
 import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
-import Debug from "@/components/tera/Debug.astro";
+import For from "@/components/tera/For.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Layout from "@/layouts/Layout.astro";
-import { themeClass, variable } from "@/lib/tera";
+import { tag, themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 ---
 
@@ -92,7 +91,12 @@ import { Icon } from "astro-icon/components";
                         value=""
                         type="select"
                         options={[]}
-                    />
+                        ><For sourceList="languages" itemName="language" slot="options_templated">
+                            <option value={variable("language[0]")}>
+                                <Variable expression="language[1]" />
+                            </option>
+                        </For></Field
+                    >
                 </div>
                 <div
                     id="editor"
@@ -150,6 +154,121 @@ import { Icon } from "astro-icon/components";
         </div>
     </div>
 </Layout>
+
+<script>
+    import type { CodeInfo } from "@/lib/editor";
+    import type { WebSocketRequest } from "@/lib/ws";
+    import type * as monaco from "monaco-editor";
+
+    import setupCodeHighlight from "@/lib/highlighting";
+    import setupWebSocket from "@/lib/ws";
+    import setupEditor from "@/lib/editor";
+    import setupMath from "@/lib/math";
+
+    let ws: WebSocket | null = null;
+    let editor: monaco.editor.IStandaloneCodeEditor | null = null;
+
+    document.addEventListener("astro:page-load", async () => {
+        if (!window.location.pathname.match(/\/problems\/\d+\/?$/)) {
+            return;
+        }
+
+        const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
+        const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
+        const editorElem = (document.querySelector("#editor") as HTMLElement)!;
+        const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
+        const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
+        const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
+        const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
+        const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
+        const languageDropdown = (document.querySelector(
+            "#language-dropdown"
+        ) as HTMLSelectElement)!;
+        const languageIcon = (document.querySelector("#language-icon") as HTMLImageElement)!;
+        const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
+        const testButtonTemplate = (document.querySelector(
+            "#test-debug-template"
+        ) as HTMLButtonElement)!;
+
+        const toggleButtons = (disabled: boolean) => {
+            submitButton.disabled = disabled;
+            runDebugButton.disabled = disabled;
+            document.querySelectorAll(".example-button").forEach((b) => {
+                (b as HTMLButtonElement).disabled = disabled;
+            });
+        };
+
+        const problemId = submitButton.dataset.problemId!;
+        const defaultLanguage = submitButton.dataset.defaultLanguage!;
+        const colorScheme = submitButton.dataset.colorPreference!;
+        const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
+
+        ws = setupWebSocket(
+            problemId,
+            runMessageWrapper,
+            runMessage,
+            debugCaseIndicator,
+            testOutput,
+            toggleButtons
+        );
+        const [newEditor, _getLang] = setupEditor(
+            codeInfo,
+            defaultLanguage,
+            problemId,
+            languageDropdown,
+            colorScheme,
+            editorElem,
+            languageIcon
+        );
+
+        editor = newEditor as monaco.editor.IStandaloneCodeEditor;
+        const getLang = _getLang as () => string;
+
+        runDebugButton.onclick = () => {
+            if (editor && ws) {
+                const req: WebSocketRequest = {
+                    type: "test",
+                    input: testInput.value,
+                    language: getLang(),
+                    program: editor.getValue()
+                };
+                console.debug("Sending request", req);
+                ws.send(JSON.stringify(req));
+            }
+        };
+
+        submitButton.onclick = () => {
+            if (editor && ws) {
+                const req: WebSocketRequest = {
+                    type: "judge",
+                    program: editor.getValue(),
+                    language: getLang()
+                };
+                console.debug("Sending request", req);
+                ws.send(JSON.stringify(req));
+            }
+        };
+
+        setupCodeHighlight((input) => {
+            if (editor) {
+                editor.setValue(input);
+            }
+        }, testButtonTemplate);
+
+        setupMath();
+    });
+
+    document.addEventListener("astro:after-swap", () => {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+        if (editor) {
+            editor.dispose();
+            editor = null;
+        }
+    });
+</script>
 
 <style is:global>
     #rendered-md > * {
@@ -226,381 +345,3 @@ import { Icon } from "astro-icon/components";
         pointer-events: none;
     }
 </style>
-
-<script>
-    import * as monaco from "monaco-editor";
-    import monacoTheme from "@/lib/wcpc-monaco.json";
-    import monacoLightTheme from "@/lib/wcpc-monaco-light.json";
-
-    monaco.editor.defineTheme("wcpc-dark", monacoTheme as any);
-    monaco.editor.defineTheme("wcpc-light", monacoLightTheme as any);
-
-    import "katex/dist/katex.css";
-    import katex from "katex";
-
-    import "highlight.js/styles/default.css";
-    import "highlight.js/styles/an-old-hope.css";
-    import hljs from "highlight.js/lib/core";
-    import javascript from "highlight.js/lib/languages/javascript";
-    import plaintext from "highlight.js/lib/languages/plaintext";
-    import python from "highlight.js/lib/languages/python";
-    import rust from "highlight.js/lib/languages/rust";
-
-    import type { WebSocketRequest, WebSocketMessage, JobState, CaseStatus } from "@/lib/ws";
-    import type { Status } from "@/components/CaseIndicator.astro";
-
-    type CodeInfo = {
-        [lang: string]: {
-            name: string;
-            tablerIcon: string;
-            monacoContribution: string;
-            defaultCode: string;
-            fileName: string;
-        };
-    };
-
-    type MonacoEditor = monaco.editor.IStandaloneCodeEditor;
-
-    declare global {
-        interface Window {
-            ws?: WebSocket;
-            stylesClone?: HTMLStyleElement;
-            codeEditor?: MonacoEditor;
-            currentLanguage?: string;
-            require?: (mods: string[], cb: (...mods: any[]) => void, err: any) => void;
-        }
-    }
-
-    const stateIsComplete = (state: JobState) => {
-        switch (state.type) {
-            case "judging":
-                return !state.cases.some((c) => c.status === "pending" || c.status === "running");
-            case "testing":
-                return state.status.status !== "pending" && state.status.status !== "running";
-        }
-    };
-
-    const typeToStatus: Record<CaseStatus["status"], Status> = {
-        failed: "error",
-        passed: "success",
-        notRun: "empty",
-        pending: "idle",
-        running: "loading"
-    };
-
-    const makeIconUrl = (name: string) =>
-        `https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/${name}.svg`;
-
-    document.addEventListener("astro:page-load", async () => {
-        if (window.codeEditor) {
-            window.codeEditor.dispose();
-            window.codeEditor = undefined;
-        }
-        if (window.ws) {
-            window.ws.close();
-            window.ws = undefined;
-        }
-
-        if (!window.location.pathname.match(/\/problems\/\d+\/?$/)) {
-            return;
-        }
-
-        const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
-        const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
-        const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
-        const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
-        const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
-        const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
-        const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
-        const languageDropdown = (document.querySelector(
-            "#language-dropdown"
-        ) as HTMLSelectElement)!;
-        const languageIcon = (document.querySelector("#language-icon") as HTMLImageElement)!;
-        const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
-        const testButtonTemplate = (document.querySelector(
-            "#test-debug-template"
-        ) as HTMLButtonElement)!;
-
-        const toggleButtons = (disabled: boolean) => {
-            submitButton.disabled = disabled;
-            runDebugButton.disabled = disabled;
-            document.querySelectorAll(".example-button").forEach((b) => {
-                (b as HTMLButtonElement).disabled = disabled;
-            });
-        };
-
-        const problemId = submitButton.dataset.problemId!;
-        const defaultLanguage = submitButton.dataset.defaultLanguage!;
-        const colorScheme = submitButton.dataset.colorPreference!;
-        const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
-
-        for (const name in codeInfo) {
-            const info = codeInfo[name];
-            const newElem = document.createElement("option");
-            newElem.value = name;
-            newElem.innerText = info.name;
-            languageDropdown.appendChild(newElem);
-        }
-
-        //languageDropdown.value = defaultLanguage;
-
-        languageDropdown.onchange = (e) => {
-            const lang = (e.target as HTMLSelectElement).value;
-            const langInfo = codeInfo[lang];
-            if (langInfo) {
-                window.currentLanguage = lang;
-                languageIcon.src = makeIconUrl(langInfo.tablerIcon);
-                if (window.codeEditor) {
-                    const storedCode = JSON.parse(
-                        window.localStorage.getItem(`problem-${problemId}-${lang}-code`) ?? "null"
-                    );
-                    window.codeEditor.setValue(storedCode ?? langInfo.defaultCode);
-                    monaco.editor.setModelLanguage(
-                        window.codeEditor.getModel()!,
-                        langInfo.monacoContribution
-                    );
-                    window.localStorage.setItem(
-                        `problem-${problemId}-code`,
-                        JSON.stringify([storedCode, lang])
-                    );
-                }
-            }
-        };
-
-        const url = `ws://${window.location.host}/run/ws/${problemId}`;
-
-        console.debug("Connecting to WebSocket at", url);
-
-        const ws = new WebSocket(url);
-
-        window.ws = ws;
-
-        ws.onopen = () => {
-            console.debug("WebSocket connection established");
-            toggleButtons(false);
-        };
-
-        ws.onmessage = (event) => {
-            const message: WebSocketMessage = JSON.parse(event.data);
-            console.debug("Received message", message);
-
-            switch (message.type) {
-                case "stateUpdate":
-                    const state = message.state as JobState;
-                    const complete = stateIsComplete(state);
-                    toggleButtons(!complete);
-                    switch (state.type) {
-                        case "judging":
-                            for (const [i, c] of state.cases.entries()) {
-                                document
-                                    .querySelector(`[data-case-number='${i}']`)!
-                                    .setAttribute("data-status", typeToStatus[c.status]);
-                            }
-                            if (complete) {
-                                const firstWithErr = state.cases.find((c) => c.status === "failed");
-                                if (firstWithErr && firstWithErr.status === "failed") {
-                                    runMessageWrapper.setAttribute("data-status", "error");
-                                    runMessage.innerText = firstWithErr.content;
-                                } else {
-                                    runMessageWrapper.setAttribute("data-status", "success");
-                                    runMessage.innerText = "Passed!";
-                                }
-                            } else {
-                                runMessageWrapper.setAttribute("data-status", "loading");
-                                runMessage.innerText = "Running...";
-                            }
-                            break;
-                        case "testing":
-                            debugCaseIndicator.setAttribute(
-                                "data-status",
-                                typeToStatus[state.status.status]
-                            );
-                            switch (state.status.status) {
-                                case "passed":
-                                    testOutput.value = state.status.content ?? "";
-                                    break;
-                                case "failed":
-                                    testOutput.value = state.status.content ?? "";
-                                    break;
-                            }
-                    }
-                    break;
-                case "invalid":
-                    console.error("Invalid message sent", message);
-                    break;
-                case "runDenied":
-                    toggleButtons(true);
-                    break;
-                case "runStarted":
-                    toggleButtons(true);
-                    break;
-            }
-        };
-
-        ws.onclose = () => {
-            console.debug("WebSocket connection closed");
-            toggleButtons(true);
-            runMessageWrapper.setAttribute("data-status", "disconnected");
-            runMessage.innerText = "Disconnected, please refresh the page.";
-        };
-
-        ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
-        };
-
-        runDebugButton.onclick = () => {
-            if (window.codeEditor && window.currentLanguage) {
-                const req: WebSocketRequest = {
-                    type: "test",
-                    input: testInput.value,
-                    language: window.currentLanguage,
-                    program: window.codeEditor.getValue()
-                };
-                console.debug("Sending request", req);
-                ws.send(JSON.stringify(req));
-            }
-        };
-
-        submitButton.onclick = () => {
-            if (window.codeEditor && window.currentLanguage) {
-                const req: WebSocketRequest = {
-                    type: "judge",
-                    program: window.codeEditor.getValue(),
-                    language: window.currentLanguage
-                };
-                console.debug("Sending request", req);
-                ws.send(JSON.stringify(req));
-            }
-        };
-
-        // Monaco Initialization
-        const editorElem = document.getElementById("editor");
-        setTimeout(async () => {
-            console.debug("Initializing Monaco", editorElem);
-            //let monaco = await loadMonaco();
-            console.debug("Monaco initialized", monaco);
-
-            const [storedCode, storedLang] = JSON.parse(
-                window.localStorage.getItem(`problem-${problemId}-code`) ?? "[null, null]"
-            );
-
-            const lang = Object.keys(codeInfo).includes(storedLang ?? "")
-                ? storedLang
-                : defaultLanguage;
-
-            const langInfo = codeInfo[lang];
-
-            window.currentLanguage = lang;
-
-            languageDropdown.value = lang;
-            languageIcon.src = makeIconUrl(langInfo.tablerIcon);
-            setTimeout(() => languageIcon.classList.remove("opacity-0"), 300);
-
-            console.debug(langInfo);
-
-            const mql = matchMedia("(prefers-color-scheme: dark)");
-
-            const themeVariant =
-                colorScheme === "system" ? (mql.matches ? "dark" : "light") : colorScheme;
-
-            if (colorScheme === "system") {
-                mql.addEventListener("change", (mql) => {
-                    if (window.codeEditor) {
-                        monaco.editor.setTheme(mql.matches ? "wcpc-dark" : "wcpc-light");
-                    }
-                });
-            }
-
-            window.codeEditor = monaco.editor.create(editorElem as HTMLElement, {
-                value: storedCode ?? langInfo.defaultCode,
-                theme: `wcpc-${themeVariant}`,
-                language: langInfo.monacoContribution,
-                automaticLayout: true,
-                minimap: { enabled: false }
-            });
-            if (window.stylesClone) {
-                const newStyles = window.stylesClone.cloneNode(true) as HTMLStyleElement;
-                document.head.appendChild(newStyles);
-            } else {
-                window.stylesClone = document.head.querySelector(
-                    ".monaco-colors"
-                ) as HTMLStyleElement;
-            }
-            let currentTimeout: number | undefined = undefined;
-            let currentLang = lang;
-            window.codeEditor!.onDidChangeModelContent(() => {
-                if (currentTimeout) {
-                    clearTimeout(currentTimeout);
-                }
-                currentTimeout = setTimeout(() => {
-                    if (window.codeEditor && currentLang === window.currentLanguage) {
-                        const text = window.codeEditor.getValue();
-                        const language = window.codeEditor.getModel()?.getLanguageId();
-                        window.localStorage.setItem(
-                            `problem-${problemId}-code`,
-                            JSON.stringify([text, language])
-                        );
-                        window.localStorage.setItem(
-                            `problem-${problemId}-${window.currentLanguage}-code`,
-                            JSON.stringify(text)
-                        );
-                    }
-                }, 1000) as unknown as number;
-                currentLang = window.currentLanguage!;
-            });
-            console.debug("Instantiated Monaco editor", window.codeEditor);
-        }, 100);
-
-        // Katex Initialization
-        document.querySelectorAll("#rendered-md code.math-inline").forEach((block) => {
-            katex.render(block.textContent ?? "", block as HTMLElement, { throwOnError: true });
-        });
-        document.querySelectorAll("#rendered-md pre code.math-display").forEach((block) => {
-            katex.render(block.textContent ?? "", block as HTMLElement, {
-                throwOnError: true,
-                displayMode: true
-            });
-        });
-
-        // Highlight.js Initialization
-        hljs.registerLanguage("javascript", javascript);
-        hljs.registerLanguage("js", javascript);
-        hljs.registerLanguage("python", python);
-        hljs.registerLanguage("py", python);
-        hljs.registerLanguage("rust", rust);
-        hljs.registerLanguage("rs", rust);
-        hljs.registerLanguage("example", plaintext);
-
-        document
-            .querySelectorAll("#rendered-md pre code:not(.language-math):not(language-example)")
-            .forEach((block) => {
-                hljs.highlightElement(block as HTMLElement);
-            });
-
-        const makePreCode = (text: string): HTMLPreElement => {
-            const pre = document.createElement("pre");
-            const code = document.createElement("code");
-            code.classList.add("language-example");
-            code.textContent = text;
-            pre.appendChild(code);
-            return pre;
-        };
-
-        document.querySelectorAll("#rendered-md pre code.language-example").forEach((block) => {
-            const wrapperElem = document.createElement("div");
-            wrapperElem.classList.add("relative");
-            const clonedButton = testButtonTemplate.cloneNode(true) as HTMLButtonElement;
-            clonedButton.removeAttribute("id");
-            clonedButton.classList.remove("hidden");
-            clonedButton.onclick = () => {
-                testInput.value = block.textContent ?? "";
-                runDebugButton.click();
-            };
-            wrapperElem.appendChild(clonedButton);
-            const newBlock = makePreCode(block.textContent ?? "");
-            wrapperElem.appendChild(newBlock);
-            block.parentElement!.replaceWith(wrapperElem);
-            hljs.highlightElement(newBlock.childNodes[0] as HTMLElement);
-        });
-    });
-</script>

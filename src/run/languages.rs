@@ -36,3 +36,12 @@ pub struct RunConfig {
     /// Default language to use
     pub default_language: String,
 }
+
+impl RunConfig {
+    pub fn get_languages_for_dropdown(&self) -> Vec<(&String, &String)> {
+        self.languages
+            .iter()
+            .map(|(k, l)| (k, &l.name))
+            .collect::<Vec<_>>()
+    }
+}

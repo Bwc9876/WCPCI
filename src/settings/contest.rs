@@ -47,12 +47,7 @@ pub fn contest_settings_get(
 ) -> Template {
     let form_template = ContestFormTemplate { user };
     let form = FormTemplateObject::get(form_template);
-    let languages = code_info
-        .run_config
-        .languages
-        .iter()
-        .map(|(k, l)| (k, &l.name))
-        .collect::<Vec<_>>();
+    let languages = code_info.run_config.get_languages_for_dropdown();
     let ctx = context_with_base_authed!(user, form, languages);
     Template::render("settings/contest", ctx)
 }
@@ -72,12 +67,7 @@ pub async fn contest_settings_post(
     code_info: &State<CodeInfo>,
 ) -> Template {
     let mut user = user.clone();
-    let languages = code_info
-        .run_config
-        .languages
-        .iter()
-        .map(|(k, l)| (k, &l.name))
-        .collect::<Vec<_>>();
+    let languages = code_info.run_config.get_languages_for_dropdown();
     if let Some(ref value) = form.value {
         let default_language = value.default_language.trim();
         let color_scheme = &value.color_scheme;

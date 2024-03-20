@@ -38,6 +38,7 @@ pub async fn view_problem_get(
             .await
             .unwrap_or(0);
 
+        let languages = info.run_config.get_languages_for_dropdown();
         let code_info = &info.languages_json;
         let default_language = user
             .map(|u| &u.default_language)
@@ -52,6 +53,7 @@ pub async fn view_problem_get(
                 last_run,
                 case_count,
                 code_info,
+                languages,
                 default_language
             ),
         ))

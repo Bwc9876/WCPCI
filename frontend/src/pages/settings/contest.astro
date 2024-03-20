@@ -33,7 +33,7 @@ import { tag, variable } from "@/lib/tera";
                     value={variable("language[0]")}
                     data-phantom={`${tag(`if form.data.default_language == language[0]`)}${variable("fake_attr(attr='selected') | safe")}${tag("endif")}`}
                 >
-                    <Variable expression="language[1]" data-phantom={``} />
+                    <Variable expression="language[1]" />
                 </option>
             </For>
         </Field>
