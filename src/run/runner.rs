@@ -32,6 +32,7 @@ pub type CaseResult<T = ()> = Result<T, CaseError>;
 
 pub struct Runner {
     run_cmd: String,
+    compile_cmd: String,
     file_name: String,
     temp_path: PathBuf,
     #[allow(dead_code)]
@@ -40,6 +41,7 @@ pub struct Runner {
 
 impl Runner {
     pub async fn new(
+        id: u64,
         compile_cmd: &str,
         run_cmd: &str,
         file_name: &str,
@@ -51,7 +53,7 @@ impl Runner {
             .map_err(|e| CaseError::Judge(format!("Couldn't get time: {e:?}")))?
             .as_nanos();
 
-        let dir_name = format!("run_{}", now_nanos);
+        let dir_name = format!("run_jon_wcpc_{id}_{}", now_nanos);
 
         let temp_path = std::env::temp_dir().join(dir_name);
 
@@ -63,11 +65,24 @@ impl Runner {
             .await
             .map_err(|e| CaseError::Judge(format!("Couldn't write to program file: {e:?}")))?;
 
-        if !compile_cmd.is_empty() {
+        Ok(Self {
+            run_cmd: run_cmd.to_string(),
+            compile_cmd: compile_cmd.to_string(),
+            file_name: file_name.to_string(),
+            temp_path,
+            max_cpu_time,
+        })
+    }
+
+    pub async fn compile(&mut self) -> Result<(), CaseError> {
+        if self.compile_cmd.is_empty() {
+            Ok(())
+        } else {
             let mut cmd = tokio::process::Command::new("bash");
             cmd.arg("-c")
-                .arg(compile_cmd)
-                .current_dir(&temp_path)
+                .arg(&self.compile_cmd)
+                .current_dir(&self.temp_path)
+                //.stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
             let output = cmd
@@ -76,16 +91,11 @@ impl Runner {
                 .map_err(|e| CaseError::Judge(format!("Couldn't run compile command: {e:?}")))?;
             if !output.status.success() {
                 let std_err = String::from_utf8_lossy(&output.stderr).to_string();
-                return Err(CaseError::Compilation(std_err));
+                Err(CaseError::Compilation(std_err))
+            } else {
+                Ok(())
             }
         }
-
-        Ok(Self {
-            run_cmd: run_cmd.to_string(),
-            file_name: file_name.to_string(),
-            temp_path,
-            max_cpu_time,
-        })
     }
 
     pub async fn run_cmd(&self, input: &str) -> CaseResult<String> {

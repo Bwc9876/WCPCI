@@ -1,6 +1,11 @@
-import * as monaco from "monaco-editor";
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
+import "@/lib/editorLanguages";
+import "@/lib/editorFeatures";
 import monacoDarkTheme from "@/lib/wcpc-monaco-dark.json";
 import monacoLightTheme from "@/lib/wcpc-monaco-light.json";
+
+import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import JsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 monaco.editor.defineTheme("wcpc-dark", monacoDarkTheme as any);
 monaco.editor.defineTheme("wcpc-light", monacoLightTheme as any);
@@ -19,6 +24,23 @@ export type CodeInfo = {
         defaultCode: string;
         fileName: string;
     };
+};
+
+const getWorker = (workerId: string, label: string): Worker => {
+    console.debug(`Creating worker for ${label}`, workerId);
+    switch (label) {
+        case "editorWorkerService":
+            return new EditorWorker();
+        case "javascript":
+        case "typescript":
+            return new JsWorker();
+        default:
+            throw new Error(`Unknown workerId: ${workerId}`);
+    }
+};
+
+self.MonacoEnvironment = {
+    getWorker
 };
 
 export const makeIconUrl = (name: string) =>
@@ -60,11 +82,13 @@ export default (
         window.localStorage.getItem(`problem-${problemId}-code`) ?? "[null, null]"
     );
 
-    const lang = Object.keys(codeInfo).includes(storedLang ?? "") ? storedLang : defaultLanguage;
+    currentLanguage = Object.keys(codeInfo).includes(storedLang ?? "")
+        ? storedLang
+        : defaultLanguage;
 
-    const langInfo = codeInfo[lang];
+    const langInfo = codeInfo[currentLanguage];
 
-    languageDropdown.value = lang;
+    languageDropdown.value = currentLanguage;
     languageIcon.src = makeIconUrl(langInfo.tablerIcon);
     setTimeout(() => languageIcon.classList.remove("opacity-0"), 300);
 
@@ -96,7 +120,7 @@ export default (
     }
 
     let currentTimeout: number | undefined = undefined;
-    let oldLang = lang;
+    let oldLang = currentLanguage;
     editor!.onDidChangeModelContent(() => {
         if (currentTimeout) {
             clearTimeout(currentTimeout);

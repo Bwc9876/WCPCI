@@ -61,3 +61,14 @@ monaco_contribution = "java"
 file_name = "Man.java"
 compile_cmd = "javac Man.java"
 run_cmd = "java Man"
+
+[debug.run.languages.typescript]
+name = "TypeScript / JavaScript"
+default_code = """
+console.log("Hello World!");
+"""
+tabler_icon = "brand-typescript"
+monaco_contribution = "typescript"
+file_name = "index.ts"
+compile_cmd = "tsc index.ts"
+run_cmd = "node index.js"

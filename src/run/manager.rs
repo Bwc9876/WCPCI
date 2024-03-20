@@ -66,8 +66,12 @@ impl RunManager {
             .get(&request.language)
             .ok_or_else(|| format!("Language {} not supported by runner", request.language))?;
 
-        let (job, state_rx) =
-            Job::new(id, request, self.shutdown_rx.clone(), language_config).await;
+        let (job, state_rx) = Job::new(id, request, self.shutdown_rx.clone(), language_config)
+            .await
+            .map_err(|e| {
+                error!("Couldn't create job: {:?}", e);
+                "Judge Error".to_string()
+            })?;
 
         let handle = Arc::new(Mutex::new(Some((problem_id, state_rx.clone()))));
 

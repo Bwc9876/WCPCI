@@ -21,8 +21,11 @@ pub fn stage() -> AdHoc {
                 .and_then(|s| s.as_str().map(|s| s.to_string()))
                 .unwrap_or_else(|| "public".to_string()),
         );
+        let path = template_dir.join("assets");
+        let assets_dir = path.to_str().unwrap();
         rocket
             .mount("/_astro", FileServer::from(dir))
+            .mount("/assets", FileServer::from(assets_dir))
             .mount("/", FileServer::from(public_dir).rank(15))
     })
 }

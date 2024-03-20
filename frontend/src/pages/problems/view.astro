@@ -8,7 +8,7 @@ import Tile from "@/components/Tile.astro";
 import For from "@/components/tera/For.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Layout from "@/layouts/Layout.astro";
-import { tag, themeClass, variable } from "@/lib/tera";
+import { themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 ---
 
@@ -160,15 +160,11 @@ import { Icon } from "astro-icon/components";
     import type { WebSocketRequest } from "@/lib/ws";
     import type * as monaco from "monaco-editor";
 
-    import setupCodeHighlight from "@/lib/highlighting";
-    import setupWebSocket from "@/lib/ws";
-    import setupEditor from "@/lib/editor";
-    import setupMath from "@/lib/math";
-
     let ws: WebSocket | null = null;
     let editor: monaco.editor.IStandaloneCodeEditor | null = null;
+    let getLang: (() => string) | null = null;
 
-    document.addEventListener("astro:page-load", async () => {
+    document.addEventListener("astro:page-load", () => {
         if (!window.location.pathname.match(/\/problems\/\d+\/?$/)) {
             return;
         }
@@ -203,29 +199,33 @@ import { Icon } from "astro-icon/components";
         const colorScheme = submitButton.dataset.colorPreference!;
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
 
-        ws = setupWebSocket(
-            problemId,
-            runMessageWrapper,
-            runMessage,
-            debugCaseIndicator,
-            testOutput,
-            toggleButtons
-        );
-        const [newEditor, _getLang] = setupEditor(
-            codeInfo,
-            defaultLanguage,
-            problemId,
-            languageDropdown,
-            colorScheme,
-            editorElem,
-            languageIcon
-        );
+        import("@/lib/ws").then((c) => {
+            ws = c.default(
+                problemId,
+                runMessageWrapper,
+                runMessage,
+                debugCaseIndicator,
+                testOutput,
+                toggleButtons
+            );
+        });
 
-        editor = newEditor as monaco.editor.IStandaloneCodeEditor;
-        const getLang = _getLang as () => string;
+        import("@/lib/editor").then((c) => {
+            const [newEditor, _getLang] = c.default(
+                codeInfo,
+                defaultLanguage,
+                problemId,
+                languageDropdown,
+                colorScheme,
+                editorElem,
+                languageIcon
+            );
+            editor = newEditor as monaco.editor.IStandaloneCodeEditor;
+            getLang = _getLang as () => string;
+        });
 
         runDebugButton.onclick = () => {
-            if (editor && ws) {
+            if (editor && ws && getLang) {
                 const req: WebSocketRequest = {
                     type: "test",
                     input: testInput.value,
@@ -234,11 +234,12 @@ import { Icon } from "astro-icon/components";
                 };
                 console.debug("Sending request", req);
                 ws.send(JSON.stringify(req));
+                toggleButtons(true);
             }
         };
 
         submitButton.onclick = () => {
-            if (editor && ws) {
+            if (editor && ws && getLang) {
                 const req: WebSocketRequest = {
                     type: "judge",
                     program: editor.getValue(),
@@ -246,16 +247,20 @@ import { Icon } from "astro-icon/components";
                 };
                 console.debug("Sending request", req);
                 ws.send(JSON.stringify(req));
+                toggleButtons(true);
             }
         };
 
-        setupCodeHighlight((input) => {
-            if (editor) {
-                editor.setValue(input);
-            }
-        }, testButtonTemplate);
+        import("@/lib/highlighting").then((c) =>
+            c.default((input) => {
+                if (editor) {
+                    testInput.value = input;
+                    runDebugButton.click();
+                }
+            }, testButtonTemplate)
+        );
 
-        setupMath();
+        import("@/lib/math").then((c) => c.default());
     });
 
     document.addEventListener("astro:after-swap", () => {
@@ -266,6 +271,9 @@ import { Icon } from "astro-icon/components";
         if (editor) {
             editor.dispose();
             editor = null;
+        }
+        if (getLang) {
+            getLang = null;
         }
     });
 </script>

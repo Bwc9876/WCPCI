@@ -1,4 +1,4 @@
-use log::{error, info, warn};
+use log::{error, info};
 use rocket::time::OffsetDateTime;
 
 use crate::{problems::TestCase, run::runner::CaseError};
@@ -148,7 +148,7 @@ pub struct JobRequest {
 pub struct Job {
     pub id: u64,
     user_id: i64,
-    runner: Option<Runner>,
+    runner: Runner,
     op: JobOperation,
     pub state: JobState,
     state_tx: JobStateSender,
@@ -162,12 +162,14 @@ impl Job {
         request: JobRequest,
         shutdown_rx: ShutdownReceiver,
         config: &LanguageConfig,
-    ) -> (Self, JobStateReceiver) {
+    ) -> Result<(Self, JobStateReceiver), String> {
         let mut state = match request.op {
             JobOperation::Judging(ref cases) => JobState::new_judging(cases.len()),
             JobOperation::Testing(_) => JobState::new_testing(),
         };
+
         let res = Runner::new(
+            id,
             &config.compile_cmd,
             &config.run_cmd,
             &config.file_name,
@@ -175,66 +177,61 @@ impl Job {
             request.cpu_time,
         )
         .await;
-        let runner = match res {
+        match res {
             Ok(runner) => {
                 info!("Job {} Runner created", id);
-                Some(runner)
+                let (state_tx, state_rx) = tokio::sync::watch::channel(state.clone());
+                Ok((
+                    Self {
+                        id,
+                        runner,
+                        state,
+                        state_tx,
+                        user_id: request.user_id,
+                        op: request.op,
+                        started_at: OffsetDateTime::now_utc(),
+                        shutdown_rx,
+                    },
+                    state_rx,
+                ))
             }
             Err(e) => {
-                match &request.op {
-                    JobOperation::Judging(_) => {
-                        state.complete_case(0, e.into());
-                    }
-                    JobOperation::Testing(_) => {
-                        match &e {
-                            CaseError::Compilation(ref msg) => {
-                                state.complete_case(
-                                    0,
-                                    CaseStatus::Failed(format!("Compilation Error: {}", msg)),
-                                );
-                            }
-                            _ => state.complete_case(0, e.into()),
-                        };
-                    }
-                }
-                None
+                state.complete_case(0, e.clone().into());
+                Err(format!("Job {} Couldn't create runner: {:?}", id, e))
             }
-        };
-        let (state_tx, state_rx) = tokio::sync::watch::channel(state.clone());
-        (
-            Self {
-                id,
-                runner,
-                state: state.clone(),
-                state_tx,
-                user_id: request.user_id,
-                op: request.op,
-                started_at: OffsetDateTime::now_utc(),
-                shutdown_rx,
-            },
-            state_rx,
-        )
+        }
     }
 
     pub async fn run(mut self) -> (JobState, OffsetDateTime) {
-        let runner = match self.runner {
-            Some(ref runner) => runner,
-            None => {
-                warn!("Job {} not running due to missing runner", self.id);
-                return (self.state, self.started_at);
+        self.state.start_first();
+        self.publish_state();
+        if let Err(why) = self.runner.compile().await {
+            info!("Job {} Compilation Failed", self.id);
+            if matches!(&self.state, JobState::Testing { .. }) {
+                match why {
+                    CaseError::Compilation(e) => {
+                        self.state
+                            .complete_case(0, CaseStatus::Failed(format!("Compile Error: {}", e)));
+                    }
+                    _ => {
+                        self.state.complete_case(0, why.into());
+                    }
+                }
+            } else {
+                self.state.complete_case(0, why.into());
             }
-        };
+            self.publish_state();
+            return (self.state, self.started_at);
+        }
         info!(
             "Job {} Starting, requested by user {}",
             self.id, self.user_id
         );
-        self.state.start_first();
-        self.publish_state();
         match &self.op {
             JobOperation::Judging(cases) => {
                 for (i, case) in cases.iter().enumerate() {
                     info!("Job {} Running Case {}", self.id, i + 1);
-                    let status = match runner.run_case(case).await {
+                    let status = match self.runner.run_case(case).await {
                         Ok(_) => CaseStatus::Passed(None),
                         Err(e) => match &e {
                             CaseError::Judge(ref why) => {
@@ -268,7 +265,7 @@ impl Job {
             }
             JobOperation::Testing(input) => {
                 info!("Job {} Running Test", self.id);
-                let status = match runner.run_cmd(input).await {
+                let status = match self.runner.run_cmd(input).await {
                     Ok(out) => CaseStatus::Passed(Some(out)),
                     Err(e) => match &e {
                         CaseError::Judge(ref why) => {
