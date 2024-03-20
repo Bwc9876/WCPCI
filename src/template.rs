@@ -180,6 +180,7 @@ macro_rules! context_with_base {
             logged_in: $usr.is_some(),
             user: $usr,
             name: $usr.map(|u| u.display_name()).unwrap_or_default(),
+            version: env!("CARGO_PKG_VERSION"),
             $($key $(: $value)?),*
         }
     };
@@ -192,6 +193,7 @@ macro_rules! context_with_base_authed {
             logged_in: true,
             user: $usr,
             name: $usr.display_name(),
+            version: env!("CARGO_PKG_VERSION"),
             $($key $(: $value)?),*
         }
     };

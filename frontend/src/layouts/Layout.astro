@@ -9,6 +9,8 @@ import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Tile from "@/components/Tile.astro";
 import Button from "@/components/Button.astro";
+import { tag, themeClass } from "@/lib/tera";
+import Tag from "@/components/tera/Tag.astro";
 
 export interface Props {
     title: string;
@@ -22,7 +24,8 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
 ---
 
 <!doctype html>
-<html class="dark" lang="en">
+<!-- {% set scheme = user.color_scheme | default(value='UseSystem') %}WCPC {{ version }} -->
+<html class={themeClass("light", "dark", "system")} lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="description" content="Astro description" />
@@ -121,6 +124,70 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
                         border-color var(--color-transition-duration) linear;
                 }
 
+                @media (prefers-color-scheme: dark) {
+                    :root.system {
+                        --text-50: #0f0a0f;
+                        --text-100: #1d151e;
+                        --text-200: #3a293d;
+                        --text-300: #583e5b;
+                        --text-400: #755379;
+                        --text-500: #926798;
+                        --text-600: #a886ac;
+                        --text-700: #bea4c1;
+                        --text-800: #d3c2d6;
+                        --text-900: #e9e1ea;
+                        --text-950: #f4f0f5;
+
+                        --background-50: #0f0b0f;
+                        --background-100: #1e151e;
+                        --background-200: #3c2a3c;
+                        --background-300: #5a3f5a;
+                        --background-400: #775577;
+                        --background-500: #956a95;
+                        --background-600: #aa88aa;
+                        --background-700: #c0a5c0;
+                        --background-800: #d5c3d5;
+                        --background-900: #eae1ea;
+                        --background-950: #f4f0f4;
+
+                        --primary-50: #17001a;
+                        --primary-100: #2d0033;
+                        --primary-200: #5a0066;
+                        --primary-300: #870099;
+                        --primary-400: #b400cc;
+                        --primary-500: #e100ff;
+                        --primary-600: #e733ff;
+                        --primary-700: #ed66ff;
+                        --primary-800: #f399ff;
+                        --primary-900: #f9ccff;
+                        --primary-950: #fce5ff;
+
+                        --secondary-50: #100811;
+                        --secondary-100: #201122;
+                        --secondary-200: #412145;
+                        --secondary-300: #613267;
+                        --secondary-400: #81428a;
+                        --secondary-500: #a253ac;
+                        --secondary-600: #b475bd;
+                        --secondary-700: #c798cd;
+                        --secondary-800: #dabade;
+                        --secondary-900: #ecddee;
+                        --secondary-950: #f6eef7;
+
+                        --accent-50: #171202;
+                        --accent-100: #2e2505;
+                        --accent-200: #5c490a;
+                        --accent-300: #8a6e0f;
+                        --accent-400: #b99213;
+                        --accent-500: #e7b718;
+                        --accent-600: #ecc546;
+                        --accent-700: #f0d475;
+                        --accent-800: #f5e2a3;
+                        --accent-900: #faf1d1;
+                        --accent-950: #fdf8e8;
+                    }
+                }
+
                 :root {
                     --color-transition-duration: 100ms;
                     --text-50: #f4f0f4;
@@ -171,18 +238,19 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
                     --secondary-900: #201122;
                     --secondary-950: #100811;
 
-                    --accent-50: #fdf8e8;
-                    --accent-100: #faf1d1;
-                    --accent-200: #f5e2a3;
-                    --accent-300: #f0d475;
-                    --accent-400: #ecc546;
-                    --accent-500: #e7b718;
-                    --accent-600: #b99213;
-                    --accent-700: #8a6e0f;
-                    --accent-800: #5c490a;
-                    --accent-900: #2e2505;
-                    --accent-950: #171202;
+                    --accent-50: #fbf7ea;
+                    --accent-100: #f6eed5;
+                    --accent-200: #eddeab;
+                    --accent-300: #e4cd81;
+                    --accent-400: #dbbc57;
+                    --accent-500: #d2ac2d;
+                    --accent-600: #a88924;
+                    --accent-700: #7e671b;
+                    --accent-800: #544512;
+                    --accent-900: #2a2209;
+                    --accent-950: #151104;
                 }
+
                 :root.dark {
                     --text-50: #0f0a0f;
                     --text-100: #1d151e;

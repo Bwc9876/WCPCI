@@ -9,7 +9,7 @@ import Tile from "@/components/Tile.astro";
 import Debug from "@/components/tera/Debug.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Layout from "@/layouts/Layout.astro";
-import { variable } from "@/lib/tera";
+import { themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 ---
 
@@ -40,6 +40,7 @@ import { Icon } from "astro-icon/components";
                     disabled
                     data-problem-id={variable("problem.id")}
                     data-default-language={variable("default_language")}
+                    data-color-preference={themeClass("light", "dark", "system")}
                     class="my-auto w-fit"
                     id="submit"
                     color="primary"
@@ -75,10 +76,12 @@ import { Icon } from "astro-icon/components";
             <Tile class="flex h-[60%] flex-col gap-2">
                 <div class="flex flex-row gap-2">
                     <img
-                        class="select-none opacity-0 invert"
+                        class:list={[
+                            "select-none opacity-0",
+                            themeClass("", "invert", "dark:invert")
+                        ]}
                         width="32"
                         height="32"
-                        class="hidden"
                         id="language-icon"
                     />
                     <Field
@@ -227,8 +230,10 @@ import { Icon } from "astro-icon/components";
 <script>
     import * as monaco from "monaco-editor";
     import monacoTheme from "@/lib/wcpc-monaco.json";
+    import monacoLightTheme from "@/lib/wcpc-monaco-light.json";
 
-    monaco.editor.defineTheme("wcpc", monacoTheme as any);
+    monaco.editor.defineTheme("wcpc-dark", monacoTheme as any);
+    monaco.editor.defineTheme("wcpc-light", monacoLightTheme as any);
 
     import "katex/dist/katex.css";
     import katex from "katex";
@@ -326,6 +331,7 @@ import { Icon } from "astro-icon/components";
 
         const problemId = submitButton.dataset.problemId!;
         const defaultLanguage = submitButton.dataset.defaultLanguage!;
+        const colorScheme = submitButton.dataset.colorPreference!;
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
 
         for (const name in codeInfo) {
@@ -492,9 +498,22 @@ import { Icon } from "astro-icon/components";
 
             console.debug(langInfo);
 
-            window.codeEditor = monaco!.editor.create(editorElem as HTMLElement, {
+            const mql = matchMedia("(prefers-color-scheme: dark)");
+
+            const themeVariant =
+                colorScheme === "system" ? (mql.matches ? "dark" : "light") : colorScheme;
+
+            if (colorScheme === "system") {
+                mql.addEventListener("change", (mql) => {
+                    if (window.codeEditor) {
+                        monaco.editor.setTheme(mql.matches ? "wcpc-dark" : "wcpc-light");
+                    }
+                });
+            }
+
+            window.codeEditor = monaco.editor.create(editorElem as HTMLElement, {
                 value: storedCode ?? langInfo.defaultCode,
-                theme: "wcpc",
+                theme: `wcpc-${themeVariant}`,
                 language: langInfo.monacoContribution,
                 automaticLayout: true,
                 minimap: { enabled: false }

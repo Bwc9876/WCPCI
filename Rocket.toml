@@ -46,3 +46,18 @@ monaco_contribution = "rust"
 file_name = "main.rs"
 compile_cmd = "rustc main.rs -o main"
 run_cmd = "./main"
+
+[debug.run.languages.java]
+name = "Java"
+default_code = """
+public class Man {
+    public static void main(String[] args) {
+        System.out.println("Hello World!");
+    }
+}
+"""
+tabler_icon = "coffee"
+monaco_contribution = "java"
+file_name = "Man.java"
+compile_cmd = "javac Man.java"
+run_cmd = "java Man"

@@ -8,9 +8,10 @@ import { tag, variable } from "@/lib/tera";
 ---
 
 <Settings title="Contest">
-    <Form>
+    <Form submitWord="Save">
         <Field
             type="select"
+            id="color-scheme-select"
             label="Color Scheme"
             name="color_scheme"
             help="Select the color scheme for the website"
@@ -38,3 +39,23 @@ import { tag, variable } from "@/lib/tera";
         </Field>
     </Form>
 </Settings>
+
+<script>
+    const valueToClassName = {
+        Light: "light",
+        Dark: "dark",
+        UseSystem: "system"
+    } as Record<string, string>;
+
+    document.addEventListener("astro:page-load", () => {
+        const schemeSelector = document.querySelector("#color-scheme-select")! as HTMLSelectElement;
+        let oldVal = schemeSelector.value;
+        schemeSelector.onchange = (e) => {
+            const val = (e.target as HTMLSelectElement).value;
+            const root = document.documentElement;
+            root.classList.remove(valueToClassName[oldVal]!);
+            root.classList.add(valueToClassName[val]!);
+            oldVal = val;
+        };
+    });
+</script>
