@@ -7,8 +7,12 @@ import monacoLightTheme from "@/lib/wcpc-monaco-light.json";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import JsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
+import registerHaskell from "@/lib/haskell";
+
 monaco.editor.defineTheme("wcpc-dark", monacoDarkTheme as any);
 monaco.editor.defineTheme("wcpc-light", monacoLightTheme as any);
+
+registerHaskell(monaco);
 
 declare global {
     interface Window {
