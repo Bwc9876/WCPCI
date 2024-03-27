@@ -1,9 +1,10 @@
+use chrono::NaiveDateTime;
 use rocket::{
     http::{Cookie, CookieJar, SameSite, Status},
     outcome::IntoOutcome,
     request::{self, FromRequest},
     time::OffsetDateTime,
-    FromFormField, Request,
+    FromFormField, Request, State,
 };
 use serde::Serialize;
 use sqlx::{encode::IsNull, Encode, Type};
@@ -67,8 +68,7 @@ pub struct User {
     pub display_name: Option<String>,
     pub color_scheme: ColorScheme,
     pub default_language: String,
-    #[serde(skip)] // Not implemented, I cry
-    pub created_at: OffsetDateTime,
+    pub created_at: NaiveDateTime,
 }
 
 pub trait UserMigration {
@@ -91,7 +91,7 @@ impl User {
             color_scheme: ColorScheme::default(),
             default_language: default_language.to_string(),
             display_name: None,
-            created_at: OffsetDateTime::now_utc(),
+            created_at: chrono::offset::Utc::now().naive_utc(),
         }
     }
 
@@ -108,22 +108,25 @@ impl User {
         let user = if let Some(user) = existing {
             user
         } else {
-            user.write_to_db(db).await.map_err(|e| e.to_string())?
+            user.insert(db).await.map_err(|e| e.to_string())?
         };
 
         let session = Session::create(db, user.id).await?;
 
+        let expires =
+            OffsetDateTime::from_unix_timestamp(session.expires_at.and_utc().timestamp()).unwrap();
+
         cookies.add_private(
             Cookie::build(("token", session.token))
                 .same_site(SameSite::Lax)
-                .expires(session.expires_at)
+                .expires(expires)
                 .build(),
         );
 
         Ok(())
     }
 
-    pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<User, String> {
+    pub async fn insert(self, db: &mut DbPoolConnection) -> Result<User, String> {
         let new = sqlx::query_as!(
             User,
             "INSERT INTO user (email, default_display_name, color_scheme, default_language) VALUES (?, ?, ?, ?) RETURNING *",
@@ -153,6 +156,10 @@ impl User {
     }
 }
 
+pub struct AdminUsers(pub Vec<String>);
+
+pub struct Admin();
+
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for &'r User {
     type Error = ();
@@ -174,5 +181,25 @@ impl<'r> FromRequest<'r> for &'r User {
         }).await;
 
         user_result.as_ref().or_forward(Status::Unauthorized)
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for &'r Admin {
+    type Error = ();
+
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        let admin_result = req
+            .local_cache_async(async {
+                let user = req.guard::<&User>().await.succeeded()?;
+                let admin_users = req.guard::<&State<AdminUsers>>().await.succeeded()?;
+                if admin_users.0.contains(&user.email) {
+                    Some(Admin())
+                } else {
+                    None
+                }
+            })
+            .await;
+        admin_result.as_ref().or_forward(Status::Forbidden)
     }
 }

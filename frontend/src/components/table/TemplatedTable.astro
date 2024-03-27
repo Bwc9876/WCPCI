@@ -17,7 +17,7 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
     itemName?: string;
     idColName?: string;
     emptyText?: string;
-    columns: string[];
+    columns: { label?: string; name: string; overrideList?: string }[];
     itemLink?: {
         class?: string;
         color?: LinkColor;
@@ -31,7 +31,6 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
         icon?: string;
         action: (id: string) => string;
     }[];
-    columnNames?: Record<string, string>;
     class?: string;
 }
 
@@ -43,7 +42,6 @@ const {
     columns,
     itemLink,
     actions,
-    columnNames,
     class: className,
     ...rest
 } = Astro.props;
@@ -52,7 +50,7 @@ const makeLabel = (str: string) => {
     return str.replaceAll(/[_\-\.]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-const prettyColumns = columns.map((col) => columnNames?.[col] ?? makeLabel(col));
+const prettyColumns = columns.map((col) => col.label ?? makeLabel(col.name));
 
 type RenderAction = "static" | "template" | false;
 
@@ -109,10 +107,10 @@ const emptyColSpan = renderAction
                                 color={itemLink.color}
                                 href={itemLink.action(variable(`${itemName}.${idColName}`))}
                             >
-                                <Variable expression={`${itemName}.${col}`} />
+                                <Variable expression={col.overrideList ? `${col.overrideList}[loop.index0]` : `${itemName}.${col.name}`} />
                             </Link>
                         ) : (
-                            <Variable expression={`${itemName}.${col}`} />
+                            <Variable expression={col.overrideList ? `${col.overrideList}[loop.index0]` : `${itemName}.${col.name}`} />
                         )}
                     </TableCol>
                 ))
@@ -123,7 +121,7 @@ const emptyColSpan = renderAction
                         {renderAction === "template" && (
                             <Tag expression={`if ${renderActionCondition}`} />
                         )}
-                        <TableCol class="flex flex-row gap-2">
+                        <TableCol class="flex flex-row gap-3">
                             {actions!.map((action) => (
                                 <>
                                     {action.condition && (
@@ -131,7 +129,7 @@ const emptyColSpan = renderAction
                                     )}
                                     <Link
                                         class:list={[
-                                            "flex flex-row gap-1 align-middle",
+                                            "flex flex-row align-middle",
                                             action.class ?? ""
                                         ]}
                                         color={action.color}

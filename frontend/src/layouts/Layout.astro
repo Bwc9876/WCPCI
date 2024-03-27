@@ -48,6 +48,7 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
                     <Icon class="my-auto" size={30} name="tabler:trophy-filled" />
                     <span class="my-auto hidden sm:inline">WCPC</span>
                 </Link>
+                <Link color="white" class="my-auto" href="/contests">Contests</Link>
                 <Link color="white" class="my-auto" href="/problems">Problems</Link>
                 <span class="flex-grow"></span>
                 <If debugEval={true} expression="logged_in">
@@ -316,3 +317,8 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
         </style>
     </body>
 </html>
+
+<script>
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.cookie = `timezone=${encodeURIComponent(timezone)}; SameSite=Lax; max-age=31536000`;
+</script>

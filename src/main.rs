@@ -5,6 +5,7 @@ use rocket_dyn_templates::Template;
 extern crate rocket_dyn_templates;
 
 mod auth;
+mod contests;
 mod db;
 mod problems;
 mod run;
@@ -12,6 +13,7 @@ mod serve;
 mod settings;
 #[macro_use]
 mod template;
+mod times;
 
 use crate::auth::users::User;
 
@@ -32,9 +34,11 @@ fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index])
         .attach(db::stage())
+        .attach(times::stage())
         .attach(template::stage())
         .attach(serve::stage())
         .attach(auth::stage())
         .attach(settings::stage())
+        .attach(contests::stage())
         .attach(problems::stage())
 }

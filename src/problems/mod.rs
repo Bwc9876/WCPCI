@@ -5,12 +5,14 @@ use std::collections::HashMap;
 use rocket::{fairing::AdHoc, routes, FromForm};
 
 mod cases;
+mod completions;
 mod edit;
 mod new;
 mod runs;
 mod view;
 
 pub use cases::TestCase;
+pub use completions::ProblemCompletion;
 pub use runs::JudgeRun;
 
 use crate::{db::DbPoolConnection, template::TemplatedForm};
@@ -20,31 +22,58 @@ use self::cases::TestCaseForm;
 #[derive(Serialize)]
 pub struct Problem {
     pub id: i64,
+    pub contest_id: i64,
     name: String,
+    slug: String,
     description: String,
     pub cpu_time: i64,
 }
 
 impl Problem {
-    pub async fn get(db: &mut DbPoolConnection, id: i64) -> Option<Self> {
-        sqlx::query_as!(Problem, "SELECT * FROM problem WHERE id = ?", id)
-            .fetch_one(&mut **db)
-            .await
-            .ok()
-    }
-
-    pub async fn list(db: &mut DbPoolConnection) -> Vec<Self> {
-        sqlx::query_as!(Problem, "SELECT * FROM problem")
-            .fetch_all(&mut **db)
-            .await
-            .unwrap()
-    }
-
-    pub async fn write_to_db(&self, db: &mut DbPoolConnection) -> Result<Problem, sqlx::Error> {
+    pub async fn by_id(db: &mut DbPoolConnection, contest_id: i64, id: i64) -> Option<Self> {
         sqlx::query_as!(
             Problem,
-            "INSERT INTO problem (name, description, cpu_time) VALUES (?, ?, ?) RETURNING *",
+            "SELECT * FROM problem WHERE id = ? AND contest_id = ?",
+            id,
+            contest_id
+        )
+        .fetch_optional(&mut **db)
+        .await
+        .ok()
+        .flatten()
+    }
+
+    pub async fn get(db: &mut DbPoolConnection, contest_id: i64, slug: &str) -> Option<Self> {
+        sqlx::query_as!(
+            Problem,
+            "SELECT * FROM problem WHERE contest_id = ? AND slug = ?",
+            contest_id,
+            slug
+        )
+        .fetch_optional(&mut **db)
+        .await
+        .ok()
+        .flatten()
+    }
+
+    pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Vec<Self> {
+        sqlx::query_as!(
+            Problem,
+            "SELECT * FROM problem WHERE contest_id = ?",
+            contest_id
+        )
+        .fetch_all(&mut **db)
+        .await
+        .unwrap()
+    }
+
+    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Problem, sqlx::Error> {
+        sqlx::query_as!(
+            Problem,
+            "INSERT INTO problem (name, contest_id, slug, description, cpu_time) VALUES (?, ?, ?, ?, ?) RETURNING *",
             self.name,
+            self.contest_id,
+            self.slug,
             self.description,
             self.cpu_time
         )
@@ -52,10 +81,28 @@ impl Problem {
         .await
     }
 
-    pub fn temp(form: &ProblemForm) -> Self {
+    pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+        sqlx::query_as!(
+            Problem,
+            "UPDATE problem SET name = ?, slug = ?, description = ?, cpu_time = ? WHERE id = ?",
+            self.name,
+            self.slug,
+            self.description,
+            self.cpu_time,
+            self.id
+        )
+        .execute(&mut **db)
+        .await
+        .map(|_| ())
+    }
+
+    pub fn temp(contest_id: i64, form: &ProblemForm) -> Self {
+        let slug = slug::slugify(form.name);
         Self {
             id: 0,
+            contest_id,
             name: form.name.to_string(),
+            slug,
             description: form.description.to_string(),
             cpu_time: form.cpu_time,
         }
@@ -115,7 +162,7 @@ impl<'r> TemplatedForm for ProblemFormTemplate<'r> {
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Problem Stage", |rocket| async {
         rocket.mount(
-            "/problems",
+            "/contests",
             routes![
                 view::list_problems_get,
                 view::view_problem_get,

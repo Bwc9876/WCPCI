@@ -10,7 +10,8 @@ use serde::Deserialize;
 use tokio::select;
 
 use crate::{
-    auth::users::User,
+    auth::users::{Admin, User},
+    contests::{Contest, Participant},
     db::DbConnection,
     problems::{Problem, TestCase},
     run::job::{JobOperation, JobRequest},
@@ -132,6 +133,7 @@ async fn websocket_loop(
                                     let job_to_start = JobRequest {
                                         user_id,
                                         problem_id: problem.id,
+                                        contest_id: problem.contest_id,
                                         program: request.program().to_string(),
                                         language: request.language().to_string(),
                                         cpu_time: problem.cpu_time,
@@ -226,27 +228,44 @@ async fn websocket_loop(
     }
 }
 
-#[get("/ws/<problem_id>")]
+#[get("/ws/<contest_id>/<problem_id>")]
 pub async fn ws_channel(
     ws: WebSocket,
+    contest_id: i64,
     problem_id: i64,
     user: &User,
+    admin: Option<&Admin>,
     manager: &State<ManagerHandle>,
     mut db: DbConnection,
 ) -> WsHttpResponse {
-    if let Some(problem) = Problem::get(&mut db, problem_id).await {
-        let user_id = user.id;
-        let handle = (*manager).clone();
-        let cases = TestCase::get_for_problem(&mut db, problem_id)
-            .await
-            .unwrap_or(vec![]);
-        if !cases.is_empty() {
-            WsHttpResponse::Accept(ws.channel(move |stream| {
-                Box::pin(async move {
-                    websocket_loop(stream, handle, problem, cases, user_id).await;
-                    Ok(())
-                })
-            }))
+    if let Some(problem) = Problem::by_id(&mut db, contest_id, problem_id).await {
+        if let Some(contest) = Contest::get(&mut db, contest_id).await {
+            let participant = Participant::get(&mut db, contest_id, user.id).await;
+            let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
+            let is_admin = admin.is_some();
+            if !is_admin
+                && !is_judge
+                && (!contest.has_started() || contest.is_running() && participant.is_none())
+            {
+                return WsHttpResponse::Reject(Status::Forbidden);
+            }
+
+            let handle = (*manager).clone();
+            // TODO: Handle test cases being updated while the user is connected
+            let cases = TestCase::get_for_problem(&mut db, problem_id)
+                .await
+                .unwrap_or_default();
+            if !cases.is_empty() {
+                let user_id = user.id;
+                WsHttpResponse::Accept(ws.channel(move |stream| {
+                    Box::pin(async move {
+                        websocket_loop(stream, handle, problem, cases, user_id).await;
+                        Ok(())
+                    })
+                }))
+            } else {
+                WsHttpResponse::Reject(Status::NotFound)
+            }
         } else {
             WsHttpResponse::Reject(Status::NotFound)
         }

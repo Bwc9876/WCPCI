@@ -7,16 +7,18 @@ import For from "@/components/tera/For.astro";
 import Layout from "@/layouts/Layout.astro";
 import { variable } from "@/lib/tera";
 
-const problemRoute = `/problems/${variable("problem.id", "view")}`;
+const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`;
 ---
 
 <Layout class="flex flex-col gap-4" title={`Runs for ${variable("problem.name")}`}>
     <Tile>
         <BreadCrumb
             entries={[
-                ["Problems", "/problems"],
-                [variable("problem.name"), problemRoute],
-                ["Runs", problemRoute + "/runs"]
+                ["Contests", "/contests"],
+                [variable("contest_name"), `/contests/${variable("problem.contest_id")}`],
+                ["Problems", `/contests/${variable("problem.contest_id")}/problems`],
+                [variable("problem.name"), `/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}`],
+                ["Runs", problemRoute]
             ]}
         />
     </Tile>

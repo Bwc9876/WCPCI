@@ -60,6 +60,7 @@ export type WebSocketMessage =
       };
 
 export default (
+    contestId: string,
     problemId: string,
     runMessageWrapper: HTMLElement,
     runMessage: HTMLElement,
@@ -67,7 +68,7 @@ export default (
     testOutput: HTMLTextAreaElement,
     toggleButtons: (disabled: boolean) => void
 ) => {
-    const url = `ws://${window.location.host}/run/ws/${problemId}`;
+    const url = `ws://${window.location.host}/run/ws/${contestId}/${problemId}`;
     console.debug("Connecting to WebSocket at", url);
     const ws = new WebSocket(url);
 

@@ -68,8 +68,7 @@ impl FormTemplateObject {
                 (
                     name.clone(),
                     val.map(|s| s.to_string())
-                        .and_then(|_| defaults.get(&name).cloned())
-                        .unwrap_or_default(),
+                        .unwrap_or_else(|| defaults.get(&name).cloned().unwrap_or_default()),
                 )
             })
             .collect::<HashMap<_, _>>();
@@ -151,26 +150,27 @@ fn len_of_form_data_list(args: FunctionArgs) -> Result<Value, tera::Error> {
         .and_then(|s| s.as_str())
         .ok_or(tera::Error::msg("list not passed!"))?;
 
-    Ok(tera::Value::Number(
-        data.into_iter()
-            .filter_map(|name| {
-                if name.starts_with(&format!("{list}[")) {
-                    Some(
-                        name[list.len() + 1..]
-                            .split(']')
-                            .next()
-                            .and_then(|s| s.parse().ok())
-                            .map(|g: i64| g + 1)
-                            .unwrap_or(0),
-                    )
-                } else {
-                    None
-                }
-            })
-            .max()
-            .unwrap_or(0)
-            .into(),
-    ))
+    let mut dat = data
+        .into_iter()
+        .filter_map(|name| {
+            if name.starts_with(&format!("{list}[")) {
+                Some(tera::Value::Number(
+                    name[list.len() + 1..]
+                        .split(']')
+                        .next()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0)
+                        .into(),
+                ))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    dat.dedup();
+
+    Ok(tera::Value::Array(dat))
 }
 
 #[macro_export]

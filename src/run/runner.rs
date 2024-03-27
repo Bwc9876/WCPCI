@@ -82,7 +82,7 @@ impl Runner {
             cmd.arg("-c")
                 .arg(&self.compile_cmd)
                 .current_dir(&self.temp_path)
-                //.stdin(Stdio::null())
+                .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
             let output = cmd

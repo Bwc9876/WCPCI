@@ -1,5 +1,5 @@
+use chrono::NaiveDateTime;
 use log::{error, info};
-use rocket::time::OffsetDateTime;
 
 use crate::{problems::TestCase, run::runner::CaseError};
 
@@ -138,6 +138,7 @@ pub enum JobOperation {
 
 pub struct JobRequest {
     pub user_id: i64,
+    pub contest_id: i64,
     pub problem_id: i64,
     pub program: String,
     pub language: String,
@@ -152,7 +153,7 @@ pub struct Job {
     op: JobOperation,
     pub state: JobState,
     state_tx: JobStateSender,
-    started_at: OffsetDateTime,
+    started_at: NaiveDateTime,
     shutdown_rx: ShutdownReceiver,
 }
 
@@ -189,7 +190,7 @@ impl Job {
                         state_tx,
                         user_id: request.user_id,
                         op: request.op,
-                        started_at: OffsetDateTime::now_utc(),
+                        started_at: chrono::offset::Utc::now().naive_utc(),
                         shutdown_rx,
                     },
                     state_rx,
@@ -202,7 +203,7 @@ impl Job {
         }
     }
 
-    pub async fn run(mut self) -> (JobState, OffsetDateTime) {
+    pub async fn run(mut self) -> (JobState, NaiveDateTime) {
         self.state.start_first();
         self.publish_state();
         if let Err(why) = self.runner.compile().await {

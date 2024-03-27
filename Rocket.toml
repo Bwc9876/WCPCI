@@ -17,6 +17,8 @@ redirect_uri = "http://localhost:8000/auth/callback/google"
 secret_key = "12345678901234567890123456789012345678901234"
 template_dir = "frontend/dist"
 public_dir = "public"
+admins = [ "bwc9876@gmail.com" ]
+timezone = "Australia/ACT"
 
 [debug.run]
 default_language = "python"
@@ -83,3 +85,5 @@ monaco_contribution = "haskell"
 file_name = "main.hs"
 compile_cmd = "ghc main.hs"
 run_cmd = "./main"
+
+

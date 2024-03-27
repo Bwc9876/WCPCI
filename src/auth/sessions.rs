@@ -1,5 +1,5 @@
+use chrono::NaiveDateTime;
 use rand::{rngs::OsRng, RngCore};
-use rocket::time::OffsetDateTime;
 
 use crate::db::DbPoolConnection;
 
@@ -7,8 +7,8 @@ pub struct Session {
     pub id: i64,
     pub user_id: i64,
     pub token: String,
-    pub created_at: OffsetDateTime,
-    pub expires_at: OffsetDateTime,
+    pub created_at: NaiveDateTime,
+    pub expires_at: NaiveDateTime,
 }
 
 impl Session {
@@ -31,11 +31,10 @@ impl Session {
 
     pub async fn create(db: &mut DbPoolConnection, user_id: i64) -> Result<Session, String> {
         let token = Self::gen_token();
-        let now = OffsetDateTime::now_utc();
-        let expires = OffsetDateTime::from_unix_timestamp(
-            now.unix_timestamp() + 60 * 60 * 24 * Self::EXPIRY_DAYS,
-        )
-        .map_err(|e| e.to_string())?;
+        let now = chrono::offset::Utc::now();
+        let expires = now
+            + chrono::TimeDelta::try_days(Self::EXPIRY_DAYS)
+                .ok_or_else(|| "Failed to parse expiry days".to_string())?;
 
         let session = sqlx::query_as!(Session, "INSERT INTO session (user_id, token, created_at, expires_at) VALUES (?, ?, ?, ?) RETURNING *", user_id, token, now, expires)
             .fetch_one(&mut **db).await.map_err(|e| e.to_string())?;

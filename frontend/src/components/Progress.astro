@@ -1,0 +1,20 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+export interface Props extends HTMLAttributes<"progress"> {}
+
+const { class: className, ...rest } = Astro.props;
+
+const baseClass = [
+    'rounded-full',
+    'bg-secondary-50',
+    '[&::-moz-progress-bar]:rounded-full',
+    '[&::-moz-progress-bar]:bg-secondary-200',
+    '[&::-webkit-progress-bar]:rounded-full',
+    '[&::-webkit-progress-bar]:bg-secondary-50',
+    '[&::-webkit-progress-value]:rounded-full',
+    '[&::-webkit-progress-value]:bg-secondary-200',
+].join(' ');
+---
+
+<progress class:list={[baseClass, className ?? ""]} {...rest} />

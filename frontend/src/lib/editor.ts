@@ -53,6 +53,7 @@ export const makeIconUrl = (name: string) =>
 export default (
     codeInfo: CodeInfo,
     defaultLanguage: string,
+    contestId: string,
     problemId: string,
     languageDropdown: HTMLSelectElement,
     colorScheme: string,
@@ -70,12 +71,12 @@ export default (
             languageIcon.src = makeIconUrl(langInfo.tablerIcon);
             if (editor) {
                 const storedCode = JSON.parse(
-                    window.localStorage.getItem(`problem-${problemId}-${lang}-code`) ?? "null"
+                    window.localStorage.getItem(`contest-${contestId}-problem-${problemId}-${lang}-code`) ?? "null"
                 );
                 editor.setValue(storedCode ?? langInfo.defaultCode);
                 monaco.editor.setModelLanguage(editor.getModel()!, langInfo.monacoContribution);
                 window.localStorage.setItem(
-                    `problem-${problemId}-code`,
+                    `contest-${contestId}-problem-${problemId}-code`,
                     JSON.stringify([storedCode, lang])
                 );
             }
@@ -83,7 +84,7 @@ export default (
     };
 
     const [storedCode, storedLang] = JSON.parse(
-        window.localStorage.getItem(`problem-${problemId}-code`) ?? "[null, null]"
+        window.localStorage.getItem(`contest-${contestId}-problem-${problemId}-code`) ?? "[null, null]"
     );
 
     currentLanguage = Object.keys(codeInfo).includes(storedLang ?? "")
@@ -134,11 +135,11 @@ export default (
                 const text = editor.getValue();
                 const language = editor.getModel()?.getLanguageId();
                 window.localStorage.setItem(
-                    `problem-${problemId}-code`,
+                    `contest-${contestId}-problem-${problemId}-code`,
                     JSON.stringify([text, language])
                 );
                 window.localStorage.setItem(
-                    `problem-${problemId}-${currentLanguage}-code`,
+                    `contest-${contestId}-problem-${problemId}-${currentLanguage}-code`,
                     JSON.stringify(text)
                 );
             }

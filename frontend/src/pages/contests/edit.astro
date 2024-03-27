@@ -1,0 +1,16 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import ContestForm from "@/components/forms/ContestForm.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import { variable } from "@/lib/tera";
+---
+
+<Layout title="Edit Contest" makeTile>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            ["Edit", `/contests/${variable("contest_id")}/edit`]
+        ]}
+    />
+    <ContestForm />
+</Layout>

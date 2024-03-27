@@ -5,17 +5,20 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
 import { variable } from "@/lib/tera";
 import Variable from "@/components/tera/Variable.astro";
 
-const problemRoute = `/problems/${variable("problem_id", "view")}`;
+const problemName = variable("problem_name | default(value=problem.name)");
+
 ---
 
-<Layout title={`Edit Problem: ${variable("problem_name")}`} makeTile>
+<Layout title={`Edit Problem: ${problemName}`} makeTile>
     <BreadCrumb
         entries={[
-            ["Problems", "/problems"],
-            [variable("problem_name"), problemRoute],
-            ["Edit", problemRoute + "/edit"]
+            ["Contests", "/contests"],
+            [variable("contest_name"), `/contests/${variable("contest_id")}`],
+            ["Problems", `/contests/${variable("contest_id")}/problems`],
+            [problemName, `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}`],
+            ["Edit", `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}/edit`]
         ]}
     />
-    <h1 class="text-2xl">Edit Problem: <Variable expression="problem_name" /></h1>
+    <h1 class="text-2xl">Edit Problem: {problemName}</h1>
     <ProblemForm submitWord="Save" />
 </Layout>

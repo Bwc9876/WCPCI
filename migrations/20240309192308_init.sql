@@ -33,9 +33,9 @@ CREATE TABLE IF NOT EXISTS contest (
 );
 
 CREATE TABLE IF NOT EXISTS participant (
-    id INTEGER PRIMARY KEY NOT NULL,
     user_id INTEGER NOT NULL,
     contest_id INTEGER NOT NULL,
+    is_judge BOOLEAN NOT NULL,
     registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     FOREIGN KEY (contest_id) REFERENCES contest(id) ON DELETE CASCADE
@@ -43,12 +43,16 @@ CREATE TABLE IF NOT EXISTS participant (
 
 CREATE TABLE IF NOT EXISTS problem (
     id INTEGER PRIMARY KEY NOT NULL,
+    contest_id INTEGER NOT NULL,
     name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
     description TEXT NOT NULL,
-    cpu_time INTEGER NOT NULL
+    cpu_time INTEGER NOT NULL,
+    FOREIGN KEY (contest_id) REFERENCES contest(id) ON DELETE CASCADE
+    UNIQUE (contest_id, slug)
 );
 
-CREATE TABLE test_case (
+CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER PRIMARY KEY NOT NULL,
     problem_id INTEGER NOT NULL,
     ord INTEGER NOT NULL,
@@ -60,7 +64,7 @@ CREATE TABLE test_case (
     UNIQUE (problem_id, ord)
 );
 
-CREATE TABLE judge_run (
+CREATE TABLE IF NOT EXISTS judge_run (
     id INTEGER PRIMARY KEY NOT NULL,
     problem_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
@@ -70,3 +74,11 @@ CREATE TABLE judge_run (
     ran_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS problem_completion (
+    problem_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE (problem_id, user_id)
+);

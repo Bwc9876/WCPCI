@@ -1,6 +1,6 @@
 #![allow(clippy::blocks_in_conditions)] // Needed for the derive of FromForm, rocket is weird
 
-use log::error;
+use log::{error, warn};
 use rocket::{
     catch, catchers, fairing::AdHoc, get, http::CookieJar, response::Redirect, routes, State,
 };
@@ -17,7 +17,7 @@ use self::{
     github::GitHubLogin,
     google::GoogleLogin,
     sessions::Session,
-    users::{User, UserMigration},
+    users::{AdminUsers, User, UserMigration},
 };
 
 mod github;
@@ -69,12 +69,10 @@ async fn github_callback(
     cookies: &CookieJar<'_>,
     code_info: &State<CodeInfo>,
 ) -> Redirect {
-    //println!("State cookie is: {:?}", cookies.get_private("rocket_oauth2_state"));
     let handler = GitHubLogin(token.access_token().to_string());
     handler
         .handle_callback(&mut db, cookies, &code_info.run_config.default_language)
         .await
-    //Redirect::to("/")
 }
 
 #[get("/login/google")]
@@ -105,7 +103,15 @@ async fn google_callback(
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Auth App", |rocket| async {
+        let admins: Vec<String> = rocket
+            .figment()
+            .extract_inner("admins")
+            .unwrap_or_else(|_| {
+                warn!("No admin user specified");
+                Vec::new()
+            });
         rocket
+            .manage(AdminUsers(admins))
             .attach(OAuth2::<GitHubLogin>::fairing("github"))
             .attach(OAuth2::<GoogleLogin>::fairing("google"))
             .attach(csrf::stage())
@@ -118,7 +124,7 @@ pub fn stage() -> AdHoc {
                     github_login,
                     github_callback,
                     google_login,
-                    google_callback
+                    google_callback // TODO: Add SAML Option: https://github.com/njaremko/samael
                 ],
             )
     })

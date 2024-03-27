@@ -131,7 +131,6 @@ fn check_regex(pattern: &str, enabled: bool) -> Result<(), rocket::form::Errors>
 }
 
 #[derive(Debug, FromForm, Serialize)]
-#[form(validate = validate_regex())]
 pub struct TestCaseForm<'r> {
     #[field(validate = len(1..))]
     pub stdin: &'r str,

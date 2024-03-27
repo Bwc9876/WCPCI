@@ -1,7 +1,13 @@
 use rocket::{get, http::Status, State};
 use rocket_dyn_templates::Template;
 
-use crate::{auth::users::User, context_with_base, db::DbConnection, run::CodeInfo};
+use crate::{
+    auth::users::{Admin, User},
+    contests::{Contest, Participant},
+    context_with_base,
+    db::DbConnection,
+    run::CodeInfo,
+};
 
 use super::{JudgeRun, Problem, TestCase};
 
@@ -11,20 +17,62 @@ pub enum ProblemViewResponse {
     NotFound(Status),
 }
 
-#[get("/")]
-pub async fn list_problems_get(user: Option<&User>, mut db: DbConnection) -> Template {
-    let problems = Problem::list(&mut db).await;
-    Template::render("problems", context_with_base!(user, problems))
+#[get("/<contest_id>/problems")]
+pub async fn list_problems_get(
+    user: Option<&User>,
+    admin: Option<&Admin>,
+    contest_id: i64,
+    mut db: DbConnection,
+) -> ProblemViewResponse {
+    if let Some(contest) = Contest::get(&mut db, contest_id).await {
+        let is_judge = if let Some(user) = user {
+            Participant::get(&mut db, contest_id, user.id)
+                .await
+                .map(|p| p.is_judge)
+                .unwrap_or(false)
+        } else {
+            false
+        };
+        let is_admin = admin.is_some();
+        if contest.has_started() || is_judge || is_admin {
+            let problems = Problem::list(&mut db, contest_id).await;
+            ProblemViewResponse::View(Template::render(
+                "problems",
+                context_with_base!(user, problems, is_admin, contest_name: contest.name, contest_id, can_edit: is_judge || is_admin),
+            ))
+        } else {
+            ProblemViewResponse::NotFound(Status::NotFound)
+        }
+    } else {
+        ProblemViewResponse::NotFound(Status::NotFound)
+    }
 }
 
-#[get("/<id>")]
+#[get("/<contest_id>/problems/<slug>", rank = 10)]
 pub async fn view_problem_get(
     user: Option<&User>,
+    admin: Option<&Admin>,
     info: &State<CodeInfo>,
     mut db: DbConnection,
-    id: i64,
+    contest_id: i64,
+    slug: &str,
 ) -> ProblemViewResponse {
-    if let Some(problem) = Problem::get(&mut db, id).await {
+    if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
+        let is_judge = if let Some(user) = user {
+            Participant::get(&mut db, contest_id, user.id)
+                .await
+                .map(|p| p.is_judge)
+                .unwrap_or(false)
+        } else {
+            false
+        };
+        let is_admin = admin.is_some();
+
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
+        if !contest.has_started() && !is_judge && !is_admin {
+            return ProblemViewResponse::NotFound(Status::NotFound);
+        }
+
         let last_run = if let Some(user) = user {
             JudgeRun::get_latest(&mut db, user.id, problem.id)
                 .await
@@ -52,9 +100,12 @@ pub async fn view_problem_get(
                 problem,
                 last_run,
                 case_count,
+                contest_id,
+                contest_name: contest.name,
                 code_info,
                 languages,
-                default_language
+                default_language,
+                can_edit: is_judge || is_admin
             ),
         ))
     } else {

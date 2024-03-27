@@ -26,8 +26,10 @@ import { Icon } from "astro-icon/components";
     <Tile class="flex flex-col gap-2">
         <BreadCrumb
             entries={[
-                ["Problems", "/problems"],
-                [variable("problem.name"), "/problems/" + variable("problem.id", "view")]
+                ["Contests", "/contests"],
+                [variable("contest_name"), `/contests/${variable("problem.contest_id")}`],
+                ["Problems", `/contests/${variable("problem.contest_id")}/problems`],
+                [variable("problem.name"), `/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}`]
             ]}
         />
         <div class="flex flex-row gap-4">
@@ -37,7 +39,9 @@ import { Icon } from "astro-icon/components";
                 <Button
                     as="button"
                     disabled
+                    data-contest-id={variable("problem.contest_id")}
                     data-problem-id={variable("problem.id")}
+                    data-problem-slug={variable("problem.slug")}
                     data-default-language={variable("default_language")}
                     data-color-preference={themeClass("light", "dark", "system")}
                     class="my-auto w-fit"
@@ -63,7 +67,7 @@ import { Icon } from "astro-icon/components";
             <small class="text-gray-500">CPU Time: <Variable expression="problem.cpu_time" /></small
             >
             <div class="overflow-y-auto">
-                <div class="overflow-y-scroll pe-2" id="rendered-md">
+                <div class="overflow-y-auto pe-2" id="rendered-md">
                     <Variable
                         expression="render_markdown(md=problem.description) | safe"
                         debugLorem={50}
@@ -117,7 +121,7 @@ import { Icon } from "astro-icon/components";
                         data-gramm_editor="false"
                         data-enable-grammarly="false"
                         rows={10}
-                        class="h-full"
+                        class="h-full font-mono"
                         type="textarea"
                         noTemplate
                         id="debug-input"
@@ -144,6 +148,7 @@ import { Icon } from "astro-icon/components";
                     <Field
                         id="debug-output"
                         rows={10}
+                        class="font-mono"
                         type="textarea"
                         noTemplate
                         readonly
@@ -165,7 +170,7 @@ import { Icon } from "astro-icon/components";
     let getLang: (() => string) | null = null;
 
     document.addEventListener("astro:page-load", () => {
-        if (!window.location.pathname.match(/\/problems\/\d+\/?$/)) {
+        if (!window.location.pathname.match(/\/contests\/\d+\/problems\/.+\/?$/)) {
             return;
         }
 
@@ -194,13 +199,17 @@ import { Icon } from "astro-icon/components";
             });
         };
 
+        const contestId = submitButton.dataset.contestId!;
         const problemId = submitButton.dataset.problemId!;
+        //const problemSlug = submitButton.dataset.problemSlug!;
         const defaultLanguage = submitButton.dataset.defaultLanguage!;
         const colorScheme = submitButton.dataset.colorPreference!;
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
 
         import("@/lib/ws").then((c) => {
+            console.debug("Preparing to connect to WebSocket");
             ws = c.default(
+                contestId,
                 problemId,
                 runMessageWrapper,
                 runMessage,
@@ -211,9 +220,11 @@ import { Icon } from "astro-icon/components";
         });
 
         import("@/lib/editor").then((c) => {
+            console.debug("Creating editor");
             const [newEditor, _getLang] = c.default(
                 codeInfo,
                 defaultLanguage,
+                contestId,
                 problemId,
                 languageDropdown,
                 colorScheme,
@@ -251,16 +262,20 @@ import { Icon } from "astro-icon/components";
             }
         };
 
-        import("@/lib/highlighting").then((c) =>
+        import("@/lib/highlighting").then((c) => {
+            console.debug("Setting Up Code Block Highlighting");
             c.default((input) => {
                 if (editor) {
                     testInput.value = input;
                     runDebugButton.click();
                 }
-            }, testButtonTemplate)
-        );
+            }, testButtonTemplate);
+        });
 
-        import("@/lib/math").then((c) => c.default());
+        import("@/lib/math").then((c) => {
+            console.debug("Setting Up Math Block Highlighting");
+            c.default()
+        });
     });
 
     document.addEventListener("astro:after-swap", () => {

@@ -1,10 +1,11 @@
+use chrono::NaiveDateTime;
 use rocket::get;
 use rocket::http::Status;
-use rocket::time::OffsetDateTime;
 use rocket_dyn_templates::Template;
 
 use crate::auth::users::User;
-use crate::context_with_base_authed;
+use crate::contests::Contest;
+use crate::context_with_base;
 use crate::db::{DbConnection, DbPoolConnection};
 use crate::run::JobState;
 
@@ -18,8 +19,8 @@ pub struct JudgeRun {
     pub amount_run: i64,
     pub total_cases: i64,
     pub error: Option<String>,
-    #[serde(skip)]
-    pub ran_at: OffsetDateTime,
+    #[serde(serialize_with = "crate::times::serialize_to_js")]
+    pub ran_at: NaiveDateTime,
 }
 
 impl JudgeRun {
@@ -29,7 +30,7 @@ impl JudgeRun {
         amount_run: i64,
         total_cases: i64,
         error: Option<String>,
-        ran_at: OffsetDateTime,
+        ran_at: NaiveDateTime,
     ) -> Self {
         Self {
             id: 0,
@@ -46,7 +47,7 @@ impl JudgeRun {
         problem_id: i64,
         user_id: i64,
         state: JobState,
-        ran_at: OffsetDateTime,
+        ran_at: NaiveDateTime,
     ) -> Self {
         let (amount_run, error) = state.last_error();
         Self::temp(
@@ -103,6 +104,10 @@ impl JudgeRun {
             .fetch_one(&mut **db)
             .await
     }
+
+    pub fn success(&self) -> bool {
+        self.amount_run == self.total_cases && self.error.is_none()
+    }
 }
 
 #[derive(Responder)]
@@ -111,13 +116,25 @@ pub enum RunsResponse {
     Ok(Template),
 }
 
-#[get("/<id>/runs")]
-pub async fn runs(id: i64, user: &User, mut db: DbConnection) -> RunsResponse {
-    if let Some(problem) = Problem::get(&mut db, id).await {
-        let runs = JudgeRun::list(&mut db, user.id, problem.id).await.unwrap();
+#[get("/<contest_id>/problems/<slug>/runs")]
+pub async fn runs(
+    contest_id: i64,
+    slug: String,
+    user: Option<&User>,
+    mut db: DbConnection,
+) -> RunsResponse {
+    if let Some(problem) = Problem::get(&mut db, contest_id, &slug).await {
+        let contest_name = Contest::get(&mut db, contest_id).await.map(|c| c.name);
+        let runs = if let Some(user) = user {
+            JudgeRun::list(&mut db, user.id, problem.id)
+                .await
+                .unwrap_or_default()
+        } else {
+            vec![]
+        };
         RunsResponse::Ok(Template::render(
             "problems/runs",
-            context_with_base_authed!(user, runs, problem),
+            context_with_base!(user, runs, contest_name: contest_name.unwrap_or_default(), problem),
         ))
     } else {
         RunsResponse::NotFound(Status::NotFound)

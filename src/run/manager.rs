@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use log::{error, info};
+use log::error;
 use rocket_db_pools::Pool;
 use tokio::sync::Mutex;
 
+use crate::contests::{Contest, Participant};
 use crate::db::DbPool;
-use crate::problems::JudgeRun;
+use crate::problems::{JudgeRun, ProblemCompletion};
 
 use super::job::{Job, JobRequest};
 
@@ -59,6 +60,7 @@ impl RunManager {
 
         let user_id = request.user_id;
         let problem_id = request.problem_id;
+        let contest_id = request.contest_id;
 
         let language_config = self
             .config
@@ -86,14 +88,32 @@ impl RunManager {
             if matches!(state, JobState::Judging { .. }) {
                 let judge_run = JudgeRun::from_job_state(problem_id, user_id, state, ran_at);
                 match pool.get().await {
-                    Ok(mut conn) => match judge_run.write_to_db(&mut conn).await {
-                        Ok(_) => {
-                            info!("Judge run written to db");
+                    Ok(mut conn) => {
+                        if let Some(contest) = Contest::get(&mut conn, contest_id).await {
+                            if contest.is_running() {
+                                if let Some(participant) =
+                                    Participant::get(&mut conn, contest_id, user_id).await
+                                {
+                                    if !participant.is_judge {
+                                        let success = judge_run.success();
+                                        if let Err(why) = judge_run.write_to_db(&mut conn).await {
+                                            error!("Couldn't write judge run to db: {:?}", why);
+                                        }
+                                        if success {
+                                            let completion =
+                                                ProblemCompletion::temp(user_id, problem_id);
+                                            if let Err(why) = completion.insert(&mut conn).await {
+                                                error!(
+                                                    "Couldn't write problem completion to db: {:?}",
+                                                    why
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        Err(e) => {
-                            error!("Couldn't write judge run to db: {:?}", e);
-                        }
-                    },
+                    }
                     Err(e) => {
                         error!("Couldn't get db connection: {:?}", e);
                     }

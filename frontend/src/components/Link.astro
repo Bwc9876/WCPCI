@@ -1,7 +1,7 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 
-export type Color = "primary" | "secondary" | "accent" | "white" | "inherit";
+export type Color = "primary" | "secondary" | "accent" | "white" | "danger" | "inherit";
 
 export interface Props extends HTMLAttributes<"a"> {
     color?: Color;
@@ -15,6 +15,7 @@ const ColorMap = {
     secondary: "text-secondary-400 hover:text-secondary-500",
     accent: "text-accent hover:text-accent-600",
     white: "text-text-900 hover:text-text-500",
+    danger: "text-red-500 hover:text-red-600",
     inherit: ""
 } as Record<Color, string>;
 ---

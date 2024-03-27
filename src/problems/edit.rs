@@ -4,14 +4,16 @@ use rocket::{
     get,
     http::Status,
     post,
+    response::Redirect,
 };
 use rocket_dyn_templates::Template;
 
 use crate::{
     auth::{
         csrf::{CsrfToken, VerifyCsrfToken},
-        users::User,
+        users::{Admin, User},
     },
+    contests::{Contest, Participant},
     context_with_base_authed,
     db::DbConnection,
     template::{FormStatus, FormTemplateObject},
@@ -23,17 +25,28 @@ use super::{cases::TestCase, Problem, ProblemForm, ProblemFormTemplate};
 #[derive(Responder)]
 pub enum ProblemEditResponse {
     Form(Template),
+    Redirect(Redirect),
     NotFound(Status),
 }
 
-#[get("/<id>/edit")]
+#[get("/<contest_id>/problems/<slug>/edit")]
 pub async fn edit_problem_get(
     user: &User,
+    admin: Option<&Admin>,
+    contest_id: i64,
     mut db: DbConnection,
-    id: i64,
+    slug: String,
     _token: &CsrfToken,
 ) -> ProblemEditResponse {
-    if let Some(problem) = Problem::get(&mut db, id).await {
+    let is_judge = Participant::get(&mut db, contest_id, user.id)
+        .await
+        .map(|p| p.is_judge)
+        .unwrap_or(false);
+    let is_admin = admin.is_some();
+    if !is_judge && !is_admin {
+        return ProblemEditResponse::NotFound(Status::Forbidden);
+    }
+    if let Some(problem) = Problem::get(&mut db, contest_id, &slug).await {
         let test_cases = TestCase::get_for_problem(&mut db, problem.id)
             .await
             .unwrap_or_default();
@@ -41,25 +54,40 @@ pub async fn edit_problem_get(
             problem: Some(&problem),
             test_cases: test_cases.iter().map(TestCase::to_form).collect(),
         };
+        let contest_name = Contest::get(&mut db, contest_id)
+            .await
+            .map(|c| c.name)
+            .unwrap_or_default();
         let form = FormTemplateObject::get(form_template);
         ProblemEditResponse::Form(Template::render(
             "problems/edit",
-            context_with_base_authed!(user, form, problem_name: problem.name, problem_id: problem.id),
+            context_with_base_authed!(user, form, contest_name, contest_id, problem),
         ))
     } else {
         ProblemEditResponse::NotFound(Status::NotFound)
     }
 }
 
-#[post("/<id>/edit", data = "<form>")]
+#[post("/<contest_id>/problems/<slug>/edit", data = "<form>")]
 pub async fn edit_problem_post(
-    id: i64,
     user: &User,
+    admin: Option<&Admin>,
+    contest_id: i64,
+    slug: &str,
     form: Form<Contextual<'_, ProblemForm<'_>>>,
     _token: &VerifyCsrfToken,
     mut db: DbConnection,
 ) -> ProblemEditResponse {
-    if let Some(mut problem) = Problem::get(&mut db, id).await {
+    let is_judge = Participant::get(&mut db, contest_id, user.id)
+        .await
+        .map(|p| p.is_judge)
+        .unwrap_or(false);
+    let is_admin = admin.is_some();
+    if !is_judge && !is_admin {
+        return ProblemEditResponse::NotFound(Status::Forbidden);
+    }
+
+    if let Some(mut problem) = Problem::get(&mut db, contest_id, slug).await {
         let mut test_cases = TestCase::get_for_problem(&mut db, problem.id)
             .await
             .unwrap_or_default();
@@ -72,17 +100,10 @@ pub async fn edit_problem_post(
 
         if let Some(ref value) = form.value {
             problem.name = value.name.to_string();
+            problem.slug = slug::slugify(value.name);
             problem.description = value.description.to_string();
             problem.cpu_time = value.cpu_time;
-            let res = sqlx::query!(
-                "UPDATE problem SET name = ?, description = ?, cpu_time = ? WHERE id = ?",
-                problem.name,
-                problem.description,
-                problem.cpu_time,
-                problem.id
-            )
-            .execute(&mut **db)
-            .await;
+            let res = problem.update(&mut db).await;
             let status = if let Err(why) = res {
                 error!("Failed to update problem: {:?}", why);
                 FormStatus::Error
@@ -103,15 +124,19 @@ pub async fn edit_problem_post(
             };
             let mut form_ctx = FormTemplateObject::get(form_template);
             form_ctx.status = status;
-            ProblemEditResponse::Form(Template::render(
-                "problems/edit",
-                context_with_base_authed!(user, form: form_ctx, problem_name: original_name, problem_id: problem.id),
-            ))
+            ProblemEditResponse::Redirect(Redirect::to(format!(
+                "/contests/{}/problems/{}",
+                contest_id, problem.slug
+            )))
         } else {
             let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
+            let contest_name = Contest::get(&mut db, contest_id)
+                .await
+                .map(|c| c.name)
+                .unwrap_or_default();
             ProblemEditResponse::Form(Template::render(
                 "problems/edit",
-                context_with_base_authed!(user, form: form_ctx, problem_name: original_name, problem_id: problem.id),
+                context_with_base_authed!(user, form: form_ctx, contest_id, contest_name, problem, problem_name: original_name),
             ))
         }
     } else {
