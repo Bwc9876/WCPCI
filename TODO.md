@@ -3,7 +3,7 @@
 
 ## Now
 
-- **Talk with Chen**
+- Get approval for working on this seriously
 - ~~Websocket disconnect on problem update~~
 - ~~Fix test case stuff AAAAAAAAAAAAAAAAAAAAA~~
 - ~~Time for problem completion should be time of user submission~~
@@ -12,6 +12,7 @@
 - Editor toolbar (save icon, reset button, etc)
 - ~~Problem deletion~~
 - ~~Contest deletion~~
+- CSP
 - Scoring
 - Leaderboard
 - User profile page
@@ -25,6 +26,7 @@
 ## Soon-ish
 
 - Error pages
+- Compression
 - Admin select judges
 - Limit websocket connections per-user?
 - GitHub exporting
@@ -35,4 +37,4 @@
 
 - Redo user login / OAuth linking
 - Problem export / import
-- SAML Auth with university (depends on Chen)
+- SAML Auth with university (waiting on approval)
