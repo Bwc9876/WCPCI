@@ -5,6 +5,7 @@ use rocket::{
     http::Status,
     post,
     response::Redirect,
+    State,
 };
 use rocket_dyn_templates::Template;
 
@@ -16,7 +17,8 @@ use crate::{
     contests::{Contest, Participant},
     context_with_base_authed,
     db::DbConnection,
-    template::{FormStatus, FormTemplateObject},
+    run::ManagerHandle,
+    template::FormTemplateObject,
 };
 
 use super::{cases::TestCase, Problem, ProblemForm, ProblemFormTemplate};
@@ -35,7 +37,7 @@ pub async fn edit_problem_get(
     admin: Option<&Admin>,
     contest_id: i64,
     mut db: DbConnection,
-    slug: String,
+    slug: &str,
     _token: &CsrfToken,
 ) -> ProblemEditResponse {
     let is_judge = Participant::get(&mut db, contest_id, user.id)
@@ -46,7 +48,7 @@ pub async fn edit_problem_get(
     if !is_judge && !is_admin {
         return ProblemEditResponse::NotFound(Status::Forbidden);
     }
-    if let Some(problem) = Problem::get(&mut db, contest_id, &slug).await {
+    if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
         let test_cases = TestCase::get_for_problem(&mut db, problem.id)
             .await
             .unwrap_or_default();
@@ -68,6 +70,8 @@ pub async fn edit_problem_get(
     }
 }
 
+// Has to be a large number of parameters because this is Rocket
+#[allow(clippy::too_many_arguments)]
 #[post("/<contest_id>/problems/<slug>/edit", data = "<form>")]
 pub async fn edit_problem_post(
     user: &User,
@@ -76,6 +80,7 @@ pub async fn edit_problem_post(
     slug: &str,
     form: Form<Contextual<'_, ProblemForm<'_>>>,
     _token: &VerifyCsrfToken,
+    manager: &State<ManagerHandle>,
     mut db: DbConnection,
 ) -> ProblemEditResponse {
     let is_judge = Participant::get(&mut db, contest_id, user.id)
@@ -88,7 +93,7 @@ pub async fn edit_problem_post(
     }
 
     if let Some(mut problem) = Problem::get(&mut db, contest_id, slug).await {
-        let mut test_cases = TestCase::get_for_problem(&mut db, problem.id)
+        let test_cases = TestCase::get_for_problem(&mut db, problem.id)
             .await
             .unwrap_or_default();
         let form_template = ProblemFormTemplate {
@@ -104,26 +109,17 @@ pub async fn edit_problem_post(
             problem.description = value.description.to_string();
             problem.cpu_time = value.cpu_time;
             let res = problem.update(&mut db).await;
-            let status = if let Err(why) = res {
+            if let Err(why) = res {
                 error!("Failed to update problem: {:?}", why);
-                FormStatus::Error
             } else {
-                test_cases = TestCase::from_vec(problem.id, &value.test_cases);
-                let backup_cases = test_cases.clone();
-                if let Ok(new_cases) = TestCase::save_for_problem(&mut db, test_cases).await {
-                    test_cases = new_cases;
-                    FormStatus::Success
+                let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
+                if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
+                    error!("Failed to update test cases: {:?}", why);
                 } else {
-                    test_cases = backup_cases;
-                    FormStatus::Error
+                    let mut manager = manager.lock().await;
+                    manager.update_problem(problem.id).await;
                 }
             };
-            let form_template = ProblemFormTemplate {
-                problem: Some(&problem),
-                test_cases: test_cases.iter().map(TestCase::to_form).collect(),
-            };
-            let mut form_ctx = FormTemplateObject::get(form_template);
-            form_ctx.status = status;
             ProblemEditResponse::Redirect(Redirect::to(format!(
                 "/contests/{}/problems/{}",
                 contest_id, problem.slug

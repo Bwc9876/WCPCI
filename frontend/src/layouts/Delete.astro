@@ -1,0 +1,29 @@
+---
+import Form from "@/components/Form.astro";
+import Layout from "./Layout.astro";
+import Button from "@/components/Button.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+
+export type Props = {
+    title: string;
+    prompt: string;
+    backLink: string;
+    breadcrumb?: [string, string][];
+};
+
+const { title, prompt, backLink, breadcrumb } = Astro.props;
+---
+
+<Layout title={title} makeTile>
+    {breadcrumb && <BreadCrumb entries={breadcrumb} />}
+    <h1 class="text-2xl">{title}</h1>
+    <Form noTemplate>
+        <h3 class="text-lg">{prompt} <strong>This action cannot be undone.</strong></h3>
+        <div class="flex flex-row gap-2" slot="submit">
+            <Button as="button" class="w-1/2 md:w-fit" color="danger" type="submit">Confirm</Button>
+            <Button as="a" class="w-1/2 text-center md:w-fit" color="secondary" href={backLink}
+                >Cancel</Button
+            >
+        </div>
+    </Form>
+</Layout>

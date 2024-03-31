@@ -39,11 +39,11 @@ impl ProblemCompletion {
         .unwrap_or_default()
     }
 
-    pub fn temp(user_id: i64, problem_id: i64) -> Self {
+    pub fn temp(user_id: i64, problem_id: i64, completed_at: NaiveDateTime) -> Self {
         Self {
             user_id,
             problem_id,
-            completed_at: None,
+            completed_at: Some(completed_at),
         }
     }
 }

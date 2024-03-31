@@ -12,12 +12,16 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
         entries={[
             ["Contests", "/contests"],
             [variable("contest_name"), `/contests/${variable("contest_id")}`],
-            ["Problems", `/contests/${variable("contest_id")}/problems`],
+            ["Problems", `/contests/${variable("contest_id")}/problems`]
         ]}
     />
     <h1 class="mb-2 text-2xl">Problems</h1>
     <ProblemsTable />
     <If debugEval={true} expression="can_edit">
-        <Button class="w-fit self-end" as="a" href={`/contests/${variable("contest_id")}/problems/new`}>Create New Problem</Button>
+        <Button
+            class="w-fit self-end"
+            as="a"
+            href={`/contests/${variable("contest_id")}/problems/new`}>Create New Problem</Button
+        >
     </If>
 </Layout>

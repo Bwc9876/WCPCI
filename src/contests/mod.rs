@@ -12,6 +12,7 @@ use crate::{
     times::{datetime_to_html_time, ClientTimeZone, FormDateTime},
 };
 
+mod delete;
 mod edit;
 mod join;
 mod list;
@@ -97,6 +98,13 @@ impl Contest {
             self.max_participants,
             self.id
         ).execute(&mut **db).await.map(|_| ())
+    }
+
+    pub async fn delete(self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM contest WHERE id = ?", self.id)
+            .execute(&mut **db)
+            .await
+            .map(|_| ())
     }
 
     pub fn has_started(&self) -> bool {
@@ -185,6 +193,7 @@ impl<'r> TemplatedForm for ContestFormTemplate<'r> {
     }
 }
 
+#[inline]
 fn over_1<'e>(max_participants: &Option<i64>) -> Result<(), rocket::form::Errors<'e>> {
     if let Some(i) = max_participants {
         if *i > 0 {
@@ -197,6 +206,7 @@ fn over_1<'e>(max_participants: &Option<i64>) -> Result<(), rocket::form::Errors
     }
 }
 
+#[inline]
 fn len_under_1000<'r, 'e>(s: &'r Option<&'r str>) -> Result<(), rocket::form::Errors<'e>> {
     if let Some(s) = s {
         if s.len() < 1000 {
@@ -232,6 +242,8 @@ pub fn stage() -> AdHoc {
                 new::new_contest_post,
                 edit::edit_contest_get,
                 edit::edit_contest_post,
+                delete::delete_contest_get,
+                delete::delete_contest_post,
                 join::join_contest,
                 view::view_contest,
             ],

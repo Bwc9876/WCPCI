@@ -1,6 +1,9 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import Button from "@/components/Button.astro";
+import If from "@/components/tera/If.astro";
+import { variable } from "@/lib/tera";
 ---
 
 <Layout title="Contests" makeTile>
@@ -8,7 +11,7 @@ import TemplatedTable from "@/components/table/TemplatedTable.astro";
     <TemplatedTable
         listName="contests"
         itemLink={{
-            action: (id: string) => `/contests/${id}`,
+            action: (id: string) => `/contests/${id}`
         }}
         actions={[
             {
@@ -26,10 +29,13 @@ import TemplatedTable from "@/components/table/TemplatedTable.astro";
             }
         ]}
         columns={[
-            {name: "name"},
-            {name: "start_time", overrideList: "start_times"},
-            {name: "registration_deadline", overrideList: "registration_deadlines"},
-            {name: "max_participants"},
+            { name: "name" },
+            { name: "start_time", overrideList: "start_times" },
+            { name: "registration_deadline", overrideList: "registration_deadlines" },
+            { name: "max_participants" }
         ]}
     />
+    <If debugEval={true} expression="is_admin">
+        <Button class="w-fit self-end" as="a" href={`/contests/new`}>Create New Contest</Button>
+    </If>
 </Layout>

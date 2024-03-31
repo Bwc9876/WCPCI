@@ -16,7 +16,7 @@ use crate::{
     },
     context_with_base_authed,
     db::DbConnection,
-    template::{FormStatus, FormTemplateObject},
+    template::FormTemplateObject,
     times::ClientTimeZone,
 };
 
@@ -27,7 +27,7 @@ use super::{Contest, ContestForm, ContestFormTemplate};
 pub enum EditContestResponse {
     Form(Template),
     Redirect(Redirect),
-    NotFound(Status),
+    Error(Status),
 }
 
 #[get("/<id>/edit")]
@@ -49,7 +49,7 @@ pub async fn edit_contest_get(
             context_with_base_authed!(user, form, contest_id: id),
         ))
     } else {
-        EditContestResponse::NotFound(Status::NotFound)
+        EditContestResponse::Error(Status::NotFound)
     }
 }
 
@@ -83,15 +83,7 @@ pub async fn edit_contest_post(
 
             if let Err(why) = contest.update(&mut db).await {
                 error!("Failed to insert contest: {}", why);
-                let form_template = ContestFormTemplate {
-                    contest: Some(&contest),
-                    timezone: &client_time_zone,
-                };
-                let mut form =
-                    FormTemplateObject::from_rocket_context(form_template, &form.context);
-                form.status = FormStatus::Error;
-                let ctx = context_with_base_authed!(user, form, contest_id: id);
-                EditContestResponse::Form(Template::render("contests/edit", ctx))
+                EditContestResponse::Error(Status::InternalServerError)
             } else {
                 EditContestResponse::Redirect(Redirect::to("/contests"))
             }
@@ -105,6 +97,6 @@ pub async fn edit_contest_post(
             EditContestResponse::Form(Template::render("contests/edit", ctx))
         }
     } else {
-        EditContestResponse::NotFound(Status::NotFound)
+        EditContestResponse::Error(Status::NotFound)
     }
 }

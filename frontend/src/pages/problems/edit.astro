@@ -3,10 +3,8 @@ import Layout from "@/layouts/Layout.astro";
 import ProblemForm from "@/components/forms/ProblemForm.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import { variable } from "@/lib/tera";
-import Variable from "@/components/tera/Variable.astro";
 
 const problemName = variable("problem_name | default(value=problem.name)");
-
 ---
 
 <Layout title={`Edit Problem: ${problemName}`} makeTile>
@@ -15,8 +13,14 @@ const problemName = variable("problem_name | default(value=problem.name)");
             ["Contests", "/contests"],
             [variable("contest_name"), `/contests/${variable("contest_id")}`],
             ["Problems", `/contests/${variable("contest_id")}/problems`],
-            [problemName, `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}`],
-            ["Edit", `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}/edit`]
+            [
+                problemName,
+                `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}`
+            ],
+            [
+                "Edit",
+                `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}/edit`
+            ]
         ]}
     />
     <h1 class="text-2xl">Edit Problem: {problemName}</h1>

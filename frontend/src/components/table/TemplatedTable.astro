@@ -107,10 +107,22 @@ const emptyColSpan = renderAction
                                 color={itemLink.color}
                                 href={itemLink.action(variable(`${itemName}.${idColName}`))}
                             >
-                                <Variable expression={col.overrideList ? `${col.overrideList}[loop.index0]` : `${itemName}.${col.name}`} />
+                                <Variable
+                                    expression={
+                                        col.overrideList
+                                            ? `${col.overrideList}[loop.index0]`
+                                            : `${itemName}.${col.name}`
+                                    }
+                                />
                             </Link>
                         ) : (
-                            <Variable expression={col.overrideList ? `${col.overrideList}[loop.index0]` : `${itemName}.${col.name}`} />
+                            <Variable
+                                expression={
+                                    col.overrideList
+                                        ? `${col.overrideList}[loop.index0]`
+                                        : `${itemName}.${col.name}`
+                                }
+                            />
                         )}
                     </TableCol>
                 ))

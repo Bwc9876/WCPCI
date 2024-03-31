@@ -82,9 +82,10 @@ async fn websocket_loop(
     test_cases: Vec<TestCase>,
     user_id: i64,
 ) {
-    let _manager = manager.lock().await;
+    let mut _manager = manager.lock().await;
     let mut started_rx = _manager.subscribe();
     let mut shutdown_rx = _manager.subscribe_shutdown();
+    let mut updated_rx = _manager.get_handle_for_problem(problem.id);
     let state_rx = _manager.get_handle(user_id, problem.id).await;
     drop(_manager);
     // Fake receiver to start the loop, will be replaced by the real one
@@ -166,6 +167,9 @@ async fn websocket_loop(
                 LoopRes::Msg(WebSocketMessage::StateUpdate { state: state.clone() })
             }
             Ok(()) = shutdown_rx.changed() => {
+                LoopRes::Break
+            }
+            Ok(()) = updated_rx.changed() => {
                 LoopRes::Break
             }
         };

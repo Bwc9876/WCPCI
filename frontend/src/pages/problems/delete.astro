@@ -1,0 +1,23 @@
+---
+import Delete from "@/layouts/Delete.astro";
+import { variable } from "@/lib/tera";
+---
+
+<Delete
+    title=`Delete ${variable("problem.name")}`
+    prompt="Are you sure you want to delete this problem?"
+    backLink=`/contests/${variable("problem.contest_id")}/problems`
+    breadcrumb={[
+        ["Contests", "/contests"],
+        [variable("contest_name"), `/contests/${variable("contest_id")}`],
+        ["Problems", `/contests/${variable("contest_id")}/problems`],
+        [
+            variable("problem.name"),
+            `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}`
+        ],
+        [
+            "Delete",
+            `/contests/${variable("contest_id")}/problems/${variable("problem.slug")}/delete`
+        ]
+    ]}
+/>

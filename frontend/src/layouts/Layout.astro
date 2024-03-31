@@ -315,10 +315,9 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
                 }
             }
         </style>
+        <script>
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            document.cookie = `timezone=${encodeURIComponent(timezone)}; SameSite=Lax; max-age=31536000`;
+        </script>
     </body>
 </html>
-
-<script>
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.cookie = `timezone=${encodeURIComponent(timezone)}; SameSite=Lax; max-age=31536000`;
-</script>

@@ -2,6 +2,7 @@ use rocket::{fairing::AdHoc, routes};
 
 mod account;
 mod contest;
+mod delete;
 mod profile;
 
 pub fn stage() -> AdHoc {
@@ -14,6 +15,8 @@ pub fn stage() -> AdHoc {
                 account::account_get,
                 contest::contest_settings_get,
                 contest::contest_settings_post,
+                delete::delete_user_get,
+                delete::delete_user_post,
             ],
         )
     })

@@ -1,3 +1,4 @@
+use log::error;
 use rocket::{get, http::Status, response::Redirect};
 
 use crate::{
@@ -36,8 +37,12 @@ pub async fn join_contest(
                 }
             }
             let participant = Participant::temp(user.id, contest_id, false);
-            participant.insert(&mut db).await.ok();
-            JoinContestResponse::Redirect(Redirect::to(format!("/contests/{}/", contest_id)))
+            if let Err(why) = participant.insert(&mut db).await {
+                error!("Error inserting participant: {:?}", why);
+                JoinContestResponse::Err(Status::InternalServerError)
+            } else {
+                JoinContestResponse::Redirect(Redirect::to(format!("/contests/{}/", contest_id)))
+            }
         } else {
             JoinContestResponse::Err(Status::Forbidden)
         }

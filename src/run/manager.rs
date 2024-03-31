@@ -22,6 +22,10 @@ pub type JobStartedMessage = (UserId, i64, JobStateReceiver);
 pub type JobStartedReceiver = tokio::sync::broadcast::Receiver<JobStartedMessage>;
 pub type JobStartedSender = tokio::sync::broadcast::Sender<JobStartedMessage>;
 
+pub type ProblemUpdatedMessage = ();
+pub type ProblemUpdatedReceiver = tokio::sync::watch::Receiver<ProblemUpdatedMessage>;
+pub type ProblemUpdatedSender = tokio::sync::watch::Sender<ProblemUpdatedMessage>;
+
 pub type ShutdownReceiver = tokio::sync::watch::Receiver<bool>;
 
 pub struct RunManager {
@@ -30,6 +34,7 @@ pub struct RunManager {
     jobs: HashMap<UserId, RunHandle>,
     db_pool: DbPool,
     job_started_channel: (JobStartedSender, JobStartedReceiver),
+    problem_updated_channels: HashMap<i64, ProblemUpdatedSender>,
     shutdown_rx: ShutdownReceiver,
 }
 
@@ -42,6 +47,7 @@ impl RunManager {
             jobs: HashMap::with_capacity(10),
             db_pool: pool,
             job_started_channel: (tx, rx),
+            problem_updated_channels: HashMap::with_capacity(5),
             shutdown_rx,
         }
     }
@@ -81,6 +87,8 @@ impl RunManager {
 
         let pool = self.db_pool.clone();
 
+        let requested_at = chrono::offset::Utc::now().naive_utc();
+
         tokio::spawn(async move {
             let (state, ran_at) = job.run().await;
             handle.lock().await.take();
@@ -100,8 +108,11 @@ impl RunManager {
                                             error!("Couldn't write judge run to db: {:?}", why);
                                         }
                                         if success {
-                                            let completion =
-                                                ProblemCompletion::temp(user_id, problem_id);
+                                            let completion = ProblemCompletion::temp(
+                                                user_id,
+                                                problem_id,
+                                                requested_at,
+                                            );
                                             if let Err(why) = completion.insert(&mut conn).await {
                                                 error!(
                                                     "Couldn't write problem completion to db: {:?}",
@@ -127,6 +138,22 @@ impl RunManager {
             .ok();
 
         Ok(())
+    }
+
+    pub fn get_handle_for_problem(&mut self, problem_id: i64) -> ProblemUpdatedReceiver {
+        if let Some(handle) = self.problem_updated_channels.get(&problem_id) {
+            handle.subscribe()
+        } else {
+            let (tx, rx) = tokio::sync::watch::channel(());
+            self.problem_updated_channels.insert(problem_id, tx);
+            rx
+        }
+    }
+
+    pub async fn update_problem(&mut self, problem_id: i64) {
+        if let Some(handle) = self.problem_updated_channels.remove(&problem_id) {
+            handle.send(()).ok();
+        }
     }
 
     pub async fn get_handle(&self, user_id: UserId, problem_id: i64) -> Option<JobStateReceiver> {

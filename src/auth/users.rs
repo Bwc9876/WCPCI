@@ -142,6 +142,16 @@ impl User {
         Ok(new)
     }
 
+    pub async fn delete(&self, db: &mut DbPoolConnection) -> Result<(), String> {
+        let res = sqlx::query!("DELETE FROM user WHERE id = ?", self.id)
+            .execute(&mut **db)
+            .await;
+
+        res.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     async fn get_by_email(
         db: &mut DbPoolConnection,
         username: &str,

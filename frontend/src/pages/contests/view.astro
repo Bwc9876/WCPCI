@@ -41,7 +41,9 @@ import { variable } from "@/lib/tera";
             <Button
                 class:list={[
                     "my-auto",
-                    import.meta.env.DEV ? "hidden" : `${tag("if not started and not is_admin", true)}hidden${tag("endif")}`
+                    import.meta.env.DEV
+                        ? "hidden"
+                        : `${tag("if not started and not is_admin", true)}hidden${tag("endif")}`
                 ]}
                 color="primary"
                 id="go-to-problems"
@@ -53,7 +55,9 @@ import { variable } from "@/lib/tera";
             <Button
                 class:list={[
                     "my-auto",
-                    import.meta.env.DEV ? "hidden" : `${tag("if not started and not is_admin", true)}hidden${tag("endif")}`
+                    import.meta.env.DEV
+                        ? "hidden"
+                        : `${tag("if not started and not is_admin", true)}hidden${tag("endif")}`
                 ]}
                 color="secondary"
                 id="go-to-leaderboard"
@@ -65,7 +69,10 @@ import { variable } from "@/lib/tera";
             <If debugEval={true} expression="not started and not is_admin">
                 <span id="countdown" class="my-auto text-xl text-gray-500">
                     Contest starts <span id="start-word">at</span>
-                    <span data-time-str={variable("start_local_html", "2024-03-22T12:32:00")} id="start-time">
+                    <span
+                        data-time-str={variable("start_local_html", "2024-03-22T12:32:00")}
+                        id="start-time"
+                    >
                         <Variable expression="start_formatted" debugEval="NEVER!!!" />
                     </span>
                 </span>
@@ -78,7 +85,10 @@ import { variable } from "@/lib/tera";
                 <h2 class="text-2xl font-bold">Description</h2>
                 <p><Variable expression="contest.description" /></p>
             </Tile>
-            <If debugEval={true} expression="logged_in and not is_admin and started and problems_total != 0">
+            <If
+                debugEval={true}
+                expression="logged_in and not is_admin and started and problems_total != 0"
+            >
                 <Tile class="flex flex-col justify-center align-middle">
                     <label class="flex flex-col gap-2 text-2xl font-bold">
                         Your Progress
@@ -88,24 +98,34 @@ import { variable } from "@/lib/tera";
                                 value={variable("problems_done", "14")}
                                 max={variable("problems_total", "20")}
                             />
-                            <span class="my-auto text-lg min-w-max">
+                            <span class="my-auto min-w-max text-lg">
                                 <span>
                                     <Variable expression="problems_done" debugEval="14" />
                                     / <Variable expression="problems_total" debugEval="20" />
                                 </span>
-                                <span>(<Variable expression="problems_done / problems_total * 100 | round" debugEval="70" />%)</span>
+                                <span
+                                    >(<Variable
+                                        expression="problems_done / problems_total * 100 | round"
+                                        debugEval="70"
+                                    />%)</span
+                                >
                             </span>
                         </div>
                     </label>
                 </Tile>
             </If>
             <If debugEval={true} expression="started or is_admin">
-                <Tile class="flex flex-col gap-2 grow overflow-hidden">
+                <Tile class="flex grow flex-col gap-2 overflow-hidden">
                     <h2 class="text-2xl font-bold">Problems</h2>
                     <Tag expression="set contest_id = contest.id" />
                     <ProblemsTable class="overflow-y-auto" />
                     <If debugEval={true} expression="can_edit">
-                        <Button class="w-fit self-end" as="a" href={`/contests/${variable("contest.id")}/problems/new`}>Create New Problem</Button>
+                        <Button
+                            class="w-fit self-end"
+                            as="a"
+                            href={`/contests/${variable("contest.id")}/problems/new`}
+                            >Create New Problem</Button
+                        >
                     </If>
                 </Tile>
             </If>
@@ -151,7 +171,9 @@ import { variable } from "@/lib/tera";
                                 emailVar="participant.1.email"
                             />
                             <span class="my-auto"
-                                ><Variable expression="participant.1.display_name | default(value=participant.1.default_display_name)" /></span
+                                ><Variable
+                                    expression="participant.1.display_name | default(value=participant.1.default_display_name)"
+                                /></span
                             >
                         </li>
                         <Else>

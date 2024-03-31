@@ -154,23 +154,26 @@ fn len_of_form_data_list(args: FunctionArgs) -> Result<Value, tera::Error> {
         .into_iter()
         .filter_map(|name| {
             if name.starts_with(&format!("{list}[")) {
-                Some(tera::Value::Number(
+                Some(
                     name[list.len() + 1..]
                         .split(']')
                         .next()
                         .and_then(|s| s.parse().ok())
-                        .unwrap_or(0)
-                        .into(),
-                ))
+                        .unwrap_or(0),
+                )
             } else {
                 None
             }
         })
         .collect::<Vec<_>>();
 
+    dat.sort();
     dat.dedup();
 
-    Ok(tera::Value::Array(dat))
+    Ok(tera::Value::Array(dbg!(dat
+        .into_iter()
+        .map(|i| tera::Value::Number(i.into()))
+        .collect::<Vec<_>>())))
 }
 
 #[macro_export]

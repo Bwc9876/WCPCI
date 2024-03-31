@@ -6,6 +6,7 @@ use rocket::{fairing::AdHoc, routes, FromForm};
 
 mod cases;
 mod completions;
+mod delete;
 mod edit;
 mod new;
 mod runs;
@@ -96,6 +97,17 @@ impl Problem {
         .map(|_| ())
     }
 
+    pub async fn delete(self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM problem WHERE id = ? AND contest_id = ?",
+            self.id,
+            self.contest_id
+        )
+        .execute(&mut **db)
+        .await
+        .map(|_| ())
+    }
+
     pub fn temp(contest_id: i64, form: &ProblemForm) -> Self {
         let slug = slug::slugify(form.name);
         Self {
@@ -170,6 +182,8 @@ pub fn stage() -> AdHoc {
                 new::new_problem_post,
                 edit::edit_problem_get,
                 edit::edit_problem_post,
+                delete::delete_problem_get,
+                delete::delete_problem_post,
                 runs::runs
             ],
         )

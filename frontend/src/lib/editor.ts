@@ -71,7 +71,9 @@ export default (
             languageIcon.src = makeIconUrl(langInfo.tablerIcon);
             if (editor) {
                 const storedCode = JSON.parse(
-                    window.localStorage.getItem(`contest-${contestId}-problem-${problemId}-${lang}-code`) ?? "null"
+                    window.localStorage.getItem(
+                        `contest-${contestId}-problem-${problemId}-${lang}-code`
+                    ) ?? "null"
                 );
                 editor.setValue(storedCode ?? langInfo.defaultCode);
                 monaco.editor.setModelLanguage(editor.getModel()!, langInfo.monacoContribution);
@@ -84,7 +86,8 @@ export default (
     };
 
     const [storedCode, storedLang] = JSON.parse(
-        window.localStorage.getItem(`contest-${contestId}-problem-${problemId}-code`) ?? "[null, null]"
+        window.localStorage.getItem(`contest-${contestId}-problem-${problemId}-code`) ??
+            "[null, null]"
     );
 
     currentLanguage = Object.keys(codeInfo).includes(storedLang ?? "")

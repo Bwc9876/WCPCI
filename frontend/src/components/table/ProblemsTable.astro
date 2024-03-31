@@ -1,31 +1,35 @@
 ---
-import { variable } from '@/lib/tera';
-import TemplatedTable from './TemplatedTable.astro';
+import { variable } from "@/lib/tera";
+import TemplatedTable from "./TemplatedTable.astro";
 
 export type Props = {
     class?: string;
 };
 
-const { class: className } = Astro.props;  
+const { class: className } = Astro.props;
 ---
 
 <TemplatedTable
-        class={className ?? ""}
-        idColName="slug"
-        itemLink={{ action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}` }}
-        actions={[
-            {
-                name: "Edit",
-                condition: "logged_in and is_admin",
-                action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}/edit`,
-                icon: "tabler:pencil"
-            }
-        ]}
-        listName="problems"
-        itemName="problem"
-        columns={[
-            {name: "name"},
-            {name: "cpu_time", label: "CPU Time (seconds)"},
-        ]}
-        emptyText="No Problems Have Been Made Yet."
+    class={className ?? ""}
+    idColName="slug"
+    itemLink={{ action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}` }}
+    actions={[
+        {
+            name: "Edit",
+            condition: "logged_in and can_edit",
+            action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}/edit`,
+            icon: "tabler:pencil"
+        },
+        {
+            name: "Delete",
+            condition: "logged_in and can_edit",
+            action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}/delete`,
+            icon: "tabler:trash",
+            class: "text-red-500"
+        }
+    ]}
+    listName="problems"
+    itemName="problem"
+    columns={[{ name: "name" }, { name: "cpu_time", label: "CPU Time (seconds)" }]}
+    emptyText="No Problems Have Been Made Yet."
 />

@@ -1,0 +1,10 @@
+---
+import Delete from "@/layouts/Delete.astro";
+import { variable } from "@/lib/tera";
+---
+
+<Delete
+    title=`Delete Account`
+    prompt=`Are you sure you want to delete your account ${variable("user.email")}? This will delete all your submissions and other data, you will also be removed from leaderboards.`
+    backLink=`/settings/account`
+/>
