@@ -6,6 +6,7 @@ extern crate rocket_dyn_templates;
 
 mod auth;
 mod contests;
+mod csp;
 mod db;
 mod problems;
 mod run;
@@ -33,6 +34,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![index])
+        .attach(csp::stage())
         .attach(db::stage())
         .attach(times::stage())
         .attach(template::stage())

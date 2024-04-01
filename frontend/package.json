@@ -6,7 +6,8 @@
         "dev": "astro dev",
         "start": "astro dev",
         "check": "astro check",
-        "build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\"",
+        "build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\" && node cspOutputer.mjs",
+        "csp": "node cspOutputer.mjs",
         "preview": "astro preview",
         "astro": "astro",
         "format": "prettier --write .",
@@ -29,6 +30,7 @@
     },
     "devDependencies": {
         "@iconify-json/tabler": "^1.1.109",
+        "@kindspells/astro-shield": "^1.3.3",
         "@types/katex": "^0.16.7",
         "prettier": "^3.2.5",
         "prettier-plugin-astro": "^0.13.0",
