@@ -104,6 +104,19 @@ import { Icon } from "astro-icon/components";
                             </option>
                         </For></Field
                     >
+                    <div
+                        id="save-indicator"
+                        aria-label="Changes Saved!"
+                        data-save-state="saved"
+                        class="group my-auto"
+                    >
+                        <Icon
+                            class="my-auto text-green-600 group-[[data-save-state=saving]]:animate-pulse group-[[data-save-state=saving]]:text-accent"
+                            name="tabler:device-floppy"
+                            size={32}
+                        />
+                    </div>
+                    <Button id="reset-button" icon="tabler:restore" justIcon color="secondary" />
                 </div>
                 <div
                     id="editor"
@@ -200,6 +213,8 @@ import { Icon } from "astro-icon/components";
         const testButtonTemplate = (document.querySelector(
             "#test-debug-template"
         ) as HTMLButtonElement)!;
+        const saveIndicator = (document.querySelector("#save-indicator") as HTMLElement)!;
+        const resetButton = (document.querySelector("#reset-button") as HTMLButtonElement)!;
 
         const toggleButtons = (disabled: boolean) => {
             submitButton.disabled = disabled;
@@ -239,7 +254,9 @@ import { Icon } from "astro-icon/components";
                 languageDropdown,
                 colorScheme,
                 editorElem,
-                languageIcon
+                languageIcon,
+                saveIndicator,
+                resetButton
             );
             editor = newEditor as monaco.editor.IStandaloneCodeEditor;
             getLang = _getLang as () => string;

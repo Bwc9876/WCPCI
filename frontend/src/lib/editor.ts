@@ -58,7 +58,9 @@ export default (
     languageDropdown: HTMLSelectElement,
     colorScheme: string,
     editorElem: HTMLElement,
-    languageIcon: HTMLImageElement
+    languageIcon: HTMLImageElement,
+    saveIndicator: HTMLElement,
+    resetButton: HTMLButtonElement
 ) => {
     let editor: monaco.editor.IStandaloneCodeEditor | null = null;
     let currentLanguage = defaultLanguage;
@@ -130,6 +132,8 @@ export default (
     let currentTimeout: number | undefined = undefined;
     let oldLang = currentLanguage;
     editor!.onDidChangeModelContent(() => {
+        saveIndicator.dataset.saveState = "saving";
+        saveIndicator.ariaLabel = "Saving Changes...";
         if (currentTimeout) {
             clearTimeout(currentTimeout);
         }
@@ -145,11 +149,25 @@ export default (
                     `contest-${contestId}-problem-${problemId}-${currentLanguage}-code`,
                     JSON.stringify(text)
                 );
+                saveIndicator.dataset.saveState = "saved";
+                saveIndicator.ariaLabel = "Changes Saved!";
             }
         }, 1000) as unknown as number;
         oldLang = currentLanguage!;
     });
     console.debug("Instantiated Monaco editor");
+
+    resetButton.onclick = () => {
+        if (editor) {
+            if (
+                window.confirm(
+                    "Are you sure you want to reset your code? This will erase your changes for the current language."
+                )
+            ) {
+                editor.setValue(codeInfo[currentLanguage].defaultCode);
+            }
+        }
+    };
 
     return [editor, () => currentLanguage];
 };
