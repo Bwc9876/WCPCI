@@ -1,4 +1,4 @@
-use rocket::{get, launch, routes};
+use rocket::{catch, catchers, get, http::Status, launch, routes, Request};
 use rocket_dyn_templates::Template;
 
 #[macro_use]
@@ -24,6 +24,16 @@ async fn index(user: Option<&User>) -> Template {
     Template::render("index", ctx)
 }
 
+#[catch(default)]
+fn error(status: Status, _request: &Request) -> Template {
+    let message = status.to_string();
+    let code = status.code;
+    Template::render(
+        "error",
+        context! { message, code, version: env!("CARGO_PKG_VERSION") },
+    )
+}
+
 #[launch]
 fn rocket() -> _ {
     if cfg!(debug_assertions) {
@@ -34,6 +44,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![index])
+        .register("/", catchers![error])
         .attach(csp::stage())
         .attach(db::stage())
         .attach(times::stage())

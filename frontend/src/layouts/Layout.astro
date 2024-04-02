@@ -17,15 +17,23 @@ export interface Props {
     animate?: boolean;
     class?: string;
     makeTile?: boolean;
+    noTemplate?: boolean;
     noGrow?: boolean;
 }
 
-const { title, class: className, makeTile = false, animate = true, noGrow = false } = Astro.props;
+const {
+    title,
+    class: className,
+    makeTile = false,
+    animate = true,
+    noTemplate = false,
+    noGrow = false
+} = Astro.props;
 ---
 
 <!doctype html>
 <!-- {% set scheme = user.color_scheme | default(value='UseSystem') %}WCPC {{ version }} -->
-<html class={themeClass("light", "dark", "system")} lang="en">
+<html class={noTemplate ? "system" : themeClass("light", "dark", "system")} lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="description" content="Astro description" />
@@ -51,41 +59,45 @@ const { title, class: className, makeTile = false, animate = true, noGrow = fals
                 <Link color="white" class="my-auto" href="/contests">Contests</Link>
                 <Link color="white" class="my-auto" href="/problems">Problems</Link>
                 <span class="flex-grow"></span>
-                <If debugEval={true} expression="logged_in">
-                    <Link
-                        href="/settings/profile"
-                        color="inherit"
-                        class="group flex flex-row gap-2 rounded-full bg-secondary p-1 hover:text-accent md:pe-5"
-                    >
-                        <Avatar
-                            class="group-hover:border-2 group-hover:border-solid group-hover:border-accent-600"
-                        />
-                        <span class="my-auto hidden md:block"
-                            ><Variable expression="name" debugEval="Ben C" /></span
-                        >
-                    </Link>
-                    <Link
-                        aria-label="Logout"
-                        href="/auth/logout"
-                        class="group flex rounded-full bg-secondary py-1 pe-2 ps-3"
-                    >
-                        <Icon
-                            size={30}
-                            name="tabler:logout"
-                            class="my-auto text-text group-hover:text-red-500"
-                        />
-                    </Link>
-                    <Else slot="else">
-                        <Button
-                            as="a"
-                            href="/auth/login"
-                            color="primary"
-                            icon="tabler:login-2"
-                            class="my-auto"
-                            size="lg">Login / Sign-Up</Button
-                        >
-                    </Else>
-                </If>
+                {
+                    !noTemplate && (
+                        <If debugEval={true} expression="logged_in">
+                            <Link
+                                href="/settings/profile"
+                                color="inherit"
+                                class="group flex flex-row gap-2 rounded-full bg-secondary p-1 hover:text-accent md:pe-5"
+                            >
+                                <Avatar class="group-hover:border-2 group-hover:border-solid group-hover:border-accent-600" />
+                                <span class="my-auto hidden md:block">
+                                    <Variable expression="name" debugEval="Ben C" />
+                                </span>
+                            </Link>
+                            <Link
+                                aria-label="Logout"
+                                href="/auth/logout"
+                                class="group flex rounded-full bg-secondary py-1 pe-2 ps-3"
+                            >
+                                <Icon
+                                    size={30}
+                                    name="tabler:logout"
+                                    class="my-auto text-text group-hover:text-red-500"
+                                />
+                            </Link>
+                            <Else slot="else">
+                                <Button
+                                    as="a"
+                                    href="/auth/login"
+                                    color="primary"
+                                    icon="tabler:login-2"
+                                    class="my-auto"
+                                    size="lg"
+                                >
+                                    Login / Sign-Up
+                                </Button>
+                            </Else>
+                        </If>
+                    )
+                }
             </Tile>
         </header>
         <main

@@ -190,7 +190,7 @@ impl<'r> FromRequest<'r> for &'r User {
             }
         }).await;
 
-        user_result.as_ref().or_forward(Status::Unauthorized)
+        user_result.as_ref().or_error((Status::Unauthorized, ()))
     }
 }
 
@@ -210,6 +210,6 @@ impl<'r> FromRequest<'r> for &'r Admin {
                 }
             })
             .await;
-        admin_result.as_ref().or_forward(Status::Forbidden)
+        admin_result.as_ref().or_error((Status::Forbidden, ()))
     }
 }
