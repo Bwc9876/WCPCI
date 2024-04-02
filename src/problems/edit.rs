@@ -28,7 +28,7 @@ use super::{cases::TestCase, Problem, ProblemForm, ProblemFormTemplate};
 pub enum ProblemEditResponse {
     Form(Template),
     Redirect(Redirect),
-    NotFound(Status),
+    Error(Status),
 }
 
 #[get("/<contest_id>/problems/<slug>/edit")]
@@ -46,7 +46,7 @@ pub async fn edit_problem_get(
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemEditResponse::NotFound(Status::Forbidden);
+        return ProblemEditResponse::Error(Status::Forbidden);
     }
     if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
         let test_cases = TestCase::get_for_problem(&mut db, problem.id)
@@ -66,7 +66,7 @@ pub async fn edit_problem_get(
             context_with_base_authed!(user, form, contest_name, contest_id, problem),
         ))
     } else {
-        ProblemEditResponse::NotFound(Status::NotFound)
+        ProblemEditResponse::Error(Status::NotFound)
     }
 }
 
@@ -89,7 +89,7 @@ pub async fn edit_problem_post(
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemEditResponse::NotFound(Status::Forbidden);
+        return ProblemEditResponse::Error(Status::Forbidden);
     }
 
     if let Some(mut problem) = Problem::get(&mut db, contest_id, slug).await {
@@ -111,19 +111,21 @@ pub async fn edit_problem_post(
             let res = problem.update(&mut db).await;
             if let Err(why) = res {
                 error!("Failed to update problem: {:?}", why);
+                ProblemEditResponse::Error(Status::InternalServerError)
             } else {
                 let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
                 if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
                     error!("Failed to update test cases: {:?}", why);
+                    ProblemEditResponse::Error(Status::InternalServerError)
                 } else {
                     let mut manager = manager.lock().await;
                     manager.update_problem(problem.id).await;
+                    ProblemEditResponse::Redirect(Redirect::to(format!(
+                        "/contests/{}/problems/{}",
+                        contest_id, problem.slug
+                    )))
                 }
-            };
-            ProblemEditResponse::Redirect(Redirect::to(format!(
-                "/contests/{}/problems/{}",
-                contest_id, problem.slug
-            )))
+            }
         } else {
             let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
             let contest_name = Contest::get(&mut db, contest_id)
@@ -136,6 +138,6 @@ pub async fn edit_problem_post(
             ))
         }
     } else {
-        ProblemEditResponse::NotFound(Status::NotFound)
+        ProblemEditResponse::Error(Status::NotFound)
     }
 }

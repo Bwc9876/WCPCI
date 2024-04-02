@@ -19,7 +19,7 @@ use super::Problem;
 pub enum ProblemDeleteResponse {
     Form(Template),
     Redirect(Redirect),
-    NotFound(Status),
+    Error(Status),
 }
 
 #[get("/<contest_id>/problems/<slug>/delete")]
@@ -37,7 +37,7 @@ pub async fn delete_problem_get(
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemDeleteResponse::NotFound(Status::Forbidden);
+        return ProblemDeleteResponse::Error(Status::Forbidden);
     }
     if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
         let contest_name = Contest::get(&mut db, contest_id)
@@ -49,7 +49,7 @@ pub async fn delete_problem_get(
             context_with_base_authed!(user, contest_name, contest_id, problem),
         ))
     } else {
-        ProblemDeleteResponse::NotFound(Status::NotFound)
+        ProblemDeleteResponse::Error(Status::NotFound)
     }
 }
 
@@ -68,16 +68,21 @@ pub async fn delete_problem_post(
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemDeleteResponse::NotFound(Status::Forbidden);
+        return ProblemDeleteResponse::Error(Status::Forbidden);
     }
 
     if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
         let res = problem.delete(&mut db).await;
         if let Err(e) = res {
             error!("Failed to delete problem: {}", e);
+            ProblemDeleteResponse::Error(Status::InternalServerError)
+        } else {
+            ProblemDeleteResponse::Redirect(Redirect::to(format!(
+                "/contests/{}/problems",
+                contest_id
+            )))
         }
-        ProblemDeleteResponse::Redirect(Redirect::to(format!("/contests/{}/problems", contest_id)))
     } else {
-        ProblemDeleteResponse::NotFound(Status::NotFound)
+        ProblemDeleteResponse::Error(Status::NotFound)
     }
 }

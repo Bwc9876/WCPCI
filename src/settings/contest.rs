@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use log::error;
 use rocket::{
     form::{Contextual, Form},
-    get, post, FromForm, State,
+    get,
+    http::Status,
+    post, FromForm, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -58,6 +60,12 @@ pub struct ContestForm<'r> {
     default_language: &'r str,
 }
 
+#[derive(Responder)]
+pub enum SettingsContestPostResponse {
+    Template(Template),
+    Error(Status),
+}
+
 #[post("/contest", data = "<form>")]
 pub async fn contest_settings_post(
     user: &User,
@@ -65,7 +73,7 @@ pub async fn contest_settings_post(
     mut db: DbConnection,
     _token: &CsrfToken,
     code_info: &State<CodeInfo>,
-) -> Template {
+) -> SettingsContestPostResponse {
     let mut user = user.clone();
     let languages = code_info.run_config.get_languages_for_dropdown();
     if let Some(ref value) = form.value {
@@ -86,7 +94,10 @@ pub async fn contest_settings_post(
             let mut form_ctx = FormTemplateObject::from_rocket_context(form_template, rocket_ctx);
             form_ctx.status = FormStatus::Error;
             let ctx = context_with_base_authed!(&user, form: form_ctx, languages);
-            return Template::render("settings/contest", ctx);
+            return SettingsContestPostResponse::Template(Template::render(
+                "settings/contest",
+                ctx,
+            ));
         } else {
             let res = sqlx::query!(
                 "UPDATE user SET default_language = ?, color_scheme = ? WHERE id = ?",
@@ -98,6 +109,7 @@ pub async fn contest_settings_post(
             .await;
             if let Err(why) = res {
                 error!("Failed to update user {}: {:?}", user.id, why);
+                return SettingsContestPostResponse::Error(Status::InternalServerError);
             }
         }
     };
@@ -107,5 +119,5 @@ pub async fn contest_settings_post(
 
     let ctx = context_with_base_authed!(&user, form, languages);
 
-    Template::render("settings/contest", ctx)
+    SettingsContestPostResponse::Template(Template::render("settings/contest", ctx))
 }

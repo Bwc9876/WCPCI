@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use log::error;
 use rocket::form::{Contextual, Form, FromForm};
+use rocket::http::Status;
 use rocket::{get, post};
 use rocket_dyn_templates::Template;
 
@@ -49,13 +50,19 @@ pub fn profile_get(user: &User, _token: &CsrfToken) -> Template {
     Template::render("settings/profile", ctx)
 }
 
+#[derive(Responder)]
+pub enum SettingsProfilePostResponse {
+    Template(Template),
+    Error(Status),
+}
+
 #[post("/profile", data = "<form>")]
 pub async fn profile_post(
     mut db: DbConnection,
     user: &User,
     _token: &VerifyCsrfToken,
     form: Form<Contextual<'_, ProfileForm<'_>>>,
-) -> Template {
+) -> SettingsProfilePostResponse {
     let mut user = user.clone();
     if let Some(ref value) = form.value {
         let name = value.display_name.trim();
@@ -72,6 +79,7 @@ pub async fn profile_post(
         .await;
         if let Err(why) = res {
             error!("Failed to update user {}: {:?}", user.id, why);
+            return SettingsProfilePostResponse::Error(Status::InternalServerError);
         }
     };
 
@@ -81,5 +89,5 @@ pub async fn profile_post(
     let ctx =
         context_with_base_authed!(&user, default_display_name: &user.default_display_name, form);
 
-    Template::render("settings/profile", ctx)
+    SettingsProfilePostResponse::Template(Template::render("settings/profile", ctx))
 }

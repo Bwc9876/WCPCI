@@ -23,7 +23,7 @@ use super::{cases::TestCase, Problem, ProblemForm, ProblemFormTemplate};
 
 #[derive(Responder)]
 pub enum ProblemNewGetResponse {
-    NotFound(Status),
+    Error(Status),
     Template(Template),
 }
 
@@ -55,7 +55,7 @@ pub async fn new_problem_get(
             context_with_base_authed!(user, contest_name, contest_id, form),
         ))
     } else {
-        ProblemNewGetResponse::NotFound(Status::Forbidden)
+        ProblemNewGetResponse::Error(Status::Forbidden)
     }
 }
 
@@ -63,8 +63,8 @@ pub async fn new_problem_get(
 #[derive(Responder)]
 pub enum ProblemNewPostResponse {
     Redirect(Redirect),
-    Error(Template),
-    NotFound(Status),
+    Template(Template),
+    Error(Status),
 }
 
 #[post("/<contest_id>/problems/new", data = "<form>", rank = 5)]
@@ -82,7 +82,7 @@ pub async fn new_problem_post(
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemNewPostResponse::NotFound(Status::Forbidden);
+        return ProblemNewPostResponse::Error(Status::Forbidden);
     }
     if let Some(ref value) = form.value {
         let problem = Problem::temp(contest_id, value);
@@ -92,17 +92,17 @@ pub async fn new_problem_post(
                 let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
                 if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
                     error!("Error saving test cases: {:?}", why);
+                    ProblemNewPostResponse::Error(Status::InternalServerError)
+                } else {
+                    ProblemNewPostResponse::Redirect(Redirect::to(format!(
+                        "/contests/{contest_id}/problems/{}",
+                        problem.slug
+                    )))
                 }
-                ProblemNewPostResponse::Redirect(Redirect::to(format!(
-                    "/contests/{contest_id}/problems/{}",
-                    problem.slug
-                )))
             }
             Err(why) => {
                 error!("Error saving problem: {:?}", why);
-                ProblemNewPostResponse::Redirect(Redirect::to(format!(
-                    "/contest/{contest_id}/problems"
-                )))
+                ProblemNewPostResponse::Error(Status::InternalServerError)
             }
         }
     } else {
@@ -117,7 +117,7 @@ pub async fn new_problem_post(
             .map(|c| c.name)
             .unwrap_or_default();
 
-        ProblemNewPostResponse::Error(Template::render(
+        ProblemNewPostResponse::Template(Template::render(
             "problems/new",
             context_with_base_authed!(user, contest_id, contest_name, form),
         ))
