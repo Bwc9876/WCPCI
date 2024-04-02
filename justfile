@@ -1,5 +1,5 @@
 setup:
-    cd frontend && pnpm i && cd ..
+    cd frontend && pnpm i
     cargo sqlx database setup
     -cp -n .dev.env.template .dev.env
 
@@ -7,17 +7,17 @@ dev-watch:
     mprocs "cargo run" "cd frontend && pnpm watch"
 
 dev:
-    cd frontend && pnpm build && cd ..
+    cd frontend && pnpm build
     cargo run
 
 format:
     cargo fmt
-    cd frontend && pnpm format && cd ..
+    cd frontend && pnpm format
 
 lint:
     cargo lint
 
 update:
     cargo update
-    cd frontend && pnpm update --latest && cd ..
+    cd frontend && pnpm update --latest
 

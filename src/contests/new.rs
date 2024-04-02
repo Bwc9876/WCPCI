@@ -70,6 +70,7 @@ pub async fn new_contest_post(
             .from_local_datetime(&value.end_time.0)
             .unwrap()
             .naive_utc();
+        let penalty = value.penalty;
         let max_participants = value.max_participants;
         let contest = Contest::temp(
             name,
@@ -77,6 +78,7 @@ pub async fn new_contest_post(
             start_time,
             registration_deadline,
             end_time,
+            penalty,
             max_participants,
         );
         if let Err(why) = contest.insert(&mut db).await {

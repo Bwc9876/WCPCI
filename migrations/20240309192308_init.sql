@@ -28,11 +28,13 @@ CREATE TABLE IF NOT EXISTS contest (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     registration_deadline TIMESTAMP NOT NULL,
+    penalty INTEGER NOT NULL,
     max_participants INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS participant (
+    p_id INTEGER PRIMARY KEY NOT NULL, -- sqlx is stupid
     user_id INTEGER NOT NULL,
     contest_id INTEGER NOT NULL,
     is_judge BOOLEAN NOT NULL,
@@ -67,18 +69,22 @@ CREATE TABLE IF NOT EXISTS test_case (
 CREATE TABLE IF NOT EXISTS judge_run (
     id INTEGER PRIMARY KEY NOT NULL,
     problem_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
+    participant_id INTEGER NOT NULL,
     amount_run INTEGER NOT NULL,
     total_cases INTEGER NOT NULL,
     error TEXT,
-    ran_at TIMESTAMP NOT NULL
+    ran_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
+    FOREIGN KEY (participant_id) REFERENCES participant(p_id) ON DELETE CASCADE
+    UNIQUE (problem_id, participant_id, ran_at)
 );
 
 CREATE TABLE IF NOT EXISTS problem_completion (
     problem_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
+    participant_id INTEGER NOT NULL,
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    number_wrong INTEGER NOT NULL,
     FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    UNIQUE (problem_id, user_id)
+    FOREIGN KEY (participant_id) REFERENCES participant(p_id) ON DELETE CASCADE,
+    UNIQUE (problem_id, participant_id)
 );

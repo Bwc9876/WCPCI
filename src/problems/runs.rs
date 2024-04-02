@@ -15,7 +15,7 @@ use super::Problem;
 pub struct JudgeRun {
     pub id: i64,
     pub problem_id: i64,
-    pub user_id: i64,
+    pub participant_id: i64,
     pub amount_run: i64,
     pub total_cases: i64,
     pub error: Option<String>,
@@ -26,7 +26,7 @@ pub struct JudgeRun {
 impl JudgeRun {
     pub fn temp(
         problem_id: i64,
-        user_id: i64,
+        participant_id: i64,
         amount_run: i64,
         total_cases: i64,
         error: Option<String>,
@@ -35,7 +35,7 @@ impl JudgeRun {
         Self {
             id: 0,
             problem_id,
-            user_id,
+            participant_id,
             amount_run,
             total_cases,
             error,
@@ -45,14 +45,14 @@ impl JudgeRun {
 
     pub fn from_job_state(
         problem_id: i64,
-        user_id: i64,
-        state: JobState,
+        participant_id: i64,
+        state: &JobState,
         ran_at: NaiveDateTime,
     ) -> Self {
-        let (amount_run, error) = state.last_error();
+        let (amount_run, _, error) = state.last_error();
         Self::temp(
             problem_id,
-            user_id,
+            participant_id,
             amount_run as i64,
             state.len() as i64,
             error,
@@ -62,13 +62,13 @@ impl JudgeRun {
 
     pub async fn list(
         db: &mut DbPoolConnection,
-        user_id: i64,
+        participant_id: i64,
         problem_id: i64,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             JudgeRun,
-            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 10",
-            user_id,
+            "SELECT * FROM judge_run WHERE participant_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 10",
+            participant_id,
             problem_id
         )
         .fetch_all(&mut **db)
@@ -77,13 +77,13 @@ impl JudgeRun {
 
     pub async fn get_latest(
         db: &mut DbPoolConnection,
-        user_id: i64,
+        participant_id: i64,
         problem_id: i64,
     ) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             JudgeRun,
-            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 1",
-            user_id,
+            "SELECT * FROM judge_run WHERE participant_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 1",
+            participant_id,
             problem_id
         )
             .fetch_optional(&mut **db)
@@ -93,9 +93,9 @@ impl JudgeRun {
     pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             JudgeRun,
-            "INSERT INTO judge_run (problem_id, user_id, amount_run, total_cases, error, ran_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
+            "INSERT INTO judge_run (problem_id, participant_id, amount_run, total_cases, error, ran_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
             self.problem_id,
-            self.user_id,
+            self.participant_id,
             self.amount_run,
             self.total_cases,
             self.error,

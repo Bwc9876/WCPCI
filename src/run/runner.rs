@@ -18,13 +18,15 @@ pub enum CaseError {
 
 impl From<CaseError> for CaseStatus {
     fn from(val: CaseError) -> Self {
-        CaseStatus::Failed(match val {
+        let status = match val {
             CaseError::Logic => "Logic error".to_string(),
             //CaseError::TimeLimitExceeded => "Time limit exceeded".to_string(),
             CaseError::Runtime(_) => "Runtime error".to_string(),
             CaseError::Compilation(_) => "Compile error".to_string(),
             CaseError::Judge(_) => "Judge error".to_string(),
-        })
+        };
+        let penalty = matches!(val, CaseError::Logic | CaseError::Runtime(_));
+        CaseStatus::Failed(penalty, status)
     }
 }
 

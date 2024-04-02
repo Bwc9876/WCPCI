@@ -3,47 +3,59 @@ use chrono::NaiveDateTime;
 use crate::db::DbPoolConnection;
 
 pub struct ProblemCompletion {
-    user_id: i64,
+    participant_id: i64,
     problem_id: i64,
-    completed_at: Option<NaiveDateTime>,
+    pub completed_at: Option<NaiveDateTime>,
+    pub number_wrong: i64,
 }
 
 impl ProblemCompletion {
-    /// Only insert is allowed as a problem completion is created when a user completes a problem for the
-    /// first time __only__.
-    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+    pub async fn upsert(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
         sqlx::query_as!(
             ProblemCompletion,
-            "INSERT OR IGNORE INTO problem_completion (user_id, problem_id, completed_at) VALUES (?, ?, ?)",
-            self.user_id,
+            "INSERT OR REPLACE INTO problem_completion (participant_id, problem_id, completed_at, number_wrong) VALUES (?, ?, ?, ?)",
+            self.participant_id,
             self.problem_id,
-            self.completed_at
+            self.completed_at,
+            self.number_wrong
         )
         .execute(&mut **db)
         .await.map(|_| ())
     }
 
-    pub async fn get_for_contest_and_user(
+    pub async fn get_for_problem_and_participant(
         db: &mut DbPoolConnection,
-        contest_id: i64,
-        user_id: i64,
-    ) -> Vec<Self> {
+        problem_id: i64,
+        participant_id: i64,
+    ) -> Option<Self> {
         sqlx::query_as!(
             ProblemCompletion,
-            "SELECT * FROM problem_completion WHERE user_id = ? AND problem_id IN (SELECT id FROM problem WHERE contest_id = ?)",
-            user_id,
-            contest_id
+            "SELECT * FROM problem_completion WHERE participant_id = ? AND problem_id = ?",
+            participant_id,
+            problem_id
+        )
+        .fetch_optional(&mut **db)
+        .await
+        .unwrap_or_default()
+    }
+
+    pub async fn get_for_participant(db: &mut DbPoolConnection, participant_id: i64) -> Vec<Self> {
+        sqlx::query_as!(
+            ProblemCompletion,
+            "SELECT * FROM problem_completion WHERE participant_id = ?",
+            participant_id,
         )
         .fetch_all(&mut **db)
         .await
         .unwrap_or_default()
     }
 
-    pub fn temp(user_id: i64, problem_id: i64, completed_at: NaiveDateTime) -> Self {
+    pub fn temp(user_id: i64, problem_id: i64, completed_at: Option<NaiveDateTime>) -> Self {
         Self {
-            user_id,
+            participant_id: user_id,
             problem_id,
-            completed_at: Some(completed_at),
+            completed_at,
+            number_wrong: 0,
         }
     }
 }

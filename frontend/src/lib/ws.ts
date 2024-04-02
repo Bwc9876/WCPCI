@@ -26,7 +26,7 @@ export type CaseStatus =
       }
     | {
           status: "failed";
-          content: string;
+          content: [boolean, string];
       }
     | {
           status: "notRun";
@@ -114,7 +114,7 @@ export default (
                             const firstWithErr = state.cases.find((c) => c.status === "failed");
                             if (firstWithErr && firstWithErr.status === "failed") {
                                 runMessageWrapper.setAttribute("data-status", "error");
-                                runMessage.innerText = firstWithErr.content;
+                                runMessage.innerText = firstWithErr.content[1];
                             } else {
                                 runMessageWrapper.setAttribute("data-status", "success");
                                 runMessage.innerText = "Passed!";
@@ -134,7 +134,7 @@ export default (
                                 testOutput.value = state.status.content ?? "";
                                 break;
                             case "failed":
-                                testOutput.value = state.status.content ?? "";
+                                testOutput.value = state.status.content[1] ?? "";
                                 break;
                         }
                 }

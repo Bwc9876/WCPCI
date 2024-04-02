@@ -18,6 +18,7 @@ mod join;
 mod list;
 mod new;
 mod participant;
+mod scoring;
 mod view;
 
 pub use participant::Participant;
@@ -33,6 +34,7 @@ pub struct Contest {
     registration_deadline: NaiveDateTime,
     #[serde(serialize_with = "crate::times::serialize_to_js")]
     end_time: NaiveDateTime,
+    penalty: i64,
     max_participants: Option<i64>,
     created_at: Option<NaiveDateTime>,
 }
@@ -44,6 +46,7 @@ impl Contest {
         start_time: NaiveDateTime,
         registration_deadline: NaiveDateTime,
         end_time: NaiveDateTime,
+        penalty: i64,
         max_participants: Option<i64>,
     ) -> Self {
         Self {
@@ -53,6 +56,7 @@ impl Contest {
             start_time,
             registration_deadline,
             end_time,
+            penalty,
             max_participants,
             created_at: None,
         }
@@ -76,12 +80,13 @@ impl Contest {
     pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Contest, sqlx::Error> {
         sqlx::query_as!(
             Contest,
-            "INSERT INTO contest (name, description, start_time, registration_deadline, end_time, max_participants) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
+            "INSERT INTO contest (name, description, start_time, registration_deadline, end_time, penalty, max_participants) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
             self.name,
             self.description,
             self.start_time,
             self.registration_deadline,
             self.end_time,
+            self.penalty,
             self.max_participants
         ).fetch_one(&mut **db).await
     }
@@ -89,12 +94,13 @@ impl Contest {
     pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
         sqlx::query_as!(
             Contest,
-            "UPDATE contest SET name = ?, description = ?, start_time = ?, registration_deadline = ?, end_time = ?, max_participants = ? WHERE id = ?",
+            "UPDATE contest SET name = ?, description = ?, start_time = ?, registration_deadline = ?, end_time = ?, penalty = ?, max_participants = ? WHERE id = ?",
             self.name,
             self.description,
             self.start_time,
             self.registration_deadline,
             self.end_time,
+            self.penalty,
             self.max_participants,
             self.id
         ).execute(&mut **db).await.map(|_| ())
@@ -172,6 +178,7 @@ impl<'r> TemplatedForm for ContestFormTemplate<'r> {
                             .from_utc_datetime(&contest.end_time),
                     ),
                 ),
+                ("penalty".to_string(), contest.penalty.to_string()),
                 (
                     "max_participants".to_string(),
                     contest
@@ -187,6 +194,7 @@ impl<'r> TemplatedForm for ContestFormTemplate<'r> {
                 ("start_time".to_string(), String::new()),
                 ("registration_deadline".to_string(), String::new()),
                 ("end_time".to_string(), String::new()),
+                ("penalty".to_string(), "30".to_string()),
                 ("max_participants".to_string(), "".to_string()),
             ])
         }
@@ -228,6 +236,8 @@ struct ContestForm<'r> {
     start_time: FormDateTime,
     registration_deadline: FormDateTime,
     end_time: FormDateTime,
+    #[field(validate = range(0..))]
+    penalty: i64,
     #[field(validate = over_1())]
     max_participants: Option<i64>,
 }

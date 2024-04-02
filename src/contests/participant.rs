@@ -4,6 +4,7 @@ use crate::{auth::users::User, db::DbPoolConnection};
 
 #[derive(Serialize)]
 pub struct Participant {
+    pub p_id: i64,
     pub user_id: i64,
     contest_id: i64,
     pub is_judge: bool,
@@ -24,6 +25,18 @@ impl Participant {
         .flatten()
     }
 
+    pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Option<Self> {
+        sqlx::query_as!(
+            Participant,
+            "SELECT * FROM participant WHERE p_id = ?",
+            p_id
+        )
+        .fetch_optional(&mut **db)
+        .await
+        .ok()
+        .flatten()
+    }
+
     pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Vec<(Self, User)> {
         let res = sqlx::query!("SELECT participant.*, user.* FROM participant JOIN user ON participant.user_id = user.id WHERE contest_id = ?", contest_id)
             .fetch_all(&mut **db)
@@ -32,6 +45,7 @@ impl Participant {
         res.into_iter()
             .map(|row| {
                 let participant = Participant {
+                    p_id: row.p_id,
                     user_id: row.user_id,
                     contest_id: row.contest_id,
                     is_judge: row.is_judge,
@@ -90,6 +104,7 @@ impl Participant {
 
     pub fn temp(user_id: i64, contest_id: i64, is_judge: bool) -> Self {
         Self {
+            p_id: 0,
             user_id,
             contest_id,
             is_judge,

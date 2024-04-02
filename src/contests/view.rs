@@ -35,7 +35,7 @@ pub async fn view_contest(
 
         let problems = Problem::list(&mut db, contest_id).await;
         let problems_done = if let Some(participant) = &participant {
-            ProblemCompletion::get_for_contest_and_user(&mut db, contest_id, participant.user_id)
+            ProblemCompletion::get_for_participant(&mut db, participant.p_id)
                 .await
                 .len()
         } else {

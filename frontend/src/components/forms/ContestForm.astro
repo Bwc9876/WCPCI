@@ -34,6 +34,13 @@ import Field from "@/components/Field.astro";
     />
     <Field name="end_time" type="datetime-local" help="End date and time of the contest" required />
     <Field
+        name="penalty"
+        label="Penalty (minutes)"
+        type="number"
+        help="Penalty in minutes for each wrong submission. This will not be applied on compile or judge errors"
+        min={0}
+    />
+    <Field
         name="max_participants"
         type="number"
         help="Maximum number of participants, leave blank for unlimited"

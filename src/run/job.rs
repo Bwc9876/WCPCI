@@ -16,7 +16,7 @@ pub enum CaseStatus {
     Running,
     Passed(Option<String>),
     NotRun,
-    Failed(String),
+    Failed(bool, String),
 }
 
 impl CaseStatus {
@@ -26,7 +26,7 @@ impl CaseStatus {
             Self::Running => "Running",
             Self::Passed(_) => "Passed",
             Self::NotRun => "NotRun",
-            Self::Failed(_) => "Failed",
+            Self::Failed(_, _) => "Failed",
         }
     }
 }
@@ -57,24 +57,24 @@ impl JobState {
         }
     }
 
-    pub fn last_error(&self) -> (usize, Option<String>) {
+    pub fn last_error(&self) -> (usize, bool, Option<String>) {
         match self {
             Self::Judging { cases, .. } => cases
                 .iter()
                 .enumerate()
                 .find_map(|(i, c)| {
-                    if let CaseStatus::Failed(e) = c {
-                        Some((i, Some(e.clone())))
+                    if let CaseStatus::Failed(penalty, e) = c {
+                        Some((i, *penalty, Some(e.clone())))
                     } else {
                         None
                     }
                 })
-                .unwrap_or_else(|| (self.len(), None)),
+                .unwrap_or_else(|| (self.len(), false, None)),
             Self::Testing { status } => {
-                if let CaseStatus::Failed(e) = status {
-                    (0, Some(e.clone()))
+                if let CaseStatus::Failed(penalty, e) = status {
+                    (0, *penalty, Some(e.clone()))
                 } else {
-                    (0, None)
+                    (0, false, None)
                 }
             }
         }
@@ -92,7 +92,7 @@ impl JobState {
             Self::Judging { complete, .. } => *complete,
             Self::Testing { status } => matches!(
                 status,
-                CaseStatus::Passed(_) | CaseStatus::Failed(_) | CaseStatus::NotRun
+                CaseStatus::Passed(_) | CaseStatus::Failed(_, _) | CaseStatus::NotRun
             ),
         }
     }
@@ -113,7 +113,7 @@ impl JobState {
             Self::Judging { cases, complete } => {
                 if idx == cases.len() - 1 {
                     *complete = true;
-                } else if matches!(&status, CaseStatus::Failed(_)) {
+                } else if matches!(&status, CaseStatus::Failed(_, _)) {
                     cases
                         .iter_mut()
                         .skip(idx + 1)
@@ -138,6 +138,7 @@ pub enum JobOperation {
 
 pub struct JobRequest {
     pub user_id: i64,
+    pub participant_id: Option<i64>,
     pub contest_id: i64,
     pub problem_id: i64,
     pub program: String,
@@ -211,8 +212,10 @@ impl Job {
             if matches!(&self.state, JobState::Testing { .. }) {
                 match why {
                     CaseError::Compilation(e) => {
-                        self.state
-                            .complete_case(0, CaseStatus::Failed(format!("Compile Error: {}", e)));
+                        self.state.complete_case(
+                            0,
+                            CaseStatus::Failed(false, format!("Compile Error: {}", e)),
+                        );
                     }
                     _ => {
                         self.state.complete_case(0, why.into());
@@ -274,7 +277,7 @@ impl Job {
                             e.into()
                         }
                         CaseError::Runtime(ref msg) => {
-                            CaseStatus::Failed(format!("Runtime Error: {}", msg))
+                            CaseStatus::Failed(true, format!("Runtime Error: {}", msg))
                         }
                         _ => e.into(),
                     },

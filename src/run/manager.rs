@@ -65,6 +65,7 @@ impl RunManager {
         self.id_counter += 1;
 
         let user_id = request.user_id;
+        let participant_id = request.participant_id;
         let problem_id = request.problem_id;
         let contest_id = request.contest_id;
 
@@ -87,40 +88,57 @@ impl RunManager {
 
         let pool = self.db_pool.clone();
 
-        let requested_at = chrono::offset::Utc::now().naive_utc();
-
         tokio::spawn(async move {
             let (state, ran_at) = job.run().await;
             handle.lock().await.take();
             drop(handle);
-            if matches!(state, JobState::Judging { .. }) {
-                let judge_run = JudgeRun::from_job_state(problem_id, user_id, state, ran_at);
+            if !matches!(state, JobState::Judging { .. }) {
+                return;
+            }
+            if let Some(participant_id) = participant_id {
+                let judge_run =
+                    JudgeRun::from_job_state(problem_id, participant_id, &state, ran_at);
                 match pool.get().await {
                     Ok(mut conn) => {
                         if let Some(contest) = Contest::get(&mut conn, contest_id).await {
-                            if contest.is_running() {
-                                if let Some(participant) =
-                                    Participant::get(&mut conn, contest_id, user_id).await
+                            if !contest.is_running() {
+                                return;
+                            }
+
+                            if let Some(participant) =
+                                Participant::get(&mut conn, contest_id, user_id).await
+                            {
+                                if participant.is_judge {
+                                    return;
+                                }
+
+                                let success = judge_run.success();
+                                if let Err(why) = judge_run.write_to_db(&mut conn).await {
+                                    error!("Couldn't write judge run to db: {:?}", why);
+                                }
+
+                                let mut completion =
+                                    ProblemCompletion::get_for_problem_and_participant(
+                                        &mut conn, problem_id, user_id,
+                                    )
+                                    .await
+                                    .unwrap_or_else(|| {
+                                        ProblemCompletion::temp(
+                                            user_id,
+                                            problem_id,
+                                            Some(ran_at).filter(|_| success),
+                                        )
+                                    });
+
+                                if success {
+                                    completion.completed_at = Some(ran_at);
+                                } else if state.last_error().1 && completion.completed_at.is_none()
                                 {
-                                    if !participant.is_judge {
-                                        let success = judge_run.success();
-                                        if let Err(why) = judge_run.write_to_db(&mut conn).await {
-                                            error!("Couldn't write judge run to db: {:?}", why);
-                                        }
-                                        if success {
-                                            let completion = ProblemCompletion::temp(
-                                                user_id,
-                                                problem_id,
-                                                requested_at,
-                                            );
-                                            if let Err(why) = completion.insert(&mut conn).await {
-                                                error!(
-                                                    "Couldn't write problem completion to db: {:?}",
-                                                    why
-                                                );
-                                            }
-                                        }
-                                    }
+                                    completion.number_wrong += 1;
+                                }
+
+                                if let Err(why) = completion.upsert(&mut conn).await {
+                                    error!("Couldn't write problem completion to db: {:?}", why);
                                 }
                             }
                         }
