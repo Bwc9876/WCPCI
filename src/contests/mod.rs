@@ -7,6 +7,7 @@ use rocket::{fairing::AdHoc, form, routes, FromForm};
 use serde::Serialize;
 
 use crate::{
+    auth::users::User,
     db::DbPoolConnection,
     template::TemplatedForm,
     times::{datetime_to_html_time, ClientTimeZone, FormDateTime},
@@ -41,6 +42,7 @@ pub struct Contest {
 }
 
 impl Contest {
+    #[allow(clippy::too_many_arguments)]
     pub fn temp(
         name: String,
         description: Option<String>,
@@ -136,13 +138,14 @@ impl Contest {
 
 struct ContestFormTemplate<'r> {
     contest: Option<&'r Contest>,
+    judges: &'r Vec<User>,
     timezone: &'r ClientTimeZone,
 }
 
 impl<'r> TemplatedForm for ContestFormTemplate<'r> {
     fn get_defaults(&mut self) -> std::collections::HashMap<String, String> {
         if let Some(contest) = self.contest {
-            HashMap::from_iter([
+            let mut map = HashMap::from_iter([
                 ("name".to_string(), contest.name.to_string()),
                 (
                     "description".to_string(),
@@ -188,7 +191,11 @@ impl<'r> TemplatedForm for ContestFormTemplate<'r> {
                         .map(|i| i.to_string())
                         .unwrap_or("null".to_string()),
                 ),
-            ])
+            ]);
+            for judge in self.judges.iter() {
+                map.insert(format!("judges[{}]", judge.id), "true".to_string());
+            }
+            map
         } else {
             HashMap::from_iter([
                 ("name".to_string(), "".to_string()),
@@ -260,6 +267,7 @@ struct ContestForm<'r> {
     penalty: i64,
     #[field(validate = over_1())]
     max_participants: Option<i64>,
+    judges: HashMap<i64, bool>,
 }
 
 pub fn stage() -> AdHoc {

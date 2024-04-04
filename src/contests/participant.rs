@@ -66,6 +66,17 @@ impl Participant {
             .collect()
     }
 
+    pub async fn list_judge(db: &mut DbPoolConnection, contest_id: i64) -> Vec<User> {
+        sqlx::query_as!(
+            User,
+            "SELECT user.* FROM participant JOIN user ON participant.user_id = user.id WHERE contest_id = ? AND is_judge = true",
+            contest_id
+        )
+        .fetch_all(&mut **db)
+        .await
+        .unwrap()
+    }
+
     pub async fn list_not_judge(db: &mut DbPoolConnection, contest_id: i64) -> Vec<Self> {
         sqlx::query_as!(
             Participant,
@@ -88,6 +99,34 @@ impl Participant {
         )
         .fetch_one(&mut **db)
         .await
+    }
+
+    pub async fn remove(
+        db: &mut DbPoolConnection,
+        contest_id: i64,
+        user_id: i64,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM participant WHERE contest_id = ? AND user_id = ?",
+            contest_id,
+            user_id
+        )
+        .execute(&mut **db)
+        .await
+        .map(|_| ())
+    }
+
+    pub async fn create_or_make_judge(
+        db: &mut DbPoolConnection,
+        contest_id: i64,
+        user_id: i64,
+    ) -> Result<Participant, sqlx::Error> {
+        sqlx::query_as!(
+            Participant,
+            "INSERT INTO participant (user_id, contest_id, is_judge) VALUES (?, ?, true) ON CONFLICT (user_id, contest_id) DO UPDATE SET is_judge = true RETURNING *",
+            user_id,
+            contest_id
+        ).fetch_one(&mut **db).await
     }
 
     // pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {

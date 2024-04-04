@@ -2,7 +2,9 @@ use chrono::TimeZone;
 use log::error;
 use rocket::{
     form::{Contextual, Form},
-    get, post,
+    get,
+    http::Status,
+    post,
     response::Redirect,
 };
 use rocket_dyn_templates::Template;
@@ -15,14 +17,15 @@ use crate::{
     contests::ContestForm,
     context_with_base_authed,
     db::DbConnection,
-    template::{FormStatus, FormTemplateObject},
+    template::FormTemplateObject,
     times::ClientTimeZone,
 };
 
-use super::{Contest, ContestFormTemplate};
+use super::{Contest, ContestFormTemplate, Participant};
 
 #[get("/new")]
-pub fn new_contest_get(
+pub async fn new_contest_get(
+    mut db: DbConnection,
     user: &User,
     _admin: &Admin,
     timezone: ClientTimeZone,
@@ -30,10 +33,12 @@ pub fn new_contest_get(
 ) -> Template {
     let form_template = ContestFormTemplate {
         contest: None,
+        judges: &Vec::new(),
         timezone: &timezone,
     };
+    let all_users = User::list(&mut db).await.unwrap_or_default();
     let form = FormTemplateObject::get(form_template);
-    let ctx = context_with_base_authed!(user, form);
+    let ctx = context_with_base_authed!(user, all_users, judges: Vec::<String>::new(), form);
     Template::render("contests/new", ctx)
 }
 
@@ -42,6 +47,7 @@ pub fn new_contest_get(
 pub enum NewContestResponse {
     Template(Template),
     Redirect(Redirect),
+    Error(Status),
 }
 
 #[post("/new", data = "<form>")]
@@ -83,22 +89,25 @@ pub async fn new_contest_post(
             penalty,
             max_participants,
         );
-        if let Err(why) = contest.insert(&mut db).await {
-            error!("Failed to insert contest: {}", why);
-            let form_template = ContestFormTemplate {
-                contest: Some(&contest),
-                timezone: &timezone,
-            };
-            let mut form = FormTemplateObject::from_rocket_context(form_template, &form.context);
-            form.status = FormStatus::Error;
-            let ctx = context_with_base_authed!(user, form);
-            NewContestResponse::Template(Template::render("contests/new", ctx))
-        } else {
-            NewContestResponse::Redirect(Redirect::to("/contests"))
+        match contest.insert(&mut db).await {
+            Err(why) => {
+                error!("Failed to insert contest: {}", why);
+                NewContestResponse::Error(Status::InternalServerError)
+            }
+            Ok(contest) => {
+                for judge in value.judges.keys() {
+                    let res = Participant::create_or_make_judge(&mut db, contest.id, *judge).await;
+                    if let Err(why) = res {
+                        error!("Failed to insert judge: {}", why);
+                    }
+                }
+                NewContestResponse::Redirect(Redirect::to("/contests"))
+            }
         }
     } else {
         let form_template = ContestFormTemplate {
             contest: None,
+            judges: &Vec::new(),
             timezone: &timezone,
         };
         let form = FormTemplateObject::from_rocket_context(form_template, &form.context);

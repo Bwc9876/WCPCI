@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS participant (
     registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     FOREIGN KEY (contest_id) REFERENCES contest(id) ON DELETE CASCADE
+    UNIQUE (user_id, contest_id)
 );
 
 CREATE TABLE IF NOT EXISTS problem (

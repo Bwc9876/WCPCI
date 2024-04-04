@@ -7,8 +7,6 @@ pub struct GitHubLogin(pub String);
 
 #[derive(Debug, serde::Deserialize)]
 pub struct UserInfo {
-    pub id: i64,
-    pub login: String,
     pub name: String,
     pub email: String,
 }

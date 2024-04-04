@@ -152,6 +152,15 @@ impl User {
         Ok(())
     }
 
+    pub async fn list(db: &mut DbPoolConnection) -> Result<Vec<User>, String> {
+        let users: Vec<User> = sqlx::query_as!(User, "SELECT * FROM user")
+            .fetch_all(&mut **db)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(users)
+    }
+
     async fn get_by_email(
         db: &mut DbPoolConnection,
         username: &str,

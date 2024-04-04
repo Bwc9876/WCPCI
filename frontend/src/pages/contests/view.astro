@@ -139,11 +139,15 @@ import { variable } from "@/lib/tera";
                             <Avatar
                                 size={35}
                                 class="my-auto"
-                                name={variable("participant.1.display_name")}
+                                name={variable(
+                                    "participant.1.display_name | default(value=participant.1.default_display_name)"
+                                )}
                                 emailVar="participant.1.email"
                             />
                             <span class="my-auto"
-                                ><Variable expression="participant.1.display_name" /></span
+                                ><Variable
+                                    expression="participant.1.display_name | default(value=participant.1.default_display_name)"
+                                /></span
                             >
                         </li>
                         <Else>
@@ -167,7 +171,9 @@ import { variable } from "@/lib/tera";
                             <Avatar
                                 size={35}
                                 class="my-auto"
-                                name={variable("participant.1.display_name")}
+                                name={variable(
+                                    "participant.1.display_name | default(value=participant.1.default_display_name)"
+                                )}
                                 emailVar="participant.1.email"
                             />
                             <span class="my-auto"

@@ -6,13 +6,22 @@ export interface Props extends HTMLAttributes<"img"> {
     emailVar?: string;
     name?: string;
     size?: number;
+    noTemplate?: boolean;
 }
 
-const { name, emailVar = "user.email", size = 40, class: className, ...rest }: Props = Astro.props;
+const {
+    name,
+    emailVar = "user.email",
+    size = 40,
+    noTemplate = false,
+    class: className,
+    ...rest
+}: Props = Astro.props;
 
-const src = import.meta.env.DEV
-    ? `https://gravatar.com/avatar/5aec02087368de589b8d33275c370ca7e876c956006aebc96d1bbc6c90e5e340?size=${size}&d=identicon&r=pg`
-    : variable(`gravatar(email=${emailVar}, size=${size})`);
+const src =
+    noTemplate || import.meta.env.DEV
+        ? `https://gravatar.com/avatar/5aec02087368de589b8d33275c370ca7e876c956006aebc96d1bbc6c90e5e340?size=${size}&d=identicon&r=pg`
+        : variable(`gravatar(email=${emailVar}, size=${size})`);
 ---
 
 <img
