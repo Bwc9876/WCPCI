@@ -18,7 +18,7 @@ secret_key = "12345678901234567890123456789012345678901234"
 template_dir = "frontend/dist"
 public_dir = "public"
 admins = [ "bwc9876@gmail.com" ]
-timezone = "Australia/ACT"
+timezone = "America/New_York"
 
 [debug.run]
 default_language = "python"

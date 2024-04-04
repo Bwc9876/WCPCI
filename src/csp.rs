@@ -33,7 +33,7 @@ fn stage_inner(path: &Path) -> AdHoc {
         "default-src 'self'".to_string(),
         "frame-ancestors 'none'".to_string(),
         format!("style-src 'self' 'unsafe-inline' {GOOGLE_FONTS_URL}"),
-        format!("font-src 'self' {GOOGLE_FONTS_URL}"),
+        format!("font-src 'self' data: {GOOGLE_FONTS_URL}"),
         format!("img-src 'self' {GRAVATAR_URL} {TABLER_URL}"),
         format!(
             "script-src 'self' {} {}",
