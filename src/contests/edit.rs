@@ -80,6 +80,8 @@ pub async fn edit_contest_post(
                 .unwrap()
                 .naive_utc();
             contest.max_participants = value.max_participants;
+            contest.penalty = value.penalty;
+            contest.freeze_time = value.freeze_time;
 
             if let Err(why) = contest.update(&mut db).await {
                 error!("Failed to insert contest: {}", why);

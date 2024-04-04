@@ -34,6 +34,13 @@ import Field from "@/components/Field.astro";
     />
     <Field name="end_time" type="datetime-local" help="End date and time of the contest" required />
     <Field
+        name="freeze_time"
+        label="Freeze Time (minutes)"
+        type="number"
+        min={0}
+        help="How many minutes before the contest ends should the leaderboard be frozen. Leave as 0 to not freeze the leaderboard"
+    />
+    <Field
         name="penalty"
         label="Penalty (minutes)"
         type="number"

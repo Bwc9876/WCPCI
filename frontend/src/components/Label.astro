@@ -38,7 +38,7 @@ const {
         errorVar && (
             <ul class="hidden text-sm text-red-500 group-has-[:user-invalid]:block group-has-[[data-invalid=true]]:block">
                 <For sourceList={errorVar} itemName="error">
-                    <li class="capitalize">
+                    <li>
                         <Variable expression="error" />
                     </li>
                 </For>

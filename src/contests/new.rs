@@ -70,6 +70,7 @@ pub async fn new_contest_post(
             .from_local_datetime(&value.end_time.0)
             .unwrap()
             .naive_utc();
+        let freeze_time = value.freeze_time;
         let penalty = value.penalty;
         let max_participants = value.max_participants;
         let contest = Contest::temp(
@@ -78,6 +79,7 @@ pub async fn new_contest_post(
             start_time,
             registration_deadline,
             end_time,
+            freeze_time,
             penalty,
             max_participants,
         );

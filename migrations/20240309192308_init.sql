@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS contest (
     description TEXT,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
+    freeze_time INTEGER NOT NULL,
     registration_deadline TIMESTAMP NOT NULL,
     penalty INTEGER NOT NULL,
     max_participants INTEGER,

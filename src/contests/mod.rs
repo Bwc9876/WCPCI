@@ -34,6 +34,7 @@ pub struct Contest {
     registration_deadline: NaiveDateTime,
     #[serde(serialize_with = "crate::times::serialize_to_js")]
     end_time: NaiveDateTime,
+    freeze_time: i64,
     penalty: i64,
     max_participants: Option<i64>,
     created_at: Option<NaiveDateTime>,
@@ -46,6 +47,7 @@ impl Contest {
         start_time: NaiveDateTime,
         registration_deadline: NaiveDateTime,
         end_time: NaiveDateTime,
+        freeze_time: i64,
         penalty: i64,
         max_participants: Option<i64>,
     ) -> Self {
@@ -56,6 +58,7 @@ impl Contest {
             start_time,
             registration_deadline,
             end_time,
+            freeze_time,
             penalty,
             max_participants,
             created_at: None,
@@ -66,7 +69,7 @@ impl Contest {
         sqlx::query_as!(Contest, "SELECT * FROM contest")
             .fetch_all(&mut **db)
             .await
-            .unwrap_or(vec![])
+            .unwrap_or_default()
     }
 
     pub async fn get(db: &mut DbPoolConnection, id: i64) -> Option<Self> {
@@ -80,12 +83,13 @@ impl Contest {
     pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Contest, sqlx::Error> {
         sqlx::query_as!(
             Contest,
-            "INSERT INTO contest (name, description, start_time, registration_deadline, end_time, penalty, max_participants) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
+            "INSERT INTO contest (name, description, start_time, registration_deadline, end_time, freeze_time, penalty, max_participants) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",
             self.name,
             self.description,
             self.start_time,
             self.registration_deadline,
             self.end_time,
+            self.freeze_time,
             self.penalty,
             self.max_participants
         ).fetch_one(&mut **db).await
@@ -94,12 +98,13 @@ impl Contest {
     pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
         sqlx::query_as!(
             Contest,
-            "UPDATE contest SET name = ?, description = ?, start_time = ?, registration_deadline = ?, end_time = ?, penalty = ?, max_participants = ? WHERE id = ?",
+            "UPDATE contest SET name = ?, description = ?, start_time = ?, registration_deadline = ?, end_time = ?, freeze_time = ?, penalty = ?, max_participants = ? WHERE id = ?",
             self.name,
             self.description,
             self.start_time,
             self.registration_deadline,
             self.end_time,
+            self.freeze_time,
             self.penalty,
             self.max_participants,
             self.id
@@ -120,10 +125,6 @@ impl Contest {
 
     pub fn is_running(&self) -> bool {
         let now = chrono::offset::Utc::now().naive_utc();
-        println!(
-            "Start: {}, End: {}, Now: {}",
-            self.start_time, self.end_time, now
-        );
         self.start_time < now && self.end_time > now
     }
 
@@ -178,6 +179,7 @@ impl<'r> TemplatedForm for ContestFormTemplate<'r> {
                             .from_utc_datetime(&contest.end_time),
                     ),
                 ),
+                ("freeze_time".to_string(), contest.freeze_time.to_string()),
                 ("penalty".to_string(), contest.penalty.to_string()),
                 (
                     "max_participants".to_string(),
@@ -194,6 +196,7 @@ impl<'r> TemplatedForm for ContestFormTemplate<'r> {
                 ("start_time".to_string(), String::new()),
                 ("registration_deadline".to_string(), String::new()),
                 ("end_time".to_string(), String::new()),
+                ("freeze_time".to_string(), "0".to_string()),
                 ("penalty".to_string(), "30".to_string()),
                 ("max_participants".to_string(), "".to_string()),
             ])
@@ -227,6 +230,20 @@ fn len_under_1000<'r, 'e>(s: &'r Option<&'r str>) -> Result<(), rocket::form::Er
     }
 }
 
+#[inline]
+fn within_bound<'r, 'e>(
+    freeze_time: &'r i64,
+    end_time: &'r NaiveDateTime,
+    start_time: &'r NaiveDateTime,
+) -> Result<(), rocket::form::Errors<'e>> {
+    let freeze_time_utc = *end_time - chrono::Duration::minutes(*freeze_time);
+    if freeze_time_utc > *start_time {
+        Ok(())
+    } else {
+        Err(form::Error::validation("This will result in the contest being frozen before the contest starts, please choose a different time").into())
+    }
+}
+
 #[derive(FromForm)]
 struct ContestForm<'r> {
     #[field(validate = len(1..=100))]
@@ -236,6 +253,9 @@ struct ContestForm<'r> {
     start_time: FormDateTime,
     registration_deadline: FormDateTime,
     end_time: FormDateTime,
+    #[field(validate = range(0..))]
+    #[field(validate = within_bound(&self.end_time.0, &self.start_time.0))]
+    freeze_time: i64,
     #[field(validate = range(0..))]
     penalty: i64,
     #[field(validate = over_1())]
