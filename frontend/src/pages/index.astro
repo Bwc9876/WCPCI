@@ -34,7 +34,12 @@ import Else from "@/components/tera/Else.astro";
         </div>
         <span class="hidden grow basis-96 lg:inline"></span>
         <div class="min-w-fit">
-            <Image src={heroImage} alt="WCPC Logo" class="mx-auto h-96 w-96 rounded-xl lg:mx-0" />
+            <Image
+                src={heroImage}
+                loading="eager"
+                alt="WCPC Logo"
+                class="mx-auto h-96 w-96 rounded-xl lg:mx-0"
+            />
         </div>
     </Tile>
 </Layout>
