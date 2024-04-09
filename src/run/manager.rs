@@ -7,6 +7,7 @@ use tokio::sync::Mutex;
 
 use crate::contests::{Contest, Participant};
 use crate::db::DbPool;
+use crate::leaderboard::LeaderboardManagerHandle;
 use crate::problems::{JudgeRun, ProblemCompletion};
 
 use super::job::{Job, JobRequest};
@@ -35,15 +36,22 @@ pub struct RunManager {
     db_pool: DbPool,
     job_started_channel: (JobStartedSender, JobStartedReceiver),
     problem_updated_channels: HashMap<i64, ProblemUpdatedSender>,
+    leaderboard_handle: LeaderboardManagerHandle,
     shutdown_rx: ShutdownReceiver,
 }
 
 impl RunManager {
-    pub fn new(config: RunConfig, pool: DbPool, shutdown_rx: ShutdownReceiver) -> Self {
+    pub fn new(
+        config: RunConfig,
+        leaderboard_manager: LeaderboardManagerHandle,
+        pool: DbPool,
+        shutdown_rx: ShutdownReceiver,
+    ) -> Self {
         let (tx, rx) = tokio::sync::broadcast::channel(10);
         Self {
             config,
             id_counter: 1,
+            leaderboard_handle: leaderboard_manager,
             jobs: HashMap::with_capacity(10),
             db_pool: pool,
             job_started_channel: (tx, rx),
@@ -87,6 +95,8 @@ impl RunManager {
         self.jobs.insert(user_id, handle.clone());
 
         let pool = self.db_pool.clone();
+
+        let leaderboard_handle = self.leaderboard_handle.clone();
 
         tokio::spawn(async move {
             let (state, ran_at) = job.run().await;
@@ -140,6 +150,15 @@ impl RunManager {
                                 if let Err(why) = completion.upsert(&mut conn).await {
                                     error!("Couldn't write problem completion to db: {:?}", why);
                                 }
+
+                                let mut leaderboard_manager = leaderboard_handle.lock().await;
+                                let leaderboard = leaderboard_manager
+                                    .get_leaderboard(&mut conn, &contest)
+                                    .await;
+                                drop(leaderboard_manager);
+                                let mut leaderboard = leaderboard.lock().await;
+
+                                leaderboard.update(&mut conn, participant_id).await;
                             }
                         }
                     }

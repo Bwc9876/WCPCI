@@ -9,6 +9,7 @@ import { variable } from "@/lib/tera";
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],
+            [variable("contest_name"), `/contests/${variable("contest_id")}/`],
             ["Edit", `/contests/${variable("contest_id")}/edit`]
         ]}
     />

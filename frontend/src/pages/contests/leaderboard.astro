@@ -1,0 +1,61 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import TableCol from "@/components/table/TableCol.astro";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import For from "@/components/tera/For.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Layout from "@/layouts/Layout.astro";
+import { variable } from "@/lib/tera";
+import { Icon } from "astro-icon/components";
+---
+
+<Layout title="Leaderboard" makeTile>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}/`],
+            ["Leaderboard", `/contests/${variable("contest.id")}/leaderboard`]
+        ]}
+    />
+    <TemplatedTable
+        idColName="user.id"
+        listName="entries"
+        itemName="entry"
+        columns={[
+            {
+                name: "loop.index",
+                forceNoPrefix: true,
+                label: "Place"
+            },
+            {
+                name: "user.display_name | default(value=entry.user.default_display_name)",
+                avatarVar: "entry.user.email",
+                label: "User"
+            }
+        ]}
+    >
+        <For slot="head" sourceList="problem_ids" itemName="problem">
+            <TableCol as="th" scope="column">
+                <Variable expression="loop.index" />
+            </TableCol>
+        </For>
+        <For sourceList="problem_ids" itemName="problem">
+            <TableCol
+                data-status={variable("problem in entry.problems_completed")}
+                class="group"
+                id=`problem-completion-indication-${variable("entry.user.id")}-${variable("problem")}`
+            >
+                <Icon
+                    size={30}
+                    name="tabler:circle-dashed"
+                    class="hidden text-gray-500 group-[[data-status=false]]:inline"
+                />
+                <Icon
+                    size={30}
+                    name="tabler:circle-check"
+                    class="hidden text-green-600 group-[[data-status=true]]:inline"
+                />
+            </TableCol>
+        </For>
+    </TemplatedTable>
+</Layout>

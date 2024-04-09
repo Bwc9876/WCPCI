@@ -11,13 +11,20 @@ import { tag, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 import Else from "@/components/tera/Else.astro";
 import Tag from "../tera/Tag.astro";
+import Avatar from "../Avatar.astro";
 
 export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
     listName: string;
     itemName?: string;
     idColName?: string;
     emptyText?: string;
-    columns: { label?: string; name: string; overrideList?: string }[];
+    columns: {
+        label?: string;
+        name: string;
+        forceNoPrefix?: boolean;
+        avatarVar?: string;
+        overrideList?: string;
+    }[];
     itemLink?: {
         class?: string;
         color?: LinkColor;
@@ -82,6 +89,7 @@ const emptyColSpan = renderAction
                 </TableCol>
             ))
         }
+        <slot name="head" />
         {
             renderAction && (
                 <>
@@ -101,32 +109,46 @@ const emptyColSpan = renderAction
             {
                 columns.map((col, i) => (
                     <TableCol scope={i === 0 ? "row" : undefined} as={i === 0 ? "th" : "td"}>
+                        {col.avatarVar && (
+                            <Avatar
+                                class:list={["me-2 inline"]}
+                                size={30}
+                                emailVar={col.avatarVar}
+                            />
+                        )}
                         {i === 0 && itemLink !== undefined ? (
                             <Link
-                                class={itemLink.class}
+                                class:list={["my-auto", itemLink.class]}
                                 color={itemLink.color}
-                                href={itemLink.action(variable(`${itemName}.${idColName}`))}
+                                href={itemLink.action(
+                                    variable(
+                                        `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${idColName}`
+                                    )
+                                )}
                             >
                                 <Variable
                                     expression={
                                         col.overrideList
                                             ? `${col.overrideList}[loop.index0]`
-                                            : `${itemName}.${col.name}`
+                                            : `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`
                                     }
                                 />
                             </Link>
                         ) : (
-                            <Variable
-                                expression={
-                                    col.overrideList
-                                        ? `${col.overrideList}[loop.index0]`
-                                        : `${itemName}.${col.name}`
-                                }
-                            />
+                            <span class="my-auto">
+                                <Variable
+                                    expression={
+                                        col.overrideList
+                                            ? `${col.overrideList}[loop.index0]`
+                                            : `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`
+                                    }
+                                />
+                            </span>
                         )}
                     </TableCol>
                 ))
             }
+            <slot />
             {
                 renderAction && (
                     <>

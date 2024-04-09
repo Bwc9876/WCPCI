@@ -6,9 +6,11 @@ use rocket::{
     http::Status,
     post,
     response::Redirect,
+    State,
 };
 use rocket_dyn_templates::Template;
 
+use crate::leaderboard::LeaderboardManagerHandle;
 use crate::{
     auth::{
         csrf::{CsrfToken, VerifyCsrfToken},
@@ -49,7 +51,7 @@ pub async fn edit_contest_get(
         let form = FormTemplateObject::get(form_template);
         EditContestResponse::Form(Template::render(
             "contests/edit",
-            context_with_base_authed!(user, form, judges, all_users, contest_id: id),
+            context_with_base_authed!(user, form, judges, all_users, contest_name: contest.name, contest_id: id),
         ))
     } else {
         EditContestResponse::Error(Status::NotFound)
@@ -61,13 +63,17 @@ pub async fn edit_contest_post(
     id: i64,
     user: &User,
     form: Form<Contextual<'_, ContestForm<'_>>>,
+    leaderboard_handle: &State<LeaderboardManagerHandle>,
     client_time_zone: ClientTimeZone,
     _token: &VerifyCsrfToken,
     mut db: DbConnection,
 ) -> EditContestResponse {
     if let Some(mut contest) = Contest::get(&mut db, id).await {
+        let contest_name = contest.name.clone();
         if let Some(ref value) = form.value {
             let tz = client_time_zone.timezone();
+            let original_start_time = contest.start_time;
+            let original_penalty = contest.penalty;
             contest.name = value.name.to_string();
             contest.description = value.description.map(|s| s.to_string());
             contest.start_time = tz
@@ -115,6 +121,16 @@ pub async fn edit_contest_post(
                         error!("Failed to insert judge: {}", why);
                     }
                 }
+
+                if contest.start_time != original_start_time || contest.penalty != original_penalty
+                {
+                    let mut leaderboard_manager = leaderboard_handle.lock().await;
+                    let leaderboard = leaderboard_manager.get_leaderboard(&mut db, &contest).await;
+                    drop(leaderboard_manager);
+                    let mut leaderboard = leaderboard.lock().await;
+                    leaderboard.full_refresh(&mut db, Some(&contest)).await;
+                }
+
                 EditContestResponse::Redirect(Redirect::to("/contests"))
             }
         } else {
@@ -126,7 +142,7 @@ pub async fn edit_contest_post(
                 timezone: &client_time_zone,
             };
             let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
-            let ctx = context_with_base_authed!(user, form, judges, all_users, contest_id: id);
+            let ctx = context_with_base_authed!(user, form, judges, all_users, contest_name, contest_id: id);
             EditContestResponse::Form(Template::render("contests/edit", ctx))
         }
     } else {

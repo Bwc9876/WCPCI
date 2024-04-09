@@ -11,7 +11,7 @@
         "preview": "astro preview",
         "astro": "astro",
         "format": "prettier --write .",
-        "watch": "pnpm build && chokidar \"**/*.astro\" \"**/*.mjs\" \"public/**\" -i \"node_modules\" -i \"dist\" -c \"pnpm build\""
+        "watch": "pnpm build && chokidar \"**/*.astro\" \"**/*.mjs\" \"public/**\" -i \"node_modules\" -i \"src/generated\" -i \"dist\" -c \"pnpm build\""
     },
     "dependencies": {
         "@astrojs/check": "^0.5.10",

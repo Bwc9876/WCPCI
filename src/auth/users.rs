@@ -7,7 +7,7 @@ use rocket::{
     FromFormField, Request, State,
 };
 use serde::Serialize;
-use sqlx::{encode::IsNull, Encode, Type};
+use sqlx::{encode::IsNull, prelude::FromRow, Decode, Encode, Type};
 
 use crate::db::{DbConnection, DbPoolConnection};
 
@@ -59,7 +59,16 @@ impl Encode<'_, sqlx::Sqlite> for ColorScheme {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+impl Decode<'_, sqlx::Sqlite> for ColorScheme {
+    fn decode(
+        value: <sqlx::Sqlite as sqlx::database::HasValueRef<'_>>::ValueRef,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        let s = <String as Decode<sqlx::Sqlite>>::decode(value)?;
+        Ok(s.into())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, FromRow)]
 pub struct User {
     pub id: i64,
     pub email: String,

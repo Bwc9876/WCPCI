@@ -4,7 +4,7 @@ use crate::db::DbPoolConnection;
 
 pub struct ProblemCompletion {
     participant_id: i64,
-    problem_id: i64,
+    pub problem_id: i64,
     pub completed_at: Option<NaiveDateTime>,
     pub number_wrong: i64,
 }

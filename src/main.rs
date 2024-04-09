@@ -8,6 +8,7 @@ mod auth;
 mod contests;
 mod csp;
 mod db;
+mod leaderboard;
 mod problems;
 mod run;
 mod serve;
@@ -60,4 +61,5 @@ fn rocket() -> _ {
         .attach(settings::stage())
         .attach(contests::stage())
         .attach(problems::stage())
+        .attach(leaderboard::stage())
 }

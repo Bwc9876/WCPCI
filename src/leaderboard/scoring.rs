@@ -1,14 +1,17 @@
 use chrono::NaiveDateTime;
 
-use crate::{db::DbPoolConnection, problems::ProblemCompletion};
-
-use super::{Contest, Participant};
+use crate::{
+    contests::{Contest, Participant},
+    db::DbPoolConnection,
+    problems::ProblemCompletion,
+};
 
 pub struct ParticipantScores {
     contest_start: NaiveDateTime,
     contest_penalty_minutes: i64,
-    participant_id: i64,
-    scores: Vec<i64>,
+    pub participant_id: i64,
+    pub user_id: i64,
+    pub scores: Vec<(i64, i64)>, // id, score
 }
 
 impl ParticipantScores {
@@ -17,14 +20,17 @@ impl ParticipantScores {
         id: i64,
         contest_start: NaiveDateTime,
         contest_penalty_minutes: i64,
-    ) -> Vec<i64> {
+    ) -> Vec<(i64, i64)> {
         let completions = ProblemCompletion::get_for_participant(db, id).await;
         completions
             .into_iter()
             .filter_map(|c| {
                 c.completed_at.map(|d| {
-                    (d - contest_start).num_seconds()
-                        + (c.number_wrong * contest_penalty_minutes * 60)
+                    (
+                        c.problem_id,
+                        (d - contest_start).num_seconds()
+                            + (c.number_wrong * contest_penalty_minutes * 60),
+                    )
                 })
             })
             .collect::<Vec<_>>()
@@ -39,6 +45,7 @@ impl ParticipantScores {
             contest_start: contest.start_time,
             contest_penalty_minutes: contest.penalty,
             participant_id: participant.p_id,
+            user_id: participant.user_id,
             scores: Self::get_scores(db, participant.p_id, contest.start_time, contest.penalty)
                 .await,
         }
@@ -83,8 +90,9 @@ impl Ord for ParticipantScores {
             .then(
                 self.scores
                     .iter()
+                    .map(|(_, score)| score)
                     .sum::<i64>()
-                    .cmp(&other.scores.iter().sum()),
+                    .cmp(&other.scores.iter().map(|(_, score)| score).sum()),
             )
             .reverse()
     }

@@ -19,24 +19,23 @@ mod join;
 mod list;
 mod new;
 mod participant;
-mod scoring;
 mod view;
 
 pub use participant::Participant;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct Contest {
-    id: i64,
+    pub id: i64,
     pub name: String,
-    description: Option<String>,
+    pub description: Option<String>,
     #[serde(serialize_with = "crate::times::serialize_to_js")]
-    start_time: NaiveDateTime,
+    pub start_time: NaiveDateTime,
     #[serde(serialize_with = "crate::times::serialize_to_js")]
-    registration_deadline: NaiveDateTime,
+    pub registration_deadline: NaiveDateTime,
     #[serde(serialize_with = "crate::times::serialize_to_js")]
-    end_time: NaiveDateTime,
-    freeze_time: i64,
-    penalty: i64,
+    pub end_time: NaiveDateTime,
+    pub freeze_time: i64,
+    pub penalty: i64,
     max_participants: Option<i64>,
     created_at: Option<NaiveDateTime>,
 }
