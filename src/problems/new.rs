@@ -45,14 +45,11 @@ pub async fn new_problem_get(
             problem: None,
             test_cases: vec![],
         };
-        let contest_name = Contest::get(&mut db, contest_id)
-            .await
-            .map(|c| c.name)
-            .unwrap_or_default();
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
         let form = FormTemplateObject::get(form_template);
         ProblemNewGetResponse::Template(Template::render(
             "problems/new",
-            context_with_base_authed!(user, contest_name, contest_id, form),
+            context_with_base_authed!(user, contest, form),
         ))
     } else {
         ProblemNewGetResponse::Error(Status::Forbidden)
@@ -112,14 +109,11 @@ pub async fn new_problem_post(
         };
         let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
 
-        let contest_name = Contest::get(&mut db, contest_id)
-            .await
-            .map(|c| c.name)
-            .unwrap_or_default();
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
 
         ProblemNewPostResponse::Template(Template::render(
             "problems/new",
-            context_with_base_authed!(user, contest_id, contest_name, form),
+            context_with_base_authed!(user, contest, form),
         ))
     }
 }

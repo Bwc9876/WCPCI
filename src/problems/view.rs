@@ -38,7 +38,7 @@ pub async fn list_problems_get(
             let problems = Problem::list(&mut db, contest_id).await;
             ProblemViewResponse::View(Template::render(
                 "problems",
-                context_with_base!(user, problems, is_admin, contest_name: contest.name, contest_id, can_edit: is_judge || is_admin),
+                context_with_base!(user, problems, is_admin, contest, can_edit: is_judge || is_admin),
             ))
         } else {
             ProblemViewResponse::NotFound(Status::NotFound)
@@ -100,8 +100,7 @@ pub async fn view_problem_get(
                 problem,
                 last_run,
                 case_count,
-                contest_id,
-                contest_name: contest.name,
+                contest,
                 code_info,
                 languages,
                 default_language,

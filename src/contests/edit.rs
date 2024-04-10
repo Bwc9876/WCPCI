@@ -51,7 +51,7 @@ pub async fn edit_contest_get(
         let form = FormTemplateObject::get(form_template);
         EditContestResponse::Form(Template::render(
             "contests/edit",
-            context_with_base_authed!(user, form, judges, all_users, contest_name: contest.name, contest_id: id),
+            context_with_base_authed!(user, form, judges, all_users, contest),
         ))
     } else {
         EditContestResponse::Error(Status::NotFound)
@@ -69,7 +69,6 @@ pub async fn edit_contest_post(
     mut db: DbConnection,
 ) -> EditContestResponse {
     if let Some(mut contest) = Contest::get(&mut db, id).await {
-        let contest_name = contest.name.clone();
         if let Some(ref value) = form.value {
             let tz = client_time_zone.timezone();
             let original_start_time = contest.start_time;
@@ -91,8 +90,6 @@ pub async fn edit_contest_post(
             contest.max_participants = value.max_participants;
             contest.penalty = value.penalty;
             contest.freeze_time = value.freeze_time;
-
-            println!("{:?}", value.judges);
 
             if let Err(why) = contest.update(&mut db).await {
                 error!("Failed to insert contest: {}", why);
@@ -142,7 +139,7 @@ pub async fn edit_contest_post(
                 timezone: &client_time_zone,
             };
             let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
-            let ctx = context_with_base_authed!(user, form, judges, all_users, contest_name, contest_id: id);
+            let ctx = context_with_base_authed!(user, form, judges, all_users, contest);
             EditContestResponse::Form(Template::render("contests/edit", ctx))
         }
     } else {

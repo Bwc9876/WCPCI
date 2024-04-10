@@ -56,14 +56,11 @@ pub async fn edit_problem_get(
             problem: Some(&problem),
             test_cases: test_cases.iter().map(TestCase::to_form).collect(),
         };
-        let contest_name = Contest::get(&mut db, contest_id)
-            .await
-            .map(|c| c.name)
-            .unwrap_or_default();
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
         let form = FormTemplateObject::get(form_template);
         ProblemEditResponse::Form(Template::render(
             "problems/edit",
-            context_with_base_authed!(user, form, contest_name, contest_id, problem),
+            context_with_base_authed!(user, form, contest, problem),
         ))
     } else {
         ProblemEditResponse::Error(Status::NotFound)
@@ -128,13 +125,10 @@ pub async fn edit_problem_post(
             }
         } else {
             let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
-            let contest_name = Contest::get(&mut db, contest_id)
-                .await
-                .map(|c| c.name)
-                .unwrap_or_default();
+            let contest = Contest::get(&mut db, contest_id).await.unwrap();
             ProblemEditResponse::Form(Template::render(
                 "problems/edit",
-                context_with_base_authed!(user, form: form_ctx, contest_id, contest_name, problem, problem_name: original_name),
+                context_with_base_authed!(user, form: form_ctx, contest, problem, problem_name: original_name),
             ))
         }
     } else {

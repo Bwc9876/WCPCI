@@ -4,18 +4,18 @@ import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
 import Else from "@/components/tera/Else.astro";
 import For from "@/components/tera/For.astro";
-import Layout from "@/layouts/Layout.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
 
 const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`;
 ---
 
-<Layout class="flex flex-col gap-4" title={`Runs for ${variable("problem.name")}`}>
+<ContestLayout class="flex flex-col gap-4" title={`Runs for ${variable("problem.name")}`}>
     <Tile>
         <BreadCrumb
             entries={[
                 ["Contests", "/contests"],
-                [variable("contest_name"), `/contests/${variable("problem.contest_id")}`],
+                [variable("contest.name"), `/contests/${variable("problem.contest_id")}`],
                 ["Problems", `/contests/${variable("problem.contest_id")}/problems`],
                 [
                     variable("problem.name"),
@@ -33,4 +33,4 @@ const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${var
             </Else>
         </For>
     </Tile>
-</Layout>
+</ContestLayout>

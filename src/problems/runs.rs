@@ -124,7 +124,7 @@ pub async fn runs(
     mut db: DbConnection,
 ) -> RunsResponse {
     if let Some(problem) = Problem::get(&mut db, contest_id, &slug).await {
-        let contest_name = Contest::get(&mut db, contest_id).await.map(|c| c.name);
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
         let runs = if let Some(user) = user {
             JudgeRun::list(&mut db, user.id, problem.id)
                 .await
@@ -134,7 +134,7 @@ pub async fn runs(
         };
         RunsResponse::Ok(Template::render(
             "problems/runs",
-            context_with_base!(user, runs, contest_name: contest_name.unwrap_or_default(), problem),
+            context_with_base!(user, runs, contest, problem),
         ))
     } else {
         RunsResponse::NotFound(Status::NotFound)

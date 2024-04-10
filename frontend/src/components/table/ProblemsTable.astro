@@ -12,18 +12,18 @@ const { class: className } = Astro.props;
 <TemplatedTable
     class={className ?? ""}
     idColName="slug"
-    itemLink={{ action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}` }}
+    itemLink={{ action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}` }}
     actions={[
         {
             name: "Edit",
             condition: "logged_in and can_edit",
-            action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}/edit`,
+            action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/edit`,
             icon: "tabler:pencil"
         },
         {
             name: "Delete",
             condition: "logged_in and can_edit",
-            action: (id: string) => `/contests/${variable("contest_id")}/problems/${id}/delete`,
+            action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/delete`,
             icon: "tabler:trash",
             class: "text-red-500"
         }

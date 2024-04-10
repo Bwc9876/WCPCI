@@ -13,7 +13,7 @@ import { tag, themeClass } from "@/lib/tera";
 import Tag from "@/components/tera/Tag.astro";
 
 export interface Props {
-    title: string;
+    title?: string;
     animate?: boolean;
     class?: string;
     makeTile?: boolean;
@@ -40,7 +40,7 @@ const {
         <meta name="viewport" content="width=device-width" />
         <meta name="generator" content=`${Astro.generator} & Tera` />
         <link rel="icon" href="/favicon.ico" />
-        <title>{title}</title>
+        <title>{title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes"}</title>
         <slot name="head" />
         <ViewTransitions />
     </head>
@@ -56,8 +56,8 @@ const {
                     <Icon class="my-auto" size={30} name="tabler:trophy-filled" />
                     <span class="my-auto hidden sm:inline">WCPC</span>
                 </Link>
-                <Link color="white" class="my-auto" href="/contests">Contests</Link>
-                <Link color="white" class="my-auto" href="/problems">Problems</Link>
+                <Link color="white" class="my-auto" href="/contests">All Contests</Link>
+                <slot name="nav-left" />
                 <span class="flex-grow"></span>
                 {
                     !noTemplate && (

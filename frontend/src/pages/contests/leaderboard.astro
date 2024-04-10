@@ -4,12 +4,12 @@ import TableCol from "@/components/table/TableCol.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
 import For from "@/components/tera/For.astro";
 import Variable from "@/components/tera/Variable.astro";
-import Layout from "@/layouts/Layout.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 ---
 
-<Layout title="Leaderboard" makeTile>
+<ContestLayout title="Leaderboard" makeTile>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],
@@ -58,4 +58,4 @@ import { Icon } from "astro-icon/components";
             </TableCol>
         </For>
     </TemplatedTable>
-</Layout>
+</ContestLayout>

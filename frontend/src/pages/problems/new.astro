@@ -1,19 +1,19 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import ProblemForm from "@/components/forms/ProblemForm.astro";
 import { variable } from "@/lib/tera";
 ---
 
-<Layout title="New Problem" makeTile>
+<ContestLayout title="New Problem" makeTile>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],
-            [variable("contest_name"), `/contests/${variable("contest_id")}`],
-            ["Problems", `/contests/${variable("contest_id")}/problems`],
-            ["New", `/contests/${variable("contest_id")}/problems/new`]
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Problems", `/contests/${variable("contest.id")}/problems`],
+            ["New", `/contests/${variable("contest.id")}/problems/new`]
         ]}
     />
     <h1 class="text-2xl">New Problem</h1>
     <ProblemForm submitWord="Create" />
-</Layout>
+</ContestLayout>

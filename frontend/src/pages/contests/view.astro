@@ -10,12 +10,12 @@ import For from "@/components/tera/For.astro";
 import If from "@/components/tera/If.astro";
 import Tag from "@/components/tera/Tag.astro";
 import Variable from "@/components/tera/Variable.astro";
-import Layout from "@/layouts/Layout.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
 import { tag } from "@/lib/tera";
 import { variable } from "@/lib/tera";
 ---
 
-<Layout noGrow class="flex flex-col gap-4" title={variable("contest.name")}>
+<ContestLayout noGrow class="flex flex-col gap-4" title={variable("contest.name")}>
     <Tile>
         <BreadCrumb
             entries={[
@@ -190,7 +190,7 @@ import { variable } from "@/lib/tera";
             </Tile>
         </div>
     </div>
-</Layout>
+</ContestLayout>
 
 <script>
     document.addEventListener("astro:page-load", () => {

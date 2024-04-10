@@ -1,5 +1,5 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
 import Button from "@/components/Button.astro";
 import If from "@/components/tera/If.astro";
 import ProblemsTable from "@/components/table/ProblemsTable.astro";
@@ -7,12 +7,12 @@ import { variable } from "@/lib/tera";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 ---
 
-<Layout class="!gap-3" title="Problems" makeTile>
+<ContestLayout class="!gap-3" title="Problems" makeTile>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],
-            [variable("contest_name"), `/contests/${variable("contest_id")}`],
-            ["Problems", `/contests/${variable("contest_id")}/problems`]
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Problems", `/contests/${variable("contest.id")}/problems`]
         ]}
     />
     <h1 class="mb-2 text-2xl">Problems</h1>
@@ -21,7 +21,7 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
         <Button
             class="w-fit self-end"
             as="a"
-            href={`/contests/${variable("contest_id")}/problems/new`}>Create New Problem</Button
+            href={`/contests/${variable("contest.id")}/problems/new`}>Create New Problem</Button
         >
     </If>
-</Layout>
+</ContestLayout>

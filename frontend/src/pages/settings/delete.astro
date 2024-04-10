@@ -1,10 +1,13 @@
 ---
-import Delete from "@/layouts/Delete.astro";
+import Layout from "@/layouts/Layout.astro";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
 import { variable } from "@/lib/tera";
 ---
 
-<Delete
-    title=`Delete Account`
-    prompt=`Are you sure you want to delete your account ${variable("user.email")}? This will delete all your submissions and other data, you will also be removed from leaderboards.`
-    backLink=`/settings/account`
-/>
+<Layout title="Delete Account" makeTile>
+    <DeleteForm
+        title="Delete Account"
+        prompt=`Are you sure you want to delete your account ${variable("user.email")}? This will delete all your submissions and other data, you will also be removed from leaderboards.`
+        backLink=`/settings/account`
+    />
+</Layout>

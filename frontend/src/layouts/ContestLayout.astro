@@ -1,0 +1,37 @@
+---
+import Link from "@/components/Link.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Layout from "@/layouts/Layout.astro";
+import type { Props as LayoutProps } from "@/layouts/Layout.astro";
+import { variable } from "@/lib/tera";
+
+export type Props = LayoutProps;
+
+const { title, ...rest } = Astro.props;
+---
+
+<Layout
+    title={title ? `${title} - ${variable("contest.name")}` : variable("contest.name")}
+    {...rest}
+>
+    <Fragment slot="nav-left">
+        <Link
+            color="white"
+            class="my-auto border-l-2 border-l-secondary-200 ps-2"
+            href={`/contests/${variable("contest.id")}`}
+        >
+            <Variable expression="contest.name" />
+        </Link>
+        <Link color="white" class="my-auto" href={`/contests/${variable("contest.id")}/problems`}>
+            Problems
+        </Link>
+        <Link
+            color="white"
+            class="my-auto"
+            href={`/contests/${variable("contest.id")}/leaderboard`}
+        >
+            Leaderboard
+        </Link>
+    </Fragment>
+    <slot />
+</Layout>

@@ -7,12 +7,16 @@ import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
 import For from "@/components/tera/For.astro";
 import Variable from "@/components/tera/Variable.astro";
-import Layout from "@/layouts/Layout.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
 import { themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 ---
 
-<Layout noGrow class="flex flex-col justify-stretch gap-4" title=`${variable("problem.name")}`>
+<ContestLayout
+    noGrow
+    class="flex flex-col justify-stretch gap-4"
+    title=`${variable("problem.name")}`
+>
     <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea>
     <Button
         class="example-button absolute right-2 top-4 mx-auto mb-1 hidden w-fit"
@@ -27,7 +31,7 @@ import { Icon } from "astro-icon/components";
         <BreadCrumb
             entries={[
                 ["Contests", "/contests"],
-                [variable("contest_name"), `/contests/${variable("problem.contest_id")}`],
+                [variable("contest.name"), `/contests/${variable("problem.contest_id")}`],
                 ["Problems", `/contests/${variable("problem.contest_id")}/problems`],
                 [
                     variable("problem.name"),
@@ -181,7 +185,7 @@ import { Icon } from "astro-icon/components";
             </Tile>
         </div>
     </div>
-</Layout>
+</ContestLayout>
 
 <script>
     import type { CodeInfo } from "@/lib/editor";

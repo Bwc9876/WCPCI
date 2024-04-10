@@ -40,13 +40,10 @@ pub async fn delete_problem_get(
         return ProblemDeleteResponse::Error(Status::Forbidden);
     }
     if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
-        let contest_name = Contest::get(&mut db, contest_id)
-            .await
-            .map(|c| c.name)
-            .unwrap_or_default();
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
         ProblemDeleteResponse::Form(Template::render(
             "problems/delete",
-            context_with_base_authed!(user, contest_name, contest_id, problem),
+            context_with_base_authed!(user, contest, problem),
         ))
     } else {
         ProblemDeleteResponse::Error(Status::NotFound)
