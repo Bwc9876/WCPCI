@@ -25,17 +25,17 @@ impl Participant {
         .flatten()
     }
 
-    pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Option<Self> {
-        sqlx::query_as!(
-            Participant,
-            "SELECT * FROM participant WHERE p_id = ?",
-            p_id
-        )
-        .fetch_optional(&mut **db)
-        .await
-        .ok()
-        .flatten()
-    }
+    // pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Option<Self> {
+    //     sqlx::query_as!(
+    //         Participant,
+    //         "SELECT * FROM participant WHERE p_id = ?",
+    //         p_id
+    //     )
+    //     .fetch_optional(&mut **db)
+    //     .await
+    //     .ok()
+    //     .flatten()
+    // }
 
     pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Vec<(Self, User)> {
         let res = sqlx::query!("SELECT participant.*, user.* FROM participant JOIN user ON participant.user_id = user.id WHERE contest_id = ?", contest_id)

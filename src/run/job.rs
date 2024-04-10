@@ -138,7 +138,6 @@ pub enum JobOperation {
 
 pub struct JobRequest {
     pub user_id: i64,
-    pub participant_id: Option<i64>,
     pub contest_id: i64,
     pub problem_id: i64,
     pub program: String,

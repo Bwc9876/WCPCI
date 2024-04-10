@@ -3,7 +3,7 @@ import ContestLayout from "@/layouts/ContestLayout.astro";
 import Button from "@/components/Button.astro";
 import If from "@/components/tera/If.astro";
 import ProblemsTable from "@/components/table/ProblemsTable.astro";
-import { variable } from "@/lib/tera";
+import { tag, variable } from "@/lib/tera";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 ---
 
@@ -16,7 +16,9 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
         ]}
     />
     <h1 class="mb-2 text-2xl">Problems</h1>
-    <ProblemsTable />
+    <ProblemsTable
+        overrideEmptyText={`${tag("if started")}No Problems${tag("else")}This contest hasn't started yet, check back when it does!${tag("endif")}`}
+    />
     <If debugEval={true} expression="can_edit">
         <Button
             class="w-fit self-end"

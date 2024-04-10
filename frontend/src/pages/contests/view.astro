@@ -43,7 +43,7 @@ import { variable } from "@/lib/tera";
                     "my-auto",
                     import.meta.env.DEV
                         ? "hidden"
-                        : `${tag("if not started and not is_admin", true)}hidden${tag("endif")}`
+                        : `${tag("if not started and not can_edit", true)}hidden${tag("endif")}`
                 ]}
                 color="primary"
                 id="go-to-problems"
@@ -57,7 +57,7 @@ import { variable } from "@/lib/tera";
                     "my-auto",
                     import.meta.env.DEV
                         ? "hidden"
-                        : `${tag("if not started and not is_admin", true)}hidden${tag("endif")}`
+                        : `${tag("if not started and not can_edit", true)}hidden${tag("endif")}`
                 ]}
                 color="secondary"
                 id="go-to-leaderboard"
@@ -66,7 +66,18 @@ import { variable } from "@/lib/tera";
                 as="a"
                 href={`/contests/${variable("contest.id")}/leaderboard`}>Leaderboard</Button
             >
-            <If debugEval={true} expression="not started and not is_admin">
+            <If expression="is_admin">
+                <Button
+                    class="my-auto"
+                    color="secondary"
+                    justIcon
+                    icon="tabler:pencil"
+                    size="lg"
+                    as="a"
+                    href={`/contests/${variable("contest.id")}/edit`}
+                />
+            </If>
+            <If debugEval={true} expression="not started and not can_edit">
                 <span id="countdown" class="my-auto text-xl text-gray-500">
                     Contest starts <span id="start-word">at</span>
                     <span
@@ -87,7 +98,7 @@ import { variable } from "@/lib/tera";
             </Tile>
             <If
                 debugEval={true}
-                expression="logged_in and not is_admin and started and problems_total != 0"
+                expression="logged_in and not can_edit and started and problems_total != 0"
             >
                 <Tile class="flex flex-col justify-center align-middle">
                     <label class="flex flex-col gap-2 text-2xl font-bold">
@@ -114,7 +125,7 @@ import { variable } from "@/lib/tera";
                     </label>
                 </Tile>
             </If>
-            <If debugEval={true} expression="started or is_admin">
+            <If debugEval={true} expression="started or can_edit">
                 <Tile class="flex grow flex-col gap-2 overflow-hidden">
                     <h2 class="text-2xl font-bold">Problems</h2>
                     <Tag expression="set contest_id = contest.id" />

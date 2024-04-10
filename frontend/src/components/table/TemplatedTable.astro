@@ -18,6 +18,7 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
     itemName?: string;
     idColName?: string;
     emptyText?: string;
+    addColSpan?: number;
     columns: {
         label?: string;
         name: string;
@@ -46,6 +47,7 @@ const {
     itemName = "item",
     idColName = "id",
     emptyText = "No items to display",
+    addColSpan = 0,
     columns,
     itemLink,
     actions,
@@ -75,9 +77,9 @@ const renderActionCondition =
 
 const emptyColSpan = renderAction
     ? renderAction === "static"
-        ? columns.length + 1
-        : `${tag(`if ${renderActionCondition}`)}${variable(`${columns.length} + 1`)}${tag("else")}${variable(`${columns.length}`)}${tag("endif")}`
-    : columns.length;
+        ? columns.length + 1 + addColSpan
+        : `${tag(`if ${renderActionCondition}`)}${variable(`${columns.length} + 1 + ${addColSpan}`)}${tag("else")}${variable(`${columns.length} + ${addColSpan}`)}${tag("endif")}`
+    : columns.length + addColSpan;
 ---
 
 <Table class:list={["", className ?? ""]} {...rest}>

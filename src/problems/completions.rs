@@ -50,9 +50,9 @@ impl ProblemCompletion {
         .unwrap_or_default()
     }
 
-    pub fn temp(user_id: i64, problem_id: i64, completed_at: Option<NaiveDateTime>) -> Self {
+    pub fn temp(participant_id: i64, problem_id: i64, completed_at: Option<NaiveDateTime>) -> Self {
         Self {
-            participant_id: user_id,
+            participant_id,
             problem_id,
             completed_at,
             number_wrong: 0,

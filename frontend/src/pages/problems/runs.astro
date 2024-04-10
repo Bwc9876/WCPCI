@@ -4,6 +4,8 @@ import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
 import Else from "@/components/tera/Else.astro";
 import For from "@/components/tera/For.astro";
+import If from "@/components/tera/If.astro";
+import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
 
@@ -27,10 +29,20 @@ const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${var
     </Tile>
     <Tile class="flex flex-col gap-4">
         <For sourceList="runs" itemName="run">
-            <ProblemRun casesName="case_count" class="bg-background-200 p-4" objName="run" />
+            <ProblemRun
+                timeExpr="formatted_times[loop.index0]"
+                casesName="case_count"
+                class="bg-background-200 p-4"
+                objName="run"
+            />
             <Else>
-                <div class="p-4 text-center">You haven't attempted this problem yet.</div>
+                <p class="p-4 text-center">You haven't attempted this problem yet.</p>
             </Else>
         </For>
+        <If expression="runs | length >= max_runs">
+            <p class="text-center">
+                Only the last <Variable expression="max_runs" /> runs are kept in our database.
+            </p>
+        </If>
     </Tile>
 </ContestLayout>

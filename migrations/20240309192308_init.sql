@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS test_case (
 CREATE TABLE IF NOT EXISTS judge_run (
     id INTEGER PRIMARY KEY NOT NULL,
     problem_id INTEGER NOT NULL,
-    participant_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     amount_run INTEGER NOT NULL,
     total_cases INTEGER NOT NULL,
     error TEXT,
     ran_at TIMESTAMP NOT NULL,
     FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
-    FOREIGN KEY (participant_id) REFERENCES participant(p_id) ON DELETE CASCADE
-    UNIQUE (problem_id, participant_id, ran_at)
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+    UNIQUE (problem_id, user_id, ran_at)
 );
 
 CREATE TABLE IF NOT EXISTS problem_completion (

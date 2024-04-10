@@ -170,10 +170,11 @@ fn len_of_form_data_list(args: FunctionArgs) -> Result<Value, tera::Error> {
     dat.sort();
     dat.dedup();
 
-    Ok(tera::Value::Array(dbg!(dat
-        .into_iter()
-        .map(|i| tera::Value::Number(i.into()))
-        .collect::<Vec<_>>())))
+    Ok(tera::Value::Array(
+        dat.into_iter()
+            .map(|i| tera::Value::Number(i.into()))
+            .collect::<Vec<_>>(),
+    ))
 }
 
 #[macro_export]

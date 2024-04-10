@@ -73,7 +73,6 @@ impl RunManager {
         self.id_counter += 1;
 
         let user_id = request.user_id;
-        let participant_id = request.participant_id;
         let problem_id = request.problem_id;
         let contest_id = request.contest_id;
 
@@ -105,66 +104,62 @@ impl RunManager {
             if !matches!(state, JobState::Judging { .. }) {
                 return;
             }
-            if let Some(participant_id) = participant_id {
-                let judge_run =
-                    JudgeRun::from_job_state(problem_id, participant_id, &state, ran_at);
-                match pool.get().await {
-                    Ok(mut conn) => {
-                        if let Some(contest) = Contest::get(&mut conn, contest_id).await {
-                            if !contest.is_running() {
+            match pool.get().await {
+                Ok(mut conn) => {
+                    if let Some(contest) = Contest::get(&mut conn, contest_id).await {
+                        let judge_run =
+                            JudgeRun::from_job_state(problem_id, user_id, &state, ran_at);
+
+                        let success = judge_run.success();
+                        if let Err(why) = judge_run.write_to_db(&mut conn).await {
+                            error!("Couldn't write judge run to db: {:?}", why);
+                        }
+
+                        if let Some(participant) =
+                            Participant::get(&mut conn, contest_id, user_id).await
+                        {
+                            if participant.is_judge || !contest.is_running() {
                                 return;
                             }
 
-                            if let Some(participant) =
-                                Participant::get(&mut conn, contest_id, user_id).await
-                            {
-                                if participant.is_judge {
-                                    return;
-                                }
-
-                                let success = judge_run.success();
-                                if let Err(why) = judge_run.write_to_db(&mut conn).await {
-                                    error!("Couldn't write judge run to db: {:?}", why);
-                                }
-
-                                let mut completion =
-                                    ProblemCompletion::get_for_problem_and_participant(
-                                        &mut conn, problem_id, user_id,
+                            let mut completion =
+                                ProblemCompletion::get_for_problem_and_participant(
+                                    &mut conn,
+                                    problem_id,
+                                    participant.p_id,
+                                )
+                                .await
+                                .unwrap_or_else(|| {
+                                    ProblemCompletion::temp(
+                                        participant.p_id,
+                                        problem_id,
+                                        Some(ran_at).filter(|_| success),
                                     )
-                                    .await
-                                    .unwrap_or_else(|| {
-                                        ProblemCompletion::temp(
-                                            user_id,
-                                            problem_id,
-                                            Some(ran_at).filter(|_| success),
-                                        )
-                                    });
+                                });
 
-                                if success {
-                                    completion.completed_at = Some(ran_at);
-                                } else if state.last_error().1 && completion.completed_at.is_none()
-                                {
-                                    completion.number_wrong += 1;
-                                }
-
-                                if let Err(why) = completion.upsert(&mut conn).await {
-                                    error!("Couldn't write problem completion to db: {:?}", why);
-                                }
-
-                                let mut leaderboard_manager = leaderboard_handle.lock().await;
-                                let leaderboard = leaderboard_manager
-                                    .get_leaderboard(&mut conn, &contest)
-                                    .await;
-                                drop(leaderboard_manager);
-                                let mut leaderboard = leaderboard.lock().await;
-
-                                leaderboard.update(&mut conn, participant_id).await;
+                            if success && completion.completed_at.is_none() {
+                                completion.completed_at = Some(ran_at);
+                            } else if state.last_error().1 && completion.completed_at.is_none() {
+                                completion.number_wrong += 1;
                             }
+
+                            if let Err(why) = completion.upsert(&mut conn).await {
+                                error!("Couldn't write problem completion to db: {:?}", why);
+                            }
+
+                            let mut leaderboard_manager = leaderboard_handle.lock().await;
+                            let leaderboard = leaderboard_manager
+                                .get_leaderboard(&mut conn, &contest)
+                                .await;
+                            drop(leaderboard_manager);
+                            let mut leaderboard = leaderboard.lock().await;
+
+                            leaderboard.update(&mut conn, participant.p_id).await;
                         }
                     }
-                    Err(e) => {
-                        error!("Couldn't get db connection: {:?}", e);
-                    }
+                }
+                Err(e) => {
+                    error!("Couldn't get db connection: {:?}", e);
                 }
             }
         });

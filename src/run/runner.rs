@@ -55,7 +55,7 @@ impl Runner {
             .map_err(|e| CaseError::Judge(format!("Couldn't get time: {e:?}")))?
             .as_nanos();
 
-        let dir_name = format!("run_jon_wcpc_{id}_{}", now_nanos);
+        let dir_name = format!("run_job_wcpc_{id}_{}", now_nanos);
 
         let temp_path = std::env::temp_dir().join(dir_name);
 

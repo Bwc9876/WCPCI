@@ -34,15 +34,16 @@ pub async fn list_problems_get(
             false
         };
         let is_admin = admin.is_some();
-        if contest.has_started() || is_judge || is_admin {
-            let problems = Problem::list(&mut db, contest_id).await;
-            ProblemViewResponse::View(Template::render(
-                "problems",
-                context_with_base!(user, problems, is_admin, contest, can_edit: is_judge || is_admin),
-            ))
+        let can_see = is_admin || is_judge || contest.has_started();
+        let problems = if can_see {
+            Problem::list(&mut db, contest_id).await
         } else {
-            ProblemViewResponse::NotFound(Status::NotFound)
-        }
+            vec![]
+        };
+        ProblemViewResponse::View(Template::render(
+            "problems",
+            context_with_base!(user, problems, is_admin, started: can_see, contest, can_edit: is_judge || is_admin),
+        ))
     } else {
         ProblemViewResponse::NotFound(Status::NotFound)
     }

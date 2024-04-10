@@ -38,17 +38,17 @@ impl Leaderboard {
         scores
     }
 
-    pub async fn standings(&self) -> Vec<(i64, Vec<i64>)> {
-        self.scores
-            .iter()
-            .map(|s| {
-                (
-                    s.participant_id,
-                    s.scores.iter().map(|(id, _)| *id).collect(),
-                )
-            })
-            .collect()
-    }
+    // pub async fn standings(&self) -> Vec<(i64, Vec<i64>)> {
+    //     self.scores
+    //         .iter()
+    //         .map(|s| {
+    //             (
+    //                 s.participant_id,
+    //                 s.scores.iter().map(|(id, _)| *id).collect(),
+    //             )
+    //         })
+    //         .collect()
+    // }
 
     pub async fn full(&self, db: &mut DbPoolConnection) -> Vec<LeaderboardEntry> {
         let cases = self

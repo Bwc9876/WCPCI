@@ -80,7 +80,6 @@ async fn websocket_loop(
     manager: ManagerHandle,
     problem: Problem,
     test_cases: Vec<TestCase>,
-    participant_id: Option<i64>,
     user_id: i64,
 ) {
     let mut _manager = manager.lock().await;
@@ -134,7 +133,6 @@ async fn websocket_loop(
                                     };
                                     let job_to_start = JobRequest {
                                         user_id,
-                                        participant_id,
                                         problem_id: problem.id,
                                         contest_id: problem.contest_id,
                                         program: request.program().to_string(),
@@ -249,10 +247,7 @@ pub async fn ws_channel(
             let participant = Participant::get(&mut db, contest_id, user.id).await;
             let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
             let is_admin = admin.is_some();
-            if !is_admin
-                && !is_judge
-                && (!contest.has_started() || contest.is_running() && participant.is_none())
-            {
+            if !is_admin && !is_judge && !contest.has_started() {
                 return WsHttpResponse::Reject(Status::Forbidden);
             }
 
@@ -263,11 +258,9 @@ pub async fn ws_channel(
                 .unwrap_or_default();
             if !cases.is_empty() {
                 let user_id = user.id;
-                let participant_id = participant.map(|p| p.p_id);
                 WsHttpResponse::Accept(ws.channel(move |stream| {
                     Box::pin(async move {
-                        websocket_loop(stream, handle, problem, cases, participant_id, user_id)
-                            .await;
+                        websocket_loop(stream, handle, problem, cases, user_id).await;
                         Ok(())
                     })
                 }))

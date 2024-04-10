@@ -29,36 +29,32 @@ async fn leaderboard_get(
     user: Option<&User>,
 ) -> LeaderboardResponse {
     if let Some(contest) = Contest::get(&mut db, contest_id).await {
-        if contest.has_started() {
-            let mut leaderboard_manager = leaderboard_manager.lock().await;
-            let leaderboard = leaderboard_manager
-                .get_leaderboard(&mut db, &contest)
-                .await
-                .clone();
-            drop(leaderboard_manager);
-            let leaderboard = leaderboard.lock().await;
-
-            let problem_ids = sqlx::query_as!(
-                ProblemIdTemp,
-                "SELECT id from problem WHERE contest_id = ?",
-                contest.id
-            )
-            .fetch_all(&mut **db)
+        let mut leaderboard_manager = leaderboard_manager.lock().await;
+        let leaderboard = leaderboard_manager
+            .get_leaderboard(&mut db, &contest)
             .await
-            .unwrap_or_default()
-            .into_iter()
-            .map(|r| r.id)
-            .collect::<Vec<_>>();
+            .clone();
+        drop(leaderboard_manager);
+        let leaderboard = leaderboard.lock().await;
 
-            let entries = leaderboard.full(&mut db).await;
+        let problem_ids = sqlx::query_as!(
+            ProblemIdTemp,
+            "SELECT id from problem WHERE contest_id = ?",
+            contest.id
+        )
+        .fetch_all(&mut **db)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| r.id)
+        .collect::<Vec<_>>();
 
-            LeaderboardResponse::Template(Template::render(
-                "contests/leaderboard",
-                context_with_base!(user, contest, entries, problem_ids),
-            ))
-        } else {
-            LeaderboardResponse::Error(Status::NotFound)
-        }
+        let entries = leaderboard.full(&mut db).await;
+
+        LeaderboardResponse::Template(Template::render(
+            "contests/leaderboard",
+            context_with_base!(user, contest, entries, problem_ids),
+        ))
     } else {
         LeaderboardResponse::Error(Status::NotFound)
     }

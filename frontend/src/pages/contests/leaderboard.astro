@@ -18,7 +18,9 @@ import { Icon } from "astro-icon/components";
         ]}
     />
     <TemplatedTable
+        addColSpan={100}
         idColName="user.id"
+        emptyText="No one has joined this contest yet!"
         listName="entries"
         itemName="entry"
         columns={[

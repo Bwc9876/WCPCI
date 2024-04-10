@@ -4,9 +4,10 @@ import TemplatedTable from "./TemplatedTable.astro";
 
 export type Props = {
     class?: string;
+    overrideEmptyText?: string;
 };
 
-const { class: className } = Astro.props;
+const { overrideEmptyText, class: className } = Astro.props;
 ---
 
 <TemplatedTable
@@ -31,5 +32,5 @@ const { class: className } = Astro.props;
     listName="problems"
     itemName="problem"
     columns={[{ name: "name" }, { name: "cpu_time", label: "CPU Time (seconds)" }]}
-    emptyText="No Problems Have Been Made Yet."
+    emptyText={overrideEmptyText ?? "No Problems Have Been Made Yet."}
 />

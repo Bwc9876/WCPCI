@@ -55,6 +55,8 @@ pub async fn view_contest(
         let end_formatted = format_datetime_human_readable(end_local);
         let tz_name = tz.timezone().name();
 
+        let can_edit = admin.is_some() || participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
+
         let ctx = context_with_base!(
             user,
             problems_done,
@@ -62,6 +64,7 @@ pub async fn view_contest(
             problems,
             participants,
             tz_name,
+            can_edit,
             start_formatted,
             start_local_html,
             end_formatted,
