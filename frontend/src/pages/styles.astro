@@ -9,6 +9,10 @@ import Tile from "@/components/Tile.astro";
 import Spinner from "@/components/Spinner.astro";
 import If from "@/components/tera/If.astro";
 import CaseIndicator from "@/components/CaseIndicator.astro";
+import Table from "@/components/table/Table.astro";
+import TableRow from "@/components/table/TableRow.astro";
+import TableCol from "@/components/table/TableCol.astro";
+import PlaceIndicator from "@/components/PlaceIndicator.astro";
 ---
 
 <Layout class="flex flex-col gap-10" title="Style Testing">
@@ -93,6 +97,35 @@ import CaseIndicator from "@/components/CaseIndicator.astro";
         <CaseIndicator status="success" />
         <CaseIndicator status="error" />
         <CaseIndicator status="empty" />
+    </Tile>
+    <Tile>
+        Place Indicators
+        <Table headings={["User", "Place"]}>
+            <TableRow>
+                <TableCol><PlaceIndicator placeVar="1" /></TableCol>
+                <TableCol>Best Person</TableCol>
+            </TableRow>
+            <TableRow>
+                <TableCol><PlaceIndicator placeVar="2" /></TableCol>
+                <TableCol>Second Best Person</TableCol>
+            </TableRow>
+            <TableRow>
+                <TableCol><PlaceIndicator placeVar="3" /></TableCol>
+                <TableCol>Third Best Person</TableCol>
+            </TableRow>
+            <TableRow>
+                <TableCol><PlaceIndicator placeVar="4" /></TableCol>
+                <TableCol>Fourth Best Person</TableCol>
+            </TableRow>
+            <TableRow>
+                <TableCol><PlaceIndicator placeVar="5" /></TableCol>
+                <TableCol>Fifth Best Person</TableCol>
+            </TableRow>
+            <TableRow>
+                <TableCol><PlaceIndicator placeVar="6" /></TableCol>
+                <TableCol>Sixth Best Person</TableCol>
+            </TableRow>
+        </Table>
     </Tile>
     <Tile>
         DA FORM:

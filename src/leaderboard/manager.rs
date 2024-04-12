@@ -109,6 +109,16 @@ impl Leaderboard {
         }
     }
 
+    pub fn stats_of(&self, user_id: i64) -> Option<(usize, usize)> {
+        self.scores.iter().enumerate().find_map(|(i, s)| {
+            if s.user_id == user_id {
+                Some((s.scores.len(), i + 1))
+            } else {
+                None
+            }
+        })
+    }
+
     pub async fn full_refresh(&mut self, db: &mut DbPoolConnection, contest: Option<&Contest>) {
         if let Some(c) = contest {
             self.contest = c.clone();

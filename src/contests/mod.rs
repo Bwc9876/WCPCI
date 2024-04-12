@@ -73,6 +73,13 @@ impl Contest {
             .unwrap_or_default()
     }
 
+    pub async fn list_user_in(db: &mut DbPoolConnection, user_id: i64) -> Vec<Self> {
+        sqlx::query_as!(Contest, "SELECT contest.* FROM contest JOIN participant ON contest.id = participant.contest_id WHERE participant.user_id = ?", user_id)
+            .fetch_all(&mut **db)
+            .await
+            .unwrap_or_default()
+    }
+
     pub async fn get(db: &mut DbPoolConnection, id: i64) -> Option<Self> {
         sqlx::query_as!(Contest, "SELECT * FROM contest WHERE id = ?", id)
             .fetch_optional(&mut **db)

@@ -1,8 +1,11 @@
 ---
 import BreadCrumb from "@/components/BreadCrumb.astro";
+import Link from "@/components/Link.astro";
 import TableCol from "@/components/table/TableCol.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import Else from "@/components/tera/Else.astro";
 import For from "@/components/tera/For.astro";
+import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
@@ -27,29 +30,42 @@ import { Icon } from "astro-icon/components";
             {
                 name: "loop.index",
                 forceNoPrefix: true,
-                label: "Place"
+                label: "Place",
+                placeIndicator: "",
+                centerHeader: true
             },
             {
                 name: "user.display_name | default(value=entry.user.default_display_name)",
                 avatarVar: "entry.user.email",
-                label: "User"
+                label: "User",
+                makeLink: `/profile/${variable("entry.user.id")}`
             }
         ]}
     >
-        <For slot="head" sourceList="problem_ids" itemName="problem">
+        <For slot="head" sourceList="problems" itemName="problem">
             <TableCol as="th" scope="column">
-                <Variable expression="loop.index" />
+                <If expression="has_started or is_admin or is_judge">
+                    <Link
+                        color="accent"
+                        href={`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`}
+                    >
+                        <Variable expression="problem.name" />
+                    </Link>
+                    <Else slot="else">
+                        Problem <Variable expression="loop.index" />
+                    </Else>
+                </If>
             </TableCol>
         </For>
-        <For sourceList="problem_ids" itemName="problem">
+        <For sourceList="problems" itemName="problem">
             <TableCol
-                data-status={variable("problem in entry.problems_completed")}
+                data-status={variable("problem.id in entry.problems_completed")}
                 class="group"
-                id=`problem-completion-indication-${variable("entry.user.id")}-${variable("problem")}`
+                id=`problem-completion-indication-${variable("entry.user.id")}-${variable("problem.id")}`
             >
                 <Icon
                     size={30}
-                    name="tabler:circle-dashed"
+                    name="tabler:circle-x"
                     class="hidden text-gray-500 group-[[data-status=false]]:inline"
                 />
                 <Icon

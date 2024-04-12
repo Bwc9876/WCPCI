@@ -10,6 +10,7 @@ mod csp;
 mod db;
 mod leaderboard;
 mod problems;
+mod profile;
 mod run;
 mod serve;
 mod settings;
@@ -62,4 +63,5 @@ fn rocket() -> _ {
         .attach(contests::stage())
         .attach(problems::stage())
         .attach(leaderboard::stage())
+        .attach(profile::stage())
 }

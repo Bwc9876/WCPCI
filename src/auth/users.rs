@@ -161,6 +161,14 @@ impl User {
         Ok(())
     }
 
+    pub async fn get(db: &mut DbPoolConnection, id: i64) -> Option<User> {
+        sqlx::query_as!(User, "SELECT * FROM user WHERE id = ?", id)
+            .fetch_optional(&mut **db)
+            .await
+            .ok()
+            .flatten()
+    }
+
     pub async fn list(db: &mut DbPoolConnection) -> Result<Vec<User>, String> {
         let users: Vec<User> = sqlx::query_as!(User, "SELECT * FROM user")
             .fetch_all(&mut **db)

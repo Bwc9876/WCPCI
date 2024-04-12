@@ -12,6 +12,7 @@ import { Icon } from "astro-icon/components";
 import Else from "@/components/tera/Else.astro";
 import Tag from "../tera/Tag.astro";
 import Avatar from "../Avatar.astro";
+import PlaceIndicator from "../PlaceIndicator.astro";
 
 export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
     listName: string;
@@ -25,6 +26,9 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
         forceNoPrefix?: boolean;
         avatarVar?: string;
         overrideList?: string;
+        placeIndicator?: string;
+        centerHeader?: boolean;
+        makeLink?: string;
     }[];
     itemLink?: {
         class?: string;
@@ -85,8 +89,12 @@ const emptyColSpan = renderAction
 <Table class:list={["", className ?? ""]} {...rest}>
     <Fragment slot="header">
         {
-            prettyColumns.map((col) => (
-                <TableCol scope="col" as="th" class="text-left">
+            prettyColumns.map((col, i) => (
+                <TableCol
+                    scope="col"
+                    as="th"
+                    class={columns[i].centerHeader ? "text-center" : "text-left"}
+                >
                     {col}
                 </TableCol>
             ))
@@ -128,6 +136,21 @@ const emptyColSpan = renderAction
                                     )
                                 )}
                             >
+                                <Variable
+                                    expression={
+                                        col.overrideList
+                                            ? `${col.overrideList}[loop.index0]`
+                                            : `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`
+                                    }
+                                />
+                            </Link>
+                        ) : col.placeIndicator !== undefined ? (
+                            <PlaceIndicator
+                                class={col.placeIndicator}
+                                placeVar={`${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`}
+                            />
+                        ) : col.makeLink ? (
+                            <Link class:list={["my-auto", col.makeLink]} href={col.makeLink}>
                                 <Variable
                                     expression={
                                         col.overrideList
