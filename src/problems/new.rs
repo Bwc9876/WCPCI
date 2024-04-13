@@ -1,6 +1,6 @@
 use log::error;
 use rocket::{
-    form::{Contextual, Form},
+    form::{Contextual, Error, Form},
     get,
     http::Status,
     post,
@@ -35,6 +35,9 @@ pub async fn new_problem_get(
     contest_id: i64,
     _token: &CsrfToken,
 ) -> ProblemNewGetResponse {
+    if Contest::get(&mut db, contest_id).await.is_none() {
+        return ProblemNewGetResponse::Error(Status::NotFound);
+    }
     let is_judge = Participant::get(&mut db, contest_id, user.id)
         .await
         .map(|p| p.is_judge)
@@ -69,10 +72,13 @@ pub async fn new_problem_post(
     user: &User,
     admin: Option<&Admin>,
     contest_id: i64,
-    form: Form<Contextual<'_, ProblemForm<'_>>>,
+    mut form: Form<Contextual<'_, ProblemForm<'_>>>,
     _token: &VerifyCsrfToken,
     mut db: DbConnection,
 ) -> ProblemNewPostResponse {
+    if Contest::get(&mut db, contest_id).await.is_none() {
+        return ProblemNewPostResponse::Error(Status::NotFound);
+    }
     let is_judge = Participant::get(&mut db, contest_id, user.id)
         .await
         .map(|p| p.is_judge)
@@ -83,37 +89,42 @@ pub async fn new_problem_post(
     }
     if let Some(ref value) = form.value {
         let problem = Problem::temp(contest_id, value);
-        let res = problem.insert(&mut db).await;
-        match res {
-            Ok(problem) => {
-                let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
-                if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
-                    error!("Error saving test cases: {:?}", why);
-                    ProblemNewPostResponse::Error(Status::InternalServerError)
-                } else {
-                    ProblemNewPostResponse::Redirect(Redirect::to(format!(
-                        "/contests/{contest_id}/problems/{}",
-                        problem.slug
-                    )))
+        if Problem::slug_exists(&mut db, &problem.slug, contest_id, None).await {
+            let err = Error::validation("Problem with this name already exists").with_name("name");
+            form.context.push_error(err);
+        } else {
+            let res = problem.insert(&mut db).await;
+            return match res {
+                Ok(problem) => {
+                    let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
+                    if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
+                        error!("Error saving test cases: {:?}", why);
+                        ProblemNewPostResponse::Error(Status::InternalServerError)
+                    } else {
+                        ProblemNewPostResponse::Redirect(Redirect::to(format!(
+                            "/contests/{contest_id}/problems/{}",
+                            problem.slug
+                        )))
+                    }
                 }
-            }
-            Err(why) => {
-                error!("Error saving problem: {:?}", why);
-                ProblemNewPostResponse::Error(Status::InternalServerError)
-            }
+                Err(why) => {
+                    error!("Error saving problem: {:?}", why);
+                    ProblemNewPostResponse::Error(Status::InternalServerError)
+                }
+            };
         }
-    } else {
-        let form_template = ProblemFormTemplate {
-            problem: None,
-            test_cases: vec![],
-        };
-        let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
-
-        let contest = Contest::get(&mut db, contest_id).await.unwrap();
-
-        ProblemNewPostResponse::Template(Template::render(
-            "problems/new",
-            context_with_base_authed!(user, contest, form),
-        ))
     }
+
+    let form_template = ProblemFormTemplate {
+        problem: None,
+        test_cases: vec![],
+    };
+    let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
+
+    let contest = Contest::get(&mut db, contest_id).await.unwrap();
+
+    ProblemNewPostResponse::Template(Template::render(
+        "problems/new",
+        context_with_base_authed!(user, contest, form),
+    ))
 }

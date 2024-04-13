@@ -1,6 +1,6 @@
 use log::error;
 use rocket::{
-    form::{Contextual, Form},
+    form::{Contextual, Error, Form},
     get,
     http::Status,
     post,
@@ -75,7 +75,7 @@ pub async fn edit_problem_post(
     admin: Option<&Admin>,
     contest_id: i64,
     slug: &str,
-    form: Form<Contextual<'_, ProblemForm<'_>>>,
+    mut form: Form<Contextual<'_, ProblemForm<'_>>>,
     _token: &VerifyCsrfToken,
     manager: &State<ManagerHandle>,
     mut db: DbConnection,
@@ -99,38 +99,45 @@ pub async fn edit_problem_post(
         };
 
         let original_name = problem.name.clone();
-
         if let Some(ref value) = form.value {
-            problem.name = value.name.to_string();
-            problem.slug = slug::slugify(value.name);
-            problem.description = value.description.to_string();
-            problem.cpu_time = value.cpu_time;
-            let res = problem.update(&mut db).await;
-            if let Err(why) = res {
-                error!("Failed to update problem: {:?}", why);
-                ProblemEditResponse::Error(Status::InternalServerError)
+            let new_slug = slug::slugify(value.name);
+
+            if Problem::slug_exists(&mut db, &new_slug, contest_id, Some(problem.id)).await {
+                let err =
+                    Error::validation("Problem with this name already exists").with_name("name");
+                form.context.push_error(err);
             } else {
-                let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
-                if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
-                    error!("Failed to update test cases: {:?}", why);
+                problem.name = value.name.to_string();
+                problem.slug = new_slug;
+                problem.description = value.description.to_string();
+                problem.cpu_time = value.cpu_time;
+                let res = problem.update(&mut db).await;
+                return if let Err(why) = res {
+                    error!("Failed to update problem: {:?}", why);
                     ProblemEditResponse::Error(Status::InternalServerError)
                 } else {
-                    let mut manager = manager.lock().await;
-                    manager.update_problem(problem.id).await;
-                    ProblemEditResponse::Redirect(Redirect::to(format!(
-                        "/contests/{}/problems/{}",
-                        contest_id, problem.slug
-                    )))
-                }
+                    let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
+                    if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
+                        error!("Failed to update test cases: {:?}", why);
+                        ProblemEditResponse::Error(Status::InternalServerError)
+                    } else {
+                        let mut manager = manager.lock().await;
+                        manager.update_problem(problem.id).await;
+                        ProblemEditResponse::Redirect(Redirect::to(format!(
+                            "/contests/{}/problems/{}",
+                            contest_id, problem.slug
+                        )))
+                    }
+                };
             }
-        } else {
-            let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
-            let contest = Contest::get(&mut db, contest_id).await.unwrap();
-            ProblemEditResponse::Form(Template::render(
-                "problems/edit",
-                context_with_base_authed!(user, form: form_ctx, contest, problem, problem_name: original_name),
-            ))
         }
+
+        let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
+        let contest = Contest::get(&mut db, contest_id).await.unwrap();
+        ProblemEditResponse::Form(Template::render(
+            "problems/edit",
+            context_with_base_authed!(user, form: form_ctx, contest, problem, problem_name: original_name),
+        ))
     } else {
         ProblemEditResponse::Error(Status::NotFound)
     }

@@ -44,6 +44,36 @@ impl Problem {
         .flatten()
     }
 
+    pub async fn slug_exists(
+        db: &mut DbPoolConnection,
+        slug: &str,
+        contest_id: i64,
+        problem_id: Option<i64>,
+    ) -> bool {
+        if let Some(problem_id) = problem_id {
+            sqlx::query!(
+                "SELECT * FROM problem WHERE contest_id = ? AND id != ? AND slug = ?",
+                contest_id,
+                problem_id,
+                slug
+            )
+            .fetch_optional(&mut **db)
+            .await
+            .map(|o| o.is_some())
+            .unwrap_or(false)
+        } else {
+            sqlx::query!(
+                "SELECT * FROM problem WHERE contest_id = ? AND slug = ?",
+                contest_id,
+                slug
+            )
+            .fetch_optional(&mut **db)
+            .await
+            .map(|o| o.is_some())
+            .unwrap_or(false)
+        }
+    }
+
     pub async fn get(db: &mut DbPoolConnection, contest_id: i64, slug: &str) -> Option<Self> {
         sqlx::query_as!(
             Problem,
