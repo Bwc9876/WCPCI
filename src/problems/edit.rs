@@ -106,6 +106,10 @@ pub async fn edit_problem_post(
                 let err =
                     Error::validation("Problem with this name already exists").with_name("name");
                 form.context.push_error(err);
+            } else if value.test_cases.is_empty() {
+                let err =
+                    Error::validation("At least one test case is required").with_name("test_cases");
+                form.context.push_error(err);
             } else {
                 problem.name = value.name.to_string();
                 problem.slug = new_slug;
@@ -117,7 +121,9 @@ pub async fn edit_problem_post(
                     ProblemEditResponse::Error(Status::InternalServerError)
                 } else {
                     let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
-                    if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
+                    if let Err(why) =
+                        TestCase::save_for_problem(&mut db, problem.id, test_cases).await
+                    {
                         error!("Failed to update test cases: {:?}", why);
                         ProblemEditResponse::Error(Status::InternalServerError)
                     } else {
@@ -132,7 +138,7 @@ pub async fn edit_problem_post(
             }
         }
 
-        let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
+        let form_ctx = FormTemplateObject::from_rocket_context(form_template, dbg!(&form.context));
         let contest = Contest::get(&mut db, contest_id).await.unwrap();
         ProblemEditResponse::Form(Template::render(
             "problems/edit",

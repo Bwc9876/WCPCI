@@ -72,16 +72,15 @@ impl FormTemplateObject {
                 )
             })
             .collect::<HashMap<_, _>>();
-        let errors = value
-            .fields()
-            .map(|f| {
-                let err = value
-                    .field_errors(f)
-                    .map(|e| e.to_string())
-                    .collect::<Vec<_>>();
-                (f.to_string(), err)
-            })
-            .collect::<HashMap<_, _>>();
+        let mut errors = HashMap::with_capacity(value.fields().count());
+        for e in value.errors() {
+            if let Some(ref name) = e.name {
+                errors
+                    .entry(name.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(e.to_string());
+            }
+        }
         Self::with_data(data, errors, value.status())
     }
 }

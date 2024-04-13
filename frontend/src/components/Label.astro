@@ -10,6 +10,7 @@ export interface Props {
     class?: string;
     errorVar?: string;
     hideText?: boolean;
+    forceShowError?: boolean;
 }
 
 const {
@@ -19,6 +20,7 @@ const {
     isCheckbox,
     isRequired,
     hideText = false,
+    forceShowError = false,
     class: className
 } = Astro.props;
 ---
@@ -36,7 +38,12 @@ const {
     </span>
     {
         errorVar && (
-            <ul class="hidden text-sm text-red-500 group-has-[:user-invalid]:block group-has-[[data-invalid=true]]:block">
+            <ul
+                class:list={[
+                    forceShowError ? "" : "hidden",
+                    "text-sm text-red-500 group-has-[:user-invalid]:block group-has-[[data-invalid=true]]:block"
+                ]}
+            >
                 <For sourceList={errorVar} itemName="error">
                     <li>
                         <Variable expression="error" />

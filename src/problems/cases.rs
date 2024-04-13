@@ -37,10 +37,11 @@ impl TestCase {
 
     pub async fn save_for_problem(
         db: &mut DbPoolConnection,
+        problem_id: i64,
         cases: Vec<Self>,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query("DELETE FROM test_case WHERE problem_id = ? AND ord >= ?")
-            .bind(cases[0].problem_id)
+            .bind(problem_id)
             .bind(cases.len() as i64)
             .execute(&mut **db)
             .await?;

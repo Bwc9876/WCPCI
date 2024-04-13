@@ -158,7 +158,6 @@ pub struct ProblemForm<'r> {
     description: &'r str,
     #[field(validate = range(1..=100))]
     cpu_time: i64,
-    #[field(validate = len(..=50))]
     test_cases: Vec<TestCaseForm<'r>>,
 }
 

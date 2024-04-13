@@ -92,12 +92,18 @@ pub async fn new_problem_post(
         if Problem::slug_exists(&mut db, &problem.slug, contest_id, None).await {
             let err = Error::validation("Problem with this name already exists").with_name("name");
             form.context.push_error(err);
+        } else if value.test_cases.is_empty() {
+            let err =
+                Error::validation("At least one test case is required").with_name("test_cases");
+            form.context.push_error(err);
         } else {
             let res = problem.insert(&mut db).await;
             return match res {
                 Ok(problem) => {
                     let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
-                    if let Err(why) = TestCase::save_for_problem(&mut db, test_cases).await {
+                    if let Err(why) =
+                        TestCase::save_for_problem(&mut db, problem.id, test_cases).await
+                    {
                         error!("Error saving test cases: {:?}", why);
                         ProblemNewPostResponse::Error(Status::InternalServerError)
                     } else {

@@ -6,6 +6,8 @@ import FormFor from "../tera/FormFor.astro";
 import TestCaseForm from "./TestCaseForm.astro";
 import Button from "../Button.astro";
 import { variable } from "@/lib/tera";
+import Label from "../Label.astro";
+import Variable from "../tera/Variable.astro";
 
 export type Props = Omit<ComponentProps<typeof Form>, "slot">;
 
@@ -34,8 +36,13 @@ const { ...props } = Astro.props;
                 help="Max wall time in seconds"
             />
         </div>
-        <div class="flex flex-col lg:w-4/6 lg:px-8">
-            <h2 class="mb-2 text-lg lg:mb-0">Test Cases</h2>
+        <div class="flex flex-col gap-2 lg:w-4/6 lg:px-8">
+            <Label
+                forceShowError
+                errorVar="form.errors | get(key='test_cases', default=[])"
+                label="Test Cases"
+                help="Add test cases for competitors"
+            />
             <div class="flex flex-col gap-2">
                 <div
                     id="test-case-clone-target"
