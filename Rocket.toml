@@ -21,6 +21,7 @@ admins = [ "bwc9876@gmail.com" ]
 timezone = "America/New_York"
 
 [debug.run]
+max_program_length = 100000
 default_language = "python"
 
 [debug.run.languages.python]

@@ -16,8 +16,7 @@ const defaultCode = 'def main():\n\tprint("Hello World!")\n\nmain()';
 ---
 
 <ContestLayout class="flex flex-col gap-4" title={`Runs for ${variable("problem.name")}`}>
-    <!-- <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea> -->
-    <Tile>
+    <Tile class="flex flex-col gap-4">
         <BreadCrumb
             entries={[
                 ["Contests", "/contests"],
@@ -30,8 +29,7 @@ const defaultCode = 'def main():\n\tprint("Hello World!")\n\nmain()';
                 ["Runs", problemRoute]
             ]}
         />
-    </Tile>
-    <Tile class="flex flex-col gap-4">
+        <h1 class="text-2xl font-semibold">Your Runs For {variable("problem.name")}</h1>
         <For sourceList="runs" itemName="run">
             <Collapse noSummaryEndGrow>
                 <ProblemRun
