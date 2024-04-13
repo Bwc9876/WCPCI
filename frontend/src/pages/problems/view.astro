@@ -307,12 +307,16 @@ import { Icon } from "astro-icon/components";
 
         import("@/lib/highlighting").then((c) => {
             console.debug("Setting Up Code Block Highlighting");
-            c.default((input) => {
-                if (editor) {
-                    testInput.value = input.trim();
-                    runDebugButton.click();
-                }
-            }, testButtonTemplate);
+            c.default(
+                "#rendered-md",
+                (input) => {
+                    if (editor) {
+                        testInput.value = input.trim();
+                        runDebugButton.click();
+                    }
+                },
+                testButtonTemplate
+            );
         });
 
         import("@/lib/math").then((c) => {

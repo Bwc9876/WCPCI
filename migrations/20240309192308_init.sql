@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS judge_run (
     amount_run INTEGER NOT NULL,
     total_cases INTEGER NOT NULL,
     error TEXT,
+    program VARCHAR(100000) NOT NULL,
+    language TEXT NOT NULL,
     ran_at TIMESTAMP NOT NULL,
     FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE

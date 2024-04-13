@@ -20,6 +20,8 @@ pub struct JudgeRun {
     pub problem_id: i64,
     pub user_id: i64,
     pub amount_run: i64,
+    pub program: String,
+    pub language: String,
     pub total_cases: i64,
     pub error: Option<String>,
     #[serde(serialize_with = "crate::times::serialize_to_js")]
@@ -27,10 +29,13 @@ pub struct JudgeRun {
 }
 
 impl JudgeRun {
+    #[allow(clippy::too_many_arguments)]
     pub fn temp(
         problem_id: i64,
         user_id: i64,
         amount_run: i64,
+        program: String,
+        language: String,
         total_cases: i64,
         error: Option<String>,
         ran_at: NaiveDateTime,
@@ -40,6 +45,8 @@ impl JudgeRun {
             problem_id,
             user_id,
             amount_run,
+            program,
+            language,
             total_cases,
             error,
             ran_at,
@@ -49,6 +56,8 @@ impl JudgeRun {
     pub fn from_job_state(
         problem_id: i64,
         user_id: i64,
+        program: String,
+        language: String,
         state: &JobState,
         ran_at: NaiveDateTime,
     ) -> Self {
@@ -57,6 +66,8 @@ impl JudgeRun {
             problem_id,
             user_id,
             amount_run as i64,
+            program,
+            language,
             state.len() as i64,
             error,
             ran_at,
@@ -98,10 +109,12 @@ impl JudgeRun {
     pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<Self, sqlx::Error> {
         let new = sqlx::query_as!(
             JudgeRun,
-            "INSERT INTO judge_run (problem_id, user_id, amount_run, total_cases, error, ran_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
+            "INSERT INTO judge_run (problem_id, user_id, amount_run, program, language, total_cases, error, ran_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",
             self.problem_id,
             self.user_id,
             self.amount_run,
+            self.program,
+            self.language,
             self.total_cases,
             self.error,
             self.ran_at

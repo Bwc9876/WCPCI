@@ -252,7 +252,6 @@ pub async fn ws_channel(
             }
 
             let handle = (*manager).clone();
-            // TODO: Handle test cases being updated while the user is connected
             let cases = TestCase::get_for_problem(&mut db, problem_id)
                 .await
                 .unwrap_or_default();

@@ -28,9 +28,16 @@ pub struct LanguageConfig {
     pub run_cmd: String,
 }
 
+const fn default_max_program_length() -> usize {
+    100_000
+}
+
 #[derive(Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 pub struct RunConfig {
+    /// Max program length in bytes (max and default is 100,000)
+    #[serde(default = "default_max_program_length")]
+    pub max_program_length: usize,
     /// Languages that are supported by the runner
     pub languages: HashMap<String, LanguageConfig>,
     /// Default language to use

@@ -72,9 +72,18 @@ impl RunManager {
         let id = self.id_counter;
         self.id_counter += 1;
 
+        if request.program.len() > self.config.max_program_length {
+            return Err(format!(
+                "Program too long, max length is {} bytes",
+                self.config.max_program_length
+            ));
+        }
+
         let user_id = request.user_id;
         let problem_id = request.problem_id;
         let contest_id = request.contest_id;
+        let program = request.program.clone();
+        let language = request.language.clone();
 
         let language_config = self
             .config
@@ -107,8 +116,9 @@ impl RunManager {
             match pool.get().await {
                 Ok(mut conn) => {
                     if let Some(contest) = Contest::get(&mut conn, contest_id).await {
-                        let judge_run =
-                            JudgeRun::from_job_state(problem_id, user_id, &state, ran_at);
+                        let judge_run = JudgeRun::from_job_state(
+                            problem_id, user_id, program, language, &state, ran_at,
+                        );
 
                         let success = judge_run.success();
                         if let Err(why) = judge_run.write_to_db(&mut conn).await {

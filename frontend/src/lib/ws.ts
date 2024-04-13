@@ -141,10 +141,12 @@ export default (
                 break;
             case "invalid":
                 console.error("Invalid message sent", message);
+                toggleButtons(false);
                 break;
             case "runDenied":
                 runMessageWrapper.setAttribute("data-status", "error");
                 runMessage.innerText = message.reason;
+                toggleButtons(false);
                 break;
             case "runStarted":
                 toggleButtons(true);

@@ -1,5 +1,7 @@
 ---
 import BreadCrumb from "@/components/BreadCrumb.astro";
+import Button from "@/components/Button.astro";
+import Collapse from "@/components/Collapse.astro";
 import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
 import Else from "@/components/tera/Else.astro";
@@ -10,9 +12,11 @@ import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
 
 const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`;
+const defaultCode = 'def main():\n\tprint("Hello World!")\n\nmain()';
 ---
 
 <ContestLayout class="flex flex-col gap-4" title={`Runs for ${variable("problem.name")}`}>
+    <!-- <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea> -->
     <Tile>
         <BreadCrumb
             entries={[
@@ -29,12 +33,30 @@ const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${var
     </Tile>
     <Tile class="flex flex-col gap-4">
         <For sourceList="runs" itemName="run">
-            <ProblemRun
-                timeExpr="formatted_times[loop.index0]"
-                casesName="case_count"
-                class="bg-background-200 p-4"
-                objName="run"
-            />
+            <Collapse noSummaryEndGrow>
+                <ProblemRun
+                    slot="summary"
+                    timeExpr="formatted_times[loop.index0]"
+                    casesName="case_count"
+                    class="w-full bg-background-200"
+                    objName="run"
+                />
+                <div class="flex flex-col gap-2">
+                    <h3 class="text-lg font-semibold">
+                        Program (<Variable expression="run.language" />)
+                    </h3>
+                    <pre
+                        class=`overflow-x-auto language-${variable("run.language", "python")}`><code id=`run-${variable("run.id", "1")}-code`>{variable("run.program", defaultCode)}</code></pre>
+                    <Button
+                        class="copy-button w-fit"
+                        color="secondary"
+                        data-program={variable("run.program | json_encode()", defaultCode)}
+                        data-run={variable("run.id", "1")}
+                        icon="tabler:clipboard">Copy to clipboard</Button
+                    >
+                </div>
+            </Collapse>
+
             <Else>
                 <p class="p-4 text-center">You haven't attempted this problem yet.</p>
             </Else>
@@ -46,3 +68,28 @@ const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${var
         </If>
     </Tile>
 </ContestLayout>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        document.querySelectorAll(".copy-button").forEach((button) => {
+            button.addEventListener("click", (e) => {
+                const target = e.target! as HTMLElement;
+                const button = target.closest(".copy-button")! as HTMLButtonElement;
+                const code = JSON.parse(button.dataset.program!);
+                console.debug("Copying code to clipboard", code);
+                navigator.clipboard.writeText(code);
+            });
+        });
+
+        import("@/lib/highlighting").then((c) => {
+            console.debug("Setting Up Code Block Highlighting");
+            c.default();
+        });
+    });
+</script>
+
+<style>
+    pre code.hljs {
+        @apply rounded-lg !bg-secondary-50;
+    }
+</style>
