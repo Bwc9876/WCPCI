@@ -4,7 +4,12 @@ import DeleteForm from "@/components/forms/DeleteForm.astro";
 import { variable } from "@/lib/tera";
 ---
 
-<ContestLayout title=`Delete ${variable("problem.name")}` makeTile>
+<ContestLayout
+    noIndex
+    path=`/contests/${variable("contest.id")}/problems/${variable("problem.id")}/delete`
+    title=`Delete ${variable("problem.name")}`
+    makeTile
+>
     <DeleteForm
         title=`Delete ${variable("problem.name")}`
         prompt="Are you sure you want to delete this problem?"

@@ -4,7 +4,14 @@ import Variable from "@/components/tera/Variable.astro";
 import Button from "@/components/Button.astro";
 ---
 
-<Layout title="Error" class="flex flex-col justify-center gap-4 align-middle" noTemplate makeTile>
+<Layout
+    noIndex
+    path="/"
+    title="Error"
+    class="flex flex-col justify-center gap-4 align-middle"
+    noTemplate
+    makeTile
+>
     <h1 class="text-center text-[3rem]"><Variable expression="message" /></h1>
     <Button icon="tabler:home" size="2xl" class="mx-auto w-fit" as="a" href="/">Home</Button>
 </Layout>

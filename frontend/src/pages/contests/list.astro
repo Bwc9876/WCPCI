@@ -3,10 +3,9 @@ import Layout from "@/layouts/Layout.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
 import Button from "@/components/Button.astro";
 import If from "@/components/tera/If.astro";
-import { variable } from "@/lib/tera";
 ---
 
-<Layout title="Contests" makeTile>
+<Layout path=`/contests` description="View WCPC Contests" title="Contests" makeTile>
     <h1 class="mb-2 text-2xl">Contests</h1>
     <TemplatedTable
         listName="contests"

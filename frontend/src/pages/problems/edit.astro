@@ -7,7 +7,12 @@ import { variable } from "@/lib/tera";
 const problemName = variable("problem_name | default(value=problem.name)");
 ---
 
-<ContestLayout title={`Edit Problem: ${problemName}`} makeTile>
+<ContestLayout
+    noIndex
+    path=`/contests/${variable("contest.id")}/problems/${variable("problem.id")}/edit`
+    title={`Edit Problem: ${problemName}`}
+    makeTile
+>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],

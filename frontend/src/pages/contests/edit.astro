@@ -5,7 +5,12 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
 import { variable } from "@/lib/tera";
 ---
 
-<ContestLayout title="Edit Contest" makeTile>
+<ContestLayout
+    noIndex
+    path=`/contests/${variable("contest.id")}/edit`
+    title="Edit Contest"
+    makeTile
+>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],

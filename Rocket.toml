@@ -14,6 +14,7 @@ provider = "Google"
 redirect_uri = "http://localhost:8000/auth/callback/google"
 
 [debug]
+url = "http://localhost:8000"
 secret_key = "12345678901234567890123456789012345678901234"
 template_dir = "frontend/dist"
 public_dir = "public"

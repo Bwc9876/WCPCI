@@ -5,9 +5,17 @@ import If from "@/components/tera/If.astro";
 import ProblemsTable from "@/components/table/ProblemsTable.astro";
 import { tag, variable } from "@/lib/tera";
 import BreadCrumb from "@/components/BreadCrumb.astro";
+
+const description = `View the problems for ${variable("contest.name")}, WCPC`;
 ---
 
-<ContestLayout class="!gap-3" title="Problems" makeTile>
+<ContestLayout
+    path=`/contests/${variable("contest.id")}/problems`
+    class="!gap-3"
+    title="Problems"
+    description={description}
+    makeTile
+>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],

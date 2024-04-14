@@ -15,7 +15,12 @@ const problemRoute = `/contests/${variable("problem.contest_id")}/problems/${var
 const defaultCode = 'def main():\n\tprint("Hello World!")\n\nmain()';
 ---
 
-<ContestLayout class="flex flex-col gap-4" title={`Runs for ${variable("problem.name")}`}>
+<ContestLayout
+    noIndex
+    path=`/contests/${variable("contest.id")}/problems/${variable("problem.id")}/runs`
+    class="flex flex-col gap-4"
+    title={`Runs for ${variable("problem.name")}`}
+>
     <Tile class="flex flex-col gap-4">
         <BreadCrumb
             entries={[

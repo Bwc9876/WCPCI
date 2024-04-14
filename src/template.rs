@@ -204,11 +204,19 @@ macro_rules! context_with_base_authed {
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Templating", |rocket| async {
-        rocket.attach(Template::custom(|e| {
+        let figment = rocket.figment();
+        let url_prefix = figment.extract_inner::<String>("url").unwrap_or_default();
+
+        rocket.attach(Template::custom(move |e| {
+            let url_prefix = url_prefix.clone();
             e.tera.register_function("in_debug", in_debug);
             e.tera.register_function("gravatar", gravatar_function);
             e.tera.register_function("fake_attr", fake_attr);
             e.tera.register_function("render_markdown", render_markdown);
+            e.tera
+                .register_function("url_prefix", move |_: FunctionArgs| {
+                    Ok(tera::Value::String(url_prefix.clone()))
+                });
             e.tera
                 .register_function("len_of_form_data_list", len_of_form_data_list);
         }))

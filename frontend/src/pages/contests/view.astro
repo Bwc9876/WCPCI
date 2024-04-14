@@ -13,9 +13,17 @@ import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
 import { tag } from "@/lib/tera";
 import { variable } from "@/lib/tera";
+
+const description = `WCPC ${variable("contest.name")} ${variable("contest.description | truncate(length=100)")}`;
 ---
 
-<ContestLayout noGrow class="flex flex-col gap-4" title={variable("contest.name")}>
+<ContestLayout
+    description={description}
+    path=`/contests/${variable("contest.id")}`
+    noGrow
+    class="flex flex-col gap-4"
+    title={variable("contest.name")}
+>
     <Tile class="flex flex-col">
         <BreadCrumb
             entries={[

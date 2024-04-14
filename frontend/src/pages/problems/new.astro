@@ -5,7 +5,12 @@ import ProblemForm from "@/components/forms/ProblemForm.astro";
 import { variable } from "@/lib/tera";
 ---
 
-<ContestLayout title="New Problem" makeTile>
+<ContestLayout
+    noIndex
+    path=`/contests/${variable("contest.id")}/problems/new`
+    title="New Problem"
+    makeTile
+>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],

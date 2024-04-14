@@ -10,9 +10,16 @@ import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
+
+const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
 ---
 
-<ContestLayout title="Leaderboard" makeTile>
+<ContestLayout
+    path=`/contests/${variable("contest.id")}/leaderboard`
+    title="Leaderboard"
+    description={description}
+    makeTile
+>
     <BreadCrumb
         entries={[
             ["Contests", "/contests"],

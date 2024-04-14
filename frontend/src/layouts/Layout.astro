@@ -1,5 +1,7 @@
 ---
 import { ViewTransitions } from "astro:transitions";
+import hero from "@/assets/hero.png";
+import iconBig from "@/assets/icon_big.png";
 
 import Link from "@/components/Link.astro";
 import { Icon } from "astro-icon/components";
@@ -9,26 +11,38 @@ import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Tile from "@/components/Tile.astro";
 import Button from "@/components/Button.astro";
-import { tag, themeClass } from "@/lib/tera";
-import Tag from "@/components/tera/Tag.astro";
+import { themeClass, variable } from "@/lib/tera";
+import { Image } from "astro:assets";
 
 export interface Props {
+    path: string;
     title?: string;
+    description?: string;
     animate?: boolean;
     class?: string;
     makeTile?: boolean;
+    noIndex?: boolean;
     noTemplate?: boolean;
     noGrow?: boolean;
 }
 
+const urlPrefix = variable("url_prefix()", "https://wcpc.fun");
+
 const {
     title,
+    description = "Compete in contests and earn prizes at WCPC",
+    path: urlSuffix,
     class: className,
     makeTile = false,
+    noIndex = false,
     animate = true,
     noTemplate = false,
     noGrow = false
 } = Astro.props;
+
+const fullUrl = `${urlPrefix}${urlSuffix}`;
+
+const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
 ---
 
 <!doctype html>
@@ -36,11 +50,39 @@ const {
 <html class={noTemplate ? "system" : themeClass("light", "dark", "system")} lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="description" content="Astro description" />
+        {noIndex && <meta name="robots" content="none" />}
         <meta name="viewport" content="width=device-width" />
+        <title>{metaTitle}</title>
+        <link rel="canonical" href={fullUrl} />
+        <meta name="description" content={description} />
+        <meta
+            name="keywords"
+            content="west chester, programming, competition, contest, python, java"
+        />
         <meta name="generator" content=`${Astro.generator} & Tera` />
-        <link rel="icon" href="/favicon.ico" />
-        <title>{title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes"}</title>
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+        <meta name="msapplication-TileColor" content="#9f00a7" />
+        <meta name="theme-color" content="#6d3973" />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={fullUrl} />
+        <meta property="og:image" content=`${urlPrefix}${hero.src}` />
+        <meta property="og:image:width" content={`${hero.width}px`} />
+        <meta property="og:image:height" content={`${hero.height}px`} />
+        <meta
+            property="og:image:alt"
+            content="WCPC Hero Image, various students are working on their computers for a competition"
+        />
+        <meta property="og:site_name" content="WCPC" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content=`${urlPrefix}${hero.src}` />
+        <meta name="twitter:card" content="summary" />
         <slot name="head" />
         <ViewTransitions />
     </head>
@@ -52,9 +94,9 @@ const {
     >
         <header>
             <Tile as="nav" class="my-4 flex justify-center gap-3">
-                <Link aria-label="Home" href="/" class="flex flex-row gap-2 sm:me-4">
-                    <Icon class="my-auto" size={30} name="tabler:trophy-filled" />
-                    <span class="my-auto hidden sm:inline">WCPC</span>
+                <Link color="white" aria-label="Home" href="/" class="flex flex-row gap-2 sm:me-4">
+                    <Image src={iconBig} alt="WCPC Logo" width={50} height={50} />
+                    <span class="my-auto hidden text-lg font-bold sm:inline">WCPC</span>
                 </Link>
                 <Link color="white" class="my-auto" href="/contests">All Contests</Link>
                 <slot name="nav-left" />

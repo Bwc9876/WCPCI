@@ -4,7 +4,7 @@ import DeleteForm from "@/components/forms/DeleteForm.astro";
 import { variable } from "@/lib/tera";
 ---
 
-<Layout title="Delete Account" makeTile>
+<Layout noIndex path="/settings/account/delete" title="Delete Account" makeTile>
     <DeleteForm
         title="Delete Account"
         prompt=`Are you sure you want to delete your account ${variable("user.email")}? This will delete all your submissions and other data, you will also be removed from leaderboards.`

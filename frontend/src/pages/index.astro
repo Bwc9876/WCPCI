@@ -7,37 +7,50 @@ import { Image } from "astro:assets";
 import If from "@/components/tera/If.astro";
 import Button from "@/components/Button.astro";
 import Else from "@/components/tera/Else.astro";
+
+const description =
+    "Join us at the West Chester Programming Competition for a day of free food, problem solving, and a chance to win prizes. Any West Chester student is welcome to join.";
 ---
 
-<Layout class="flex flex-col gap-4" title="Home">
-    <Tile class="flex flex-col-reverse gap-2 text-center lg:flex-row lg:text-left">
+<Layout path="/" description={description} class="flex flex-col gap-4">
+    <Tile class="flex flex-col-reverse gap-2 !p-8 text-center lg:flex-row lg:text-left">
         <div class="flex flex-col gap-2">
-            <h1 class="mb-2 text-2xl">Compete, Learn, and Earn Prizes at WCPC</h1>
-            <p class="text-lg">
-                Join us at the West Chester Programming Competition for a day of free food, problem
-                solving, and a chance to win prizes.
+            <h1 class="mb-2 text-5xl font-extrabold">Compete, Learn, and Earn Prizes at WCPC</h1>
+            <p class="text-xl">
+                {description}
             </p>
+            <span class="grow"></span>
             <div class="mx-auto mt-2 flex flex-row gap-2 lg:mx-0">
                 <If debugEval={false} expression="logged_in">
-                    <Button size="xl" color="primary" as="a" href="/contests">Go To Contests</Button
+                    <Button class="px-8 py-4" size="2xl" color="primary" as="a" href="/contests"
+                        >Go To Contests</Button
                     >
                     <Else slot="else">
-                        <Button size="xl" color="primary" as="a" href="/auth/login"
-                            >Get Started</Button
+                        <Button
+                            class="px-8 py-4"
+                            size="2xl"
+                            color="primary"
+                            as="a"
+                            href="/auth/login">Get Started</Button
                         >
-                        <Button size="xl" color="secondary" as="a" href="/contests"
-                            >View Contests</Button
+                        <Button
+                            class="px-8 py-4"
+                            size="2xl"
+                            color="secondary"
+                            as="a"
+                            href="/contests">View Contests</Button
                         >
                     </Else>
                 </If>
             </div>
+            <span class="grow"></span>
         </div>
         <span class="hidden grow basis-96 lg:inline"></span>
         <div class="min-w-fit">
             <Image
                 src={heroImage}
                 loading="eager"
-                alt="WCPC Logo"
+                alt="WCPC Hero Image, various students are working on their computers for a competition"
                 class="mx-auto h-96 w-96 rounded-xl lg:mx-0"
             />
         </div>
