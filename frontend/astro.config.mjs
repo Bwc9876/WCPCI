@@ -14,7 +14,7 @@ export default defineConfig({
         format: "file"
     },
     prefetch: false,
-    compressHTML: false,
+    compressHTML: true,
     integrations: [
         tailwind({ nesting: true }),
         icon(),
