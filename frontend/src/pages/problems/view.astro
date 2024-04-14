@@ -17,7 +17,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 
 <ContestLayout
     noGrow
-    path=`/contests/${variable("contest.id")}/problems/${variable("problem.id")}`
+    path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`
     class="flex flex-col justify-stretch gap-4"
     title=`${variable("problem.name")}`
     description={description}

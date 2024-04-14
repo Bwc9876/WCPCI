@@ -6,7 +6,7 @@ import { variable } from "@/lib/tera";
 
 <ContestLayout
     noIndex
-    path=`/contests/${variable("contest.id")}/problems/${variable("problem.id")}/delete`
+    path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}/delete`
     title=`Delete ${variable("problem.name")}`
     makeTile
 >

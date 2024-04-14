@@ -9,7 +9,7 @@ const problemName = variable("problem_name | default(value=problem.name)");
 
 <ContestLayout
     noIndex
-    path=`/contests/${variable("contest.id")}/problems/${variable("problem.id")}/edit`
+    path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}/edit`
     title={`Edit Problem: ${problemName}`}
     makeTile
 >
