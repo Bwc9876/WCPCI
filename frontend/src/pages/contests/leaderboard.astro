@@ -1,6 +1,7 @@
 ---
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import Link from "@/components/Link.astro";
+import Title from "@/components/Title.astro";
 import TableCol from "@/components/table/TableCol.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
 import Else from "@/components/tera/Else.astro";
@@ -27,6 +28,7 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             ["Leaderboard", `/contests/${variable("contest.id")}/leaderboard`]
         ]}
     />
+    <Title>Leaderboard for <Variable expression="contest.name" /></Title>
     <TemplatedTable
         addColSpan={100}
         idColName="user.id"

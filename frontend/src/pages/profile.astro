@@ -2,6 +2,7 @@
 import Avatar from "@/components/Avatar.astro";
 import Button from "@/components/Button.astro";
 import Tile from "@/components/Tile.astro";
+import Title from "@/components/Title.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
 import Else from "@/components/tera/Else.astro";
 import If from "@/components/tera/If.astro";
@@ -26,7 +27,7 @@ const description = `View ${name}'s profile on WCPC. Participated in ${variable(
     <Tile class="flex flex-col justify-center gap-6 text-center md:flex-row md:text-left">
         <Avatar class="mx-auto my-auto" emailVar="profile.email" name={name} size={150} />
         <div class="my-auto flex flex-col gap-1">
-            <h1 class="my-auto text-3xl">{name}</h1>
+            <Title class="my-auto">{name}</Title>
             <p class="my-auto text-xl">
                 Joined on <Variable expression="joined" debugEval="February 9th, 2024" />
             </p>

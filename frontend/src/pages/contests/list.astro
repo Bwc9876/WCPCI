@@ -3,10 +3,11 @@ import Layout from "@/layouts/Layout.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
 import Button from "@/components/Button.astro";
 import If from "@/components/tera/If.astro";
+import Title from "@/components/Title.astro";
 ---
 
 <Layout path=`/contests` description="View WCPC Contests" title="Contests" makeTile>
-    <h1 class="mb-2 text-2xl">Contests</h1>
+    <Title>Contests</Title>
     <TemplatedTable
         listName="contests"
         itemLink={{

@@ -3,6 +3,8 @@ import ContestLayout from "@/layouts/ContestLayout.astro";
 import ContestForm from "@/components/forms/ContestForm.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import { variable } from "@/lib/tera";
+import Title from "@/components/Title.astro";
+import Variable from "@/components/tera/Variable.astro";
 ---
 
 <ContestLayout
@@ -18,5 +20,6 @@ import { variable } from "@/lib/tera";
             ["Edit", `/contests/${variable("contest.id")}/edit`]
         ]}
     />
+    <Title><Variable expression="contest.name" /></Title>
     <ContestForm />
 </ContestLayout>

@@ -3,6 +3,8 @@ import ContestLayout from "@/layouts/ContestLayout.astro";
 import ProblemForm from "@/components/forms/ProblemForm.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import { variable } from "@/lib/tera";
+import Title from "@/components/Title.astro";
+import Variable from "@/components/tera/Variable.astro";
 
 const problemName = variable("problem_name | default(value=problem.name)");
 ---
@@ -28,6 +30,6 @@ const problemName = variable("problem_name | default(value=problem.name)");
             ]
         ]}
     />
-    <h1 class="text-2xl">Edit Problem: {problemName}</h1>
+    <Title>Edit <Variable expression="problem.name" /></Title>
     <ProblemForm submitWord="Save" />
 </ContestLayout>

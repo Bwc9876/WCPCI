@@ -131,6 +131,22 @@ export default (
 
     let currentTimeout: number | undefined = undefined;
     let oldLang = currentLanguage;
+
+    const saveChanges = () => {
+        const text = editor.getValue();
+        const language = editor.getModel()?.getLanguageId();
+        window.localStorage.setItem(
+            `contest-${contestId}-problem-${problemId}-code`,
+            JSON.stringify([text, language])
+        );
+        window.localStorage.setItem(
+            `contest-${contestId}-problem-${problemId}-${currentLanguage}-code`,
+            JSON.stringify(text)
+        );
+        saveIndicator.dataset.saveState = "saved";
+        saveIndicator.ariaLabel = "Changes Saved!";
+    };
+
     editor!.onDidChangeModelContent(() => {
         saveIndicator.dataset.saveState = "saving";
         saveIndicator.ariaLabel = "Saving Changes...";
@@ -139,22 +155,22 @@ export default (
         }
         currentTimeout = setTimeout(() => {
             if (editor && oldLang === currentLanguage) {
-                const text = editor.getValue();
-                const language = editor.getModel()?.getLanguageId();
-                window.localStorage.setItem(
-                    `contest-${contestId}-problem-${problemId}-code`,
-                    JSON.stringify([text, language])
-                );
-                window.localStorage.setItem(
-                    `contest-${contestId}-problem-${problemId}-${currentLanguage}-code`,
-                    JSON.stringify(text)
-                );
-                saveIndicator.dataset.saveState = "saved";
-                saveIndicator.ariaLabel = "Changes Saved!";
+                saveChanges();
             }
         }, 1000) as unknown as number;
         oldLang = currentLanguage!;
     });
+
+    document.onkeydown = (e) => {
+        if (e.ctrlKey && e.key === "s") {
+            e.preventDefault();
+            saveChanges();
+            if (currentTimeout) {
+                clearTimeout(currentTimeout);
+            }
+        }
+    };
+
     console.debug("Instantiated Monaco editor");
 
     resetButton.onclick = () => {

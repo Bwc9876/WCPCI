@@ -31,12 +31,14 @@ fn stage_inner(path: &Path) -> AdHoc {
     let hashes: SRIHashes = serde_json::from_str(&raw_hashes).unwrap();
     let directives: Vec<String> = vec![
         "default-src 'self'".to_string(),
+        "object-src 'none'".to_string(),
         "frame-ancestors 'none'".to_string(),
+        "require-trusted-types-for 'script'".to_string(),
         format!("style-src 'self' 'unsafe-inline' {GOOGLE_FONTS_URL}"),
         format!("font-src 'self' data: {GOOGLE_FONTS_URL}"),
         format!("img-src 'self' {GRAVATAR_URL} {TABLER_URL}"),
         format!(
-            "script-src 'self' {} {}",
+            "script-src 'self' 'unsafe-inline' {} {}",
             join_hashes(&hashes.ext_script_hashes),
             join_hashes(&hashes.inline_script_hashes)
         ),

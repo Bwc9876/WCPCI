@@ -2,6 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import ContestForm from "@/components/forms/ContestForm.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
+import Title from "@/components/Title.astro";
 ---
 
 <Layout noIndex path=`/contests/new` title="Create Contest" makeTile>
@@ -11,5 +12,6 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
             ["New", "/contests/new"]
         ]}
     />
+    <Title>Create Contest</Title>
     <ContestForm />
 </Layout>

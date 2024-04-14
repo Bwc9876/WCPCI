@@ -5,6 +5,8 @@ import If from "@/components/tera/If.astro";
 import ProblemsTable from "@/components/table/ProblemsTable.astro";
 import { tag, variable } from "@/lib/tera";
 import BreadCrumb from "@/components/BreadCrumb.astro";
+import Title from "@/components/Title.astro";
+import Variable from "@/components/tera/Variable.astro";
 
 const description = `View the problems for ${variable("contest.name")}, WCPC`;
 ---
@@ -23,7 +25,7 @@ const description = `View the problems for ${variable("contest.name")}, WCPC`;
             ["Problems", `/contests/${variable("contest.id")}/problems`]
         ]}
     />
-    <h1 class="mb-2 text-2xl">Problems</h1>
+    <Title>Problems for <Variable expression="contest.name" /></Title>
     <ProblemsTable
         overrideEmptyText={`${tag("if started")}No Problems${tag("else")}This contest hasn't started yet, check back when it does!${tag("endif")}`}
     />

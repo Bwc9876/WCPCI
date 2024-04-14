@@ -3,13 +3,16 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
 import Button from "@/components/Button.astro";
 import CaseIndicator from "@/components/CaseIndicator.astro";
 import Field from "@/components/Field.astro";
+import Label from "@/components/Label.astro";
 import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
+import Title from "@/components/Title.astro";
+import Else from "@/components/tera/Else.astro";
 import For from "@/components/tera/For.astro";
 import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
-import { themeClass, variable } from "@/lib/tera";
+import { tag, themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 
 const description = `${variable("problem.name")} from ${variable("contest.name")}, WCPC. ${variable("problem.description | truncate(length=100)")}`;
@@ -45,8 +48,21 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             ]}
         />
         <div class="flex flex-row gap-4">
-            <span class="my-auto text-xl">Progress:</span>
-            <ProblemRun casesName="case_count" class="grow" objName="last_run" />
+            <Title class="my-auto"><Variable expression="problem.name" /></Title>
+            <If expression="logged_in">
+                <ProblemRun casesName="case_count" objName="last_run" class="grow" />
+                <Else slot="else">
+                    <span class="grow"></span>
+                    <Button
+                        size="lg"
+                        as="a"
+                        href=`/auth/login`
+                        class="my-auto w-fit"
+                        icon="tabler:login-2"
+                        color="secondary">Login or Register to Submit</Button
+                    >
+                </Else>
+            </If>
             <div class="flex flex-row gap-1">
                 <Button
                     as="button"
@@ -55,21 +71,24 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                     data-problem-id={variable("problem.id")}
                     data-problem-slug={variable("problem.slug")}
                     data-default-language={variable("default_language")}
+                    data-logged-in={variable("logged_in")}
                     data-color-preference={themeClass("light", "dark", "system")}
-                    class="my-auto w-fit"
+                    class:list={["my-auto w-fit data-[logged-in='false']:hidden"]}
                     id="submit"
                     color="primary"
                     icon="tabler:star">Submit!</Button
                 >
-                <Button
-                    size="lg"
-                    as="a"
-                    href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`
-                    class="my-auto w-fit"
-                    justIcon
-                    icon="tabler:clock"
-                    color="secondary"
-                />
+                <If expression="logged_in">
+                    <Button
+                        size="lg"
+                        as="a"
+                        href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`
+                        class="my-auto w-fit"
+                        justIcon
+                        icon="tabler:clock"
+                        color="secondary"
+                    />
+                </If>
                 <If expression="can_edit">
                     <Button
                         size="lg"
@@ -84,89 +103,130 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             </div>
         </div>
     </Tile>
-    <div class="flex grow flex-row gap-4 overflow-hidden">
-        <Tile class="flex w-2/5 flex-col gap-2 overflow-hidden">
-            <h1 class="text-2xl"><Variable expression="problem.name" /></h1>
-            <small class="text-gray-500">CPU Time: <Variable expression="problem.cpu_time" /></small
+</ContestLayout>
+<div class="flex grow flex-row gap-4 overflow-hidden">
+    <Tile class="group flex flex-row gap-1 overflow-hidden !p-0 has-[[data-expanded='true']]:w-2/5">
+        <div
+            class="mb-2 ms-2 mt-2 flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden"
+        >
+            <h2 class="text-2xl">Description</h2>
+            <small class="text-gray-500"
+                >CPU Time: <Variable expression="problem.cpu_time" /> second(s)</small
             >
             <div class="overflow-y-auto">
-                <div class="overflow-y-auto pe-2" id="rendered-md">
+                <div class="overflow-y-auto" id="rendered-md">
                     <Variable
                         expression="render_markdown(md=problem.description) | safe"
                         debugLorem={50}
                     />
                 </div>
             </div>
-        </Tile>
-        <div class="flex w-3/5 grow flex-col gap-4">
-            <Tile class="flex h-[60%] flex-col gap-2">
-                <div class="flex flex-row gap-2">
-                    <img
-                        class:list={[
-                            "select-none opacity-0",
-                            themeClass("", "invert", "dark:invert")
-                        ]}
-                        width="32"
-                        height="32"
-                        id="language-icon"
-                    />
-                    <Field
-                        hideLabel
-                        noTemplate
-                        id="language-dropdown"
-                        name="Language"
-                        value=""
-                        type="select"
-                        options={[]}
-                        ><For sourceList="languages" itemName="language" slot="options_templated">
-                            <option value={variable("language[0]")}>
-                                <Variable expression="language[1]" />
-                            </option>
-                        </For></Field
-                    >
-                    <div
-                        id="save-indicator"
-                        aria-label="Changes Saved!"
-                        data-save-state="saved"
-                        class="group my-auto"
-                    >
-                        <Icon
-                            class="my-auto text-green-600 group-[[data-save-state=saving]]:animate-pulse group-[[data-save-state=saving]]:text-accent"
-                            name="tabler:device-floppy"
-                            size={32}
-                        />
-                    </div>
-                    <Button id="reset-button" icon="tabler:restore" justIcon color="secondary" />
-                </div>
+        </div>
+        <div
+            data-expanded="true"
+            id="description-section-chevron"
+            class="group flex justify-center self-stretch px-2 align-middle"
+        >
+            <Icon
+                class="my-auto hidden group-[[data-expanded='true']]:inline"
+                name="tabler:chevron-left"
+                size={32}
+            />
+            <Icon
+                class="my-auto hidden group-[[data-expanded='false']]:inline"
+                name="tabler:chevron-right"
+                size={32}
+            />
+        </div>
+    </Tile>
+    <div class="group flex w-3/5 grow flex-col gap-4">
+        <Tile class="flex h-[60%] grow flex-col gap-2">
+            <h2 class="text-2xl">Editor</h2>
+            <div class="flex flex-row gap-2">
+                <img
+                    class:list={["select-none opacity-0", themeClass("", "invert", "dark:invert")]}
+                    width="32"
+                    height="32"
+                    id="language-icon"
+                />
+                <Field
+                    hideLabel
+                    noTemplate
+                    id="language-dropdown"
+                    name="Language"
+                    value=""
+                    type="select"
+                    options={[]}
+                    ><For sourceList="languages" itemName="language" slot="options_templated">
+                        <option value={variable("language[0]")}>
+                            <Variable expression="language[1]" />
+                        </option>
+                    </For></Field
+                >
                 <div
-                    id="editor"
-                    class="align-center flex h-full w-full justify-center rounded-2xl bg-background-50 p-2"
+                    id="save-indicator"
+                    aria-label="Changes Saved!"
+                    data-save-state="saved"
+                    class="group my-auto"
                 >
                     <Icon
-                        class="my-auto animate-pulse text-blue-300"
-                        name="tabler:pencil"
-                        size={60}
+                        class="my-auto text-green-600 group-[[data-save-state=saving]]:animate-pulse group-[[data-save-state=saving]]:text-accent"
+                        name="tabler:device-floppy"
+                        size={32}
                     />
                 </div>
-            </Tile>
-            <Tile class="align-center flex h-[40%] w-full flex-row gap-4">
+                <Button id="reset-button" icon="tabler:restore" justIcon color="secondary" />
+            </div>
+            <div
+                id="editor"
+                class="align-center flex min-h-0 w-full grow justify-center rounded-2xl bg-background-50 p-2"
+            >
+                <Icon class="my-auto animate-pulse text-blue-300" name="tabler:pencil" size={60} />
+            </div>
+        </Tile>
+        <Tile class="group flex flex-col gap-2 has-[[data-expanded='true']]:h-[40%]">
+            <div
+                data-expanded="true"
+                id="test-section-heading"
+                class="group flex flex-row justify-center gap-2 self-stretch align-middle"
+            >
+                <Icon
+                    class="my-auto hidden group-[[data-expanded='true']]:inline"
+                    size={25}
+                    name="tabler:chevron-down"
+                />
+                <Icon
+                    class="my-auto hidden group-[[data-expanded='false']]:inline"
+                    size={25}
+                    name="tabler:chevron-up"
+                />
+                <h2 class="select-none text-center text-2xl">Test Solution</h2>
+            </div>
+            <div class="flex w-full grow flex-row gap-4 group-has-[[data-expanded='false']]:hidden">
                 <div class="flex h-full grow flex-col gap-2">
                     <Field
                         spellcheck="false"
                         data-gramm="false"
                         data-gramm_editor="false"
                         data-enable-grammarly="false"
-                        rows={10}
                         class="h-full font-mono"
+                        labelClass="grow"
+                        wrapperClass="h-full"
+                        labelSpanClass="h-full"
                         type="textarea"
                         noTemplate
                         id="debug-input"
                         label="Input"
                     />
                 </div>
-                <div class="flex basis-1/6 flex-col justify-center gap-2 align-middle">
+                <Label
+                    label=" "
+                    innerSpanClass="h-full"
+                    class="flex flex-col gap-1 self-stretch text-center"
+                >
+                    <span class="grow"></span>
                     <CaseIndicator
-                        class="mx-auto -mb-8 mt-auto"
+                        class="mx-auto"
                         id="test-indicator"
                         status="idle"
                         size={40}
@@ -178,6 +238,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                             empty: "tabler:circle-dot"
                         }}
                     />
+                    <span class="grow"></span>
                     <Button
                         class="mx-auto mb-1 mt-auto w-fit"
                         as="button"
@@ -186,22 +247,24 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         color="secondary"
                         icon="tabler:bug">Test</Button
                     >
-                </div>
+                </Label>
                 <div class="flex h-full grow flex-col gap-2">
                     <Field
                         id="debug-output"
-                        rows={10}
-                        class="font-mono"
+                        class="h-full p-2 font-mono"
+                        labelClass="grow text-right"
+                        wrapperClass="h-full"
+                        labelSpanClass="h-full"
                         type="textarea"
                         noTemplate
                         readonly
                         label="Output"
                     />
                 </div>
-            </Tile>
-        </div>
+            </div>
+        </Tile>
     </div>
-</ContestLayout>
+</div>
 
 <script>
     import type { CodeInfo } from "@/lib/editor";
@@ -213,11 +276,14 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
     let getLang: (() => string) | null = null;
 
     document.addEventListener("astro:page-load", () => {
-        if (!window.location.pathname.match(/\/contests\/\d+\/problems\/.+\/?$/)) {
+        if (
+            import.meta.env.PROD &&
+            !window.location.pathname.match(/\/contests\/\d+\/problems\/.+\/?$/)
+        ) {
             return;
         }
 
-        const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
+        const submitButton = document.querySelector("#submit") as HTMLButtonElement;
         const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
         const editorElem = (document.querySelector("#editor") as HTMLElement)!;
         const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
@@ -235,6 +301,10 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         ) as HTMLButtonElement)!;
         const saveIndicator = (document.querySelector("#save-indicator") as HTMLElement)!;
         const resetButton = (document.querySelector("#reset-button") as HTMLButtonElement)!;
+        const testSectionHeader = (document.querySelector("#test-section-heading") as HTMLElement)!;
+        const descriptionSectionChevron = (document.querySelector(
+            "#description-section-chevron"
+        ) as HTMLElement)!;
 
         const toggleButtons = (disabled: boolean) => {
             submitButton.disabled = disabled;
@@ -249,20 +319,55 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         //const problemSlug = submitButton.dataset.problemSlug!;
         const defaultLanguage = submitButton.dataset.defaultLanguage!;
         const colorScheme = submitButton.dataset.colorPreference!;
+        const loggedIn = submitButton.dataset.loggedIn === "true";
+
+        testSectionHeader.onclick = () => {
+            const expanded = testSectionHeader.dataset.expanded === "true";
+            testSectionHeader.dataset.expanded = expanded ? "false" : "true";
+            window.localStorage.setItem(
+                `testSectionExpanded-${contestId}-${problemId}`,
+                expanded ? "false" : "true"
+            );
+        };
+
+        descriptionSectionChevron.onclick = () => {
+            const expanded = descriptionSectionChevron.dataset.expanded === "true";
+            descriptionSectionChevron.dataset.expanded = expanded ? "false" : "true";
+            window.localStorage.setItem(
+                `descriptionSectionExpanded-${contestId}-${problemId}`,
+                expanded ? "false" : "true"
+            );
+        };
+
+        if (
+            window.localStorage.getItem(`testSectionExpanded-${contestId}-${problemId}`) === "false"
+        ) {
+            testSectionHeader.dataset.expanded = "false";
+        }
+
+        if (
+            window.localStorage.getItem(`descriptionSectionExpanded-${contestId}-${problemId}`) ===
+            "false"
+        ) {
+            descriptionSectionChevron.dataset.expanded = "false";
+        }
+
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
 
-        import("@/lib/ws").then((c) => {
-            console.debug("Preparing to connect to WebSocket");
-            ws = c.default(
-                contestId,
-                problemId,
-                runMessageWrapper,
-                runMessage,
-                debugCaseIndicator,
-                testOutput,
-                toggleButtons
-            );
-        });
+        if (loggedIn) {
+            import("@/lib/ws").then((c) => {
+                console.debug("Preparing to connect to WebSocket");
+                ws = c.default(
+                    contestId,
+                    problemId,
+                    runMessageWrapper,
+                    runMessage,
+                    debugCaseIndicator,
+                    testOutput,
+                    toggleButtons
+                );
+            });
+        }
 
         import("@/lib/editor").then((c) => {
             console.debug("Creating editor");
@@ -280,6 +385,25 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             );
             editor = newEditor as monaco.editor.IStandaloneCodeEditor;
             getLang = _getLang as () => string;
+        });
+
+        import("@/lib/highlighting").then((c) => {
+            console.debug("Setting Up Code Block Highlighting");
+            c.default(
+                "#rendered-md",
+                (input) => {
+                    if (editor) {
+                        testInput.value = input.trim();
+                        runDebugButton.click();
+                    }
+                },
+                testButtonTemplate
+            );
+        });
+
+        import("@/lib/math").then((c) => {
+            console.debug("Setting Up Math Block Highlighting");
+            c.default();
         });
 
         runDebugButton.onclick = () => {
@@ -308,25 +432,6 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 toggleButtons(true);
             }
         };
-
-        import("@/lib/highlighting").then((c) => {
-            console.debug("Setting Up Code Block Highlighting");
-            c.default(
-                "#rendered-md",
-                (input) => {
-                    if (editor) {
-                        testInput.value = input.trim();
-                        runDebugButton.click();
-                    }
-                },
-                testButtonTemplate
-            );
-        });
-
-        import("@/lib/math").then((c) => {
-            console.debug("Setting Up Math Block Highlighting");
-            c.default();
-        });
     });
 
     document.addEventListener("astro:after-swap", () => {
