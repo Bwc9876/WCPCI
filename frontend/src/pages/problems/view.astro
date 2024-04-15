@@ -12,7 +12,7 @@ import For from "@/components/tera/For.astro";
 import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
-import { tag, themeClass, variable } from "@/lib/tera";
+import { themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 
 const description = `${variable("problem.name")} from ${variable("contest.name")}, WCPC. ${variable("problem.description | truncate(length=100)")}`;
@@ -103,168 +103,181 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             </div>
         </div>
     </Tile>
-</ContestLayout>
-<div class="flex grow flex-row gap-4 overflow-hidden">
-    <Tile class="group flex flex-row gap-1 overflow-hidden !p-0 has-[[data-expanded='true']]:w-2/5">
-        <div
-            class="mb-2 ms-2 mt-2 flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden"
+    <div class="flex grow flex-row gap-4 overflow-hidden">
+        <Tile
+            class="group flex flex-row gap-1 overflow-hidden !p-0 has-[[data-expanded='true']]:w-2/5"
         >
-            <h2 class="text-2xl">Description</h2>
-            <small class="text-gray-500"
-                >CPU Time: <Variable expression="problem.cpu_time" /> second(s)</small
-            >
-            <div class="overflow-y-auto">
-                <div class="overflow-y-auto" id="rendered-md">
-                    <Variable
-                        expression="render_markdown(md=problem.description) | safe"
-                        debugLorem={50}
-                    />
-                </div>
-            </div>
-        </div>
-        <div
-            data-expanded="true"
-            id="description-section-chevron"
-            class="group flex justify-center self-stretch px-2 align-middle"
-        >
-            <Icon
-                class="my-auto hidden group-[[data-expanded='true']]:inline"
-                name="tabler:chevron-left"
-                size={32}
-            />
-            <Icon
-                class="my-auto hidden group-[[data-expanded='false']]:inline"
-                name="tabler:chevron-right"
-                size={32}
-            />
-        </div>
-    </Tile>
-    <div class="group flex w-3/5 grow flex-col gap-4">
-        <Tile class="flex h-[60%] grow flex-col gap-2">
-            <h2 class="text-2xl">Editor</h2>
-            <div class="flex flex-row gap-2">
-                <img
-                    class:list={["select-none opacity-0", themeClass("", "invert", "dark:invert")]}
-                    width="32"
-                    height="32"
-                    id="language-icon"
-                />
-                <Field
-                    hideLabel
-                    noTemplate
-                    id="language-dropdown"
-                    name="Language"
-                    value=""
-                    type="select"
-                    options={[]}
-                    ><For sourceList="languages" itemName="language" slot="options_templated">
-                        <option value={variable("language[0]")}>
-                            <Variable expression="language[1]" />
-                        </option>
-                    </For></Field
-                >
-                <div
-                    id="save-indicator"
-                    aria-label="Changes Saved!"
-                    data-save-state="saved"
-                    class="group my-auto"
-                >
-                    <Icon
-                        class="my-auto text-green-600 group-[[data-save-state=saving]]:animate-pulse group-[[data-save-state=saving]]:text-accent"
-                        name="tabler:device-floppy"
-                        size={32}
-                    />
-                </div>
-                <Button id="reset-button" icon="tabler:restore" justIcon color="secondary" />
-            </div>
             <div
-                id="editor"
-                class="align-center flex min-h-0 w-full grow justify-center rounded-2xl bg-background-50 p-2"
+                class="mb-4 ms-4 mt-4 flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden"
             >
-                <Icon class="my-auto animate-pulse text-blue-300" name="tabler:pencil" size={60} />
+                <h2 class="text-2xl">Description</h2>
+                <small class="text-gray-500"
+                    >CPU Time: <Variable expression="problem.cpu_time" /> second<Variable
+                        expression="problem.cpu_time | pluralize"
+                    /></small
+                >
+                <div class="overflow-y-auto">
+                    <div class="overflow-y-auto" id="rendered-md">
+                        <Variable
+                            expression="render_markdown(md=problem.description) | safe"
+                            debugLorem={50}
+                        />
+                    </div>
+                </div>
             </div>
-        </Tile>
-        <Tile class="group flex flex-col gap-2 has-[[data-expanded='true']]:h-[40%]">
             <div
                 data-expanded="true"
-                id="test-section-heading"
-                class="group flex flex-row justify-center gap-2 self-stretch align-middle"
+                id="description-section-chevron"
+                class="group flex justify-center self-stretch px-2 align-middle"
             >
                 <Icon
                     class="my-auto hidden group-[[data-expanded='true']]:inline"
-                    size={25}
-                    name="tabler:chevron-down"
+                    name="tabler:chevron-left"
+                    size={32}
                 />
                 <Icon
                     class="my-auto hidden group-[[data-expanded='false']]:inline"
-                    size={25}
-                    name="tabler:chevron-up"
+                    name="tabler:chevron-right"
+                    size={32}
                 />
-                <h2 class="select-none text-center text-2xl">Test Solution</h2>
-            </div>
-            <div class="flex w-full grow flex-row gap-4 group-has-[[data-expanded='false']]:hidden">
-                <div class="flex h-full grow flex-col gap-2">
-                    <Field
-                        spellcheck="false"
-                        data-gramm="false"
-                        data-gramm_editor="false"
-                        data-enable-grammarly="false"
-                        class="h-full font-mono"
-                        labelClass="grow"
-                        wrapperClass="h-full"
-                        labelSpanClass="h-full"
-                        type="textarea"
-                        noTemplate
-                        id="debug-input"
-                        label="Input"
-                    />
-                </div>
-                <Label
-                    label=" "
-                    innerSpanClass="h-full"
-                    class="flex flex-col gap-1 self-stretch text-center"
-                >
-                    <span class="grow"></span>
-                    <CaseIndicator
-                        class="mx-auto"
-                        id="test-indicator"
-                        status="idle"
-                        size={40}
-                        iconMap={{
-                            idle: "tabler:circle-dashed",
-                            loading: "tabler:circle-dashed",
-                            success: "tabler:circle-arrow-right",
-                            error: "tabler:circle-x",
-                            empty: "tabler:circle-dot"
-                        }}
-                    />
-                    <span class="grow"></span>
-                    <Button
-                        class="mx-auto mb-1 mt-auto w-fit"
-                        as="button"
-                        disabled
-                        id="run-debug"
-                        color="secondary"
-                        icon="tabler:bug">Test</Button
-                    >
-                </Label>
-                <div class="flex h-full grow flex-col gap-2">
-                    <Field
-                        id="debug-output"
-                        class="h-full p-2 font-mono"
-                        labelClass="grow text-right"
-                        wrapperClass="h-full"
-                        labelSpanClass="h-full"
-                        type="textarea"
-                        noTemplate
-                        readonly
-                        label="Output"
-                    />
-                </div>
             </div>
         </Tile>
+        <div class="group flex w-3/5 grow flex-col gap-4">
+            <Tile class="flex h-[60%] grow flex-col gap-2">
+                <h2 class="text-2xl">Editor</h2>
+                <div class="flex flex-row gap-2">
+                    <img
+                        class:list={[
+                            "select-none opacity-0",
+                            themeClass("", "invert", "dark:invert")
+                        ]}
+                        width="32"
+                        height="32"
+                        id="language-icon"
+                    />
+                    <Field
+                        hideLabel
+                        noTemplate
+                        id="language-dropdown"
+                        name="Language"
+                        value=""
+                        type="select"
+                        options={[]}
+                        ><For sourceList="languages" itemName="language" slot="options_templated">
+                            <option value={variable("language[0]")}>
+                                <Variable expression="language[1]" />
+                            </option>
+                        </For></Field
+                    >
+                    <div
+                        id="save-indicator"
+                        aria-label="Changes Saved!"
+                        data-save-state="saved"
+                        class="group my-auto"
+                    >
+                        <Icon
+                            class="my-auto text-green-600 group-[[data-save-state=saving]]:animate-pulse group-[[data-save-state=saving]]:text-accent"
+                            name="tabler:device-floppy"
+                            size={32}
+                        />
+                    </div>
+                    <Button id="reset-button" icon="tabler:restore" justIcon color="secondary" />
+                </div>
+                <div
+                    id="editor"
+                    class="align-center flex min-h-0 w-full grow justify-center rounded-2xl bg-background-50 p-2"
+                >
+                    <Icon
+                        class="my-auto animate-pulse text-blue-300"
+                        name="tabler:pencil"
+                        size={60}
+                    />
+                </div>
+            </Tile>
+            <Tile class="group flex flex-col gap-2 has-[[data-expanded='true']]:h-[40%]">
+                <div
+                    data-expanded="true"
+                    id="test-section-heading"
+                    class="group flex flex-row justify-center gap-2 self-stretch align-middle"
+                >
+                    <Icon
+                        class="my-auto hidden group-[[data-expanded='true']]:inline"
+                        size={25}
+                        name="tabler:chevron-down"
+                    />
+                    <Icon
+                        class="my-auto hidden group-[[data-expanded='false']]:inline"
+                        size={25}
+                        name="tabler:chevron-up"
+                    />
+                    <h2 class="select-none text-center text-2xl">Test Solution</h2>
+                </div>
+                <div
+                    class="flex w-full grow flex-row gap-4 group-has-[[data-expanded='false']]:hidden"
+                >
+                    <div class="flex h-full grow flex-col gap-2">
+                        <Field
+                            spellcheck="false"
+                            data-gramm="false"
+                            data-gramm_editor="false"
+                            data-enable-grammarly="false"
+                            class="h-full font-mono"
+                            labelClass="grow"
+                            wrapperClass="h-full"
+                            labelSpanClass="h-full"
+                            type="textarea"
+                            noTemplate
+                            id="debug-input"
+                            label="Input"
+                        />
+                    </div>
+                    <Label
+                        label=" "
+                        innerSpanClass="h-full"
+                        class="flex flex-col gap-1 self-stretch text-center"
+                    >
+                        <span class="grow"></span>
+                        <CaseIndicator
+                            class="mx-auto"
+                            id="test-indicator"
+                            status="idle"
+                            size={40}
+                            iconMap={{
+                                idle: "tabler:circle-dashed",
+                                loading: "tabler:circle-dashed",
+                                success: "tabler:circle-arrow-right",
+                                error: "tabler:circle-x",
+                                empty: "tabler:circle-dot"
+                            }}
+                        />
+                        <span class="grow"></span>
+                        <Button
+                            class="mx-auto mb-1 mt-auto w-fit"
+                            as="button"
+                            disabled
+                            id="run-debug"
+                            color="secondary"
+                            icon="tabler:bug">Test</Button
+                        >
+                    </Label>
+                    <div class="flex h-full grow flex-col gap-2">
+                        <Field
+                            id="debug-output"
+                            class="h-full p-2 font-mono"
+                            labelClass="grow text-right"
+                            wrapperClass="h-full"
+                            labelSpanClass="h-full"
+                            type="textarea"
+                            noTemplate
+                            readonly
+                            label="Output"
+                        />
+                    </div>
+                </div>
+            </Tile>
+        </div>
     </div>
-</div>
+</ContestLayout>
 
 <script>
     import type { CodeInfo } from "@/lib/editor";

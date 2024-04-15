@@ -12,7 +12,7 @@ export interface Props {
 
 const { class: className, title, href, icon, isActive = false } = Astro.props;
 
-const activeClass = isActive ? "text-accent bg-secondary" : "";
+const activeClass = isActive ? "text-accent" : "";
 ---
 
 <Link

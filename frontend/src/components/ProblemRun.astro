@@ -47,7 +47,7 @@ const statusExpr = `${tag(`if ${objName}`)}${statusExprExists}${tag("else")}empt
         <span id="runs-msg" class="my-auto">
             <If expression={`${objName}.error`}>
                 <Variable expression={`${objName}.error`} />
-                <ElseIf expression={`${objName}`}> Passed! </ElseIf>
+                <ElseIf expression={`${objName}`}>All Tests Passed!</ElseIf>
             </If>
         </span>
         <Icon name="tabler:x" class="my-auto hidden group-data-[status=error]:inline" size={25} />

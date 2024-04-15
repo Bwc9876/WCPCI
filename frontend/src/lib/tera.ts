@@ -7,6 +7,6 @@ export const teraIf = (condition: string, t: string, f?: string) =>
 
 export const themeClass = (light: string, dark: string, system?: string) => {
     return import.meta.env.DEV
-        ? "dark"
-        : `${tag("if scheme == 'Dark'", true)}${dark}${tag("elif scheme == 'Light'")}${light}${tag("else")}${system ?? `dark:${dark}`}${tag("endif", true)}`;
+        ? system ?? dark
+        : `${tag("if scheme == 'Dark'", true)}${dark}${tag("elif scheme == 'Light'")}${light}${tag("else")}${system ?? dark}${tag("endif", true)}`;
 };

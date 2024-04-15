@@ -1,0 +1,15 @@
+@use "sass:meta";
+
+@media (prefers-color-scheme: dark) {
+    :root.system {
+        @include meta.load-css("highlight.js/styles/an-old-hope");
+    }
+}
+
+:root {
+    @include meta.load-css("highlight.js/styles/a11y-light");
+}
+
+:root.dark {
+    @include meta.load-css("highlight.js/styles/an-old-hope");
+}

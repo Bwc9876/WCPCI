@@ -1,5 +1,5 @@
 import "highlight.js/styles/default.css";
-import "highlight.js/styles/an-old-hope.css";
+import "@/styles/highlight-theme.scss";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import plaintext from "highlight.js/lib/languages/plaintext";

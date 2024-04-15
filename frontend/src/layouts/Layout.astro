@@ -47,7 +47,7 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
 
 <!doctype html>
 <!-- {% set scheme = user.color_scheme | default(value='UseSystem') %}WCPC {{ version }} -->
-<html class={noTemplate ? "system" : themeClass("light", "dark", "system")} lang="en">
+<html class:list={["group/root", themeClass("light", "dark", "system")]} lang="en">
     <head>
         <meta charset="UTF-8" />
         {noIndex && <meta name="robots" content="none" />}
@@ -107,9 +107,9 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                             <Link
                                 href="/settings/profile"
                                 color="inherit"
-                                class="group flex flex-row gap-2 rounded-full bg-secondary p-1 hover:text-accent md:pe-5"
+                                class="group flex flex-row gap-2 rounded-full bg-secondary p-1 hover:text-text-500 md:pe-5"
                             >
-                                <Avatar class="group-hover:border-2 group-hover:border-solid group-hover:border-accent-600" />
+                                <Avatar class="group-hover:border-2 group-hover:border-solid group-hover:border-accent" />
                                 <span class="my-auto hidden md:block">
                                     <Variable expression="name" debugEval="Ben C" />
                                 </span>
@@ -147,7 +147,9 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
             class:list={[
                 "grow",
                 noGrow ? "overflow-y-hidden" : "",
-                makeTile ? "flex flex-col gap-2 rounded-2xl bg-background-100 p-4" : "",
+                makeTile
+                    ? `flex flex-col gap-2 rounded-2xl bg-background-100 bg-background-100 p-4`
+                    : "",
                 className ?? ""
             ]}
             transition:animate={animate ? "slide" : "none"}
@@ -260,17 +262,17 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                     --text-900: #1d151e;
                     --text-950: #0e0b0f;
 
-                    --background-50: #f4f0f4;
-                    --background-100: #eae1ea;
-                    --background-200: #d4c4d4;
-                    --background-300: #bfa6bf;
-                    --background-400: #a989a9;
-                    --background-500: #946b94;
-                    --background-600: #765676;
-                    --background-700: #594059;
-                    --background-800: #3b2b3b;
-                    --background-900: #1e151e;
-                    --background-950: #0f0b0f;
+                    --secondary-50: #f4f0f4;
+                    --secondary-100: #eae1ea;
+                    --secondary-200: #d4c4d4;
+                    --secondary-300: #bfa6bf;
+                    --secondary-400: #a989a9;
+                    --secondary-500: #946b94;
+                    --secondary-600: #765676;
+                    --secondary-700: #594059;
+                    --secondary-800: #3b2b3b;
+                    --secondary-900: #1e151e;
+                    --secondary-950: #0f0b0f;
 
                     --primary-50: #fce5ff;
                     --primary-100: #f9ccff;
@@ -284,29 +286,30 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                     --primary-900: #2d0033;
                     --primary-950: #17001a;
 
-                    --secondary-50: #f6eef7;
-                    --secondary-100: #ecddee;
-                    --secondary-200: #dabade;
-                    --secondary-300: #c798cd;
-                    --secondary-400: #b475bd;
-                    --secondary-500: #a253ac;
-                    --secondary-600: #81428a;
-                    --secondary-700: #613267;
-                    --secondary-800: #412145;
-                    --secondary-900: #201122;
-                    --secondary-950: #100811;
+                    --background-50: #f6eef7;
+                    --background-100: #ecddee;
+                    --background-200: #dabade;
+                    --background-300: #c798cd;
+                    --background-400: #b475bd;
+                    --background-500: #a253ac;
+                    --background-600: #81428a;
+                    --background-700: #613267;
+                    --background-800: #412145;
+                    --background-900: #201122;
+                    --background-950: #100811;
 
-                    --accent-50: #fbf7ea;
-                    --accent-100: #f6eed5;
-                    --accent-200: #eddeab;
-                    --accent-300: #e4cd81;
-                    --accent-400: #dbbc57;
-                    --accent-500: #d2ac2d;
-                    --accent-600: #a88924;
-                    --accent-700: #7e671b;
-                    --accent-800: #544512;
-                    --accent-900: #2a2209;
-                    --accent-950: #151104;
+                    --accent-50: #fdf8e8;
+                    --accent-100: #faf1d1;
+                    --accent-200: #f5e2a3;
+                    --accent-300: #f0d475;
+                    --accent-400: #ecc546;
+                    --accent-500: #e7b718;
+                    --accent-600: #b99213;
+                    --accent-700: #8a6e0f;
+                    --accent-800: #5c490a;
+                    --accent-900: #2e2505;
+                    --accent-950: #171202;
+                    a: #c08ac733;
                 }
 
                 :root.dark {

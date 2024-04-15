@@ -117,7 +117,7 @@ export default (
                                 runMessage.innerText = firstWithErr.content[1];
                             } else {
                                 runMessageWrapper.setAttribute("data-status", "success");
-                                runMessage.innerText = "Passed!";
+                                runMessage.innerText = "All Tests Passed!";
                             }
                         } else {
                             runMessageWrapper.setAttribute("data-status", "loading");

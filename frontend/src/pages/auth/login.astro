@@ -1,6 +1,5 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import Debug from "@/components/tera/Debug.astro";
 import Tile from "@/components/Tile.astro";
 import Button from "@/components/Button.astro";
 import Title from "@/components/Title.astro";
@@ -8,14 +7,14 @@ import Title from "@/components/Title.astro";
 
 <Layout path="/auth/login" class="flex h-full flex-col items-center justify-center" title="Login">
     <Tile class="max-w-1/2 flex flex-col justify-center gap-3">
-        <Title>Login</Title>
+        <Title class="text-center">Login</Title>
         <p class="wrap text-center">Choose a service to login or sign up with to continue</p>
         <Button
             as="a"
             icon="tabler:brand-github"
             size="xl"
             color="custom"
-            class="flex w-full justify-center bg-[#120E0F] align-middle hover:bg-[hsl(345,13%,8%)]"
+            class="flex w-full justify-center bg-[#120E0F] align-middle text-white hover:bg-[hsl(345,13%,8%)]"
             href="/auth/login/github"
         >
             Login with GitHub
@@ -30,16 +29,5 @@ import Title from "@/components/Title.astro";
         >
             Login with Google
         </Button>
-        <Debug>
-            <form class="flex flex-row gap-2" method="post" action="/auth/login/debug">
-                <input
-                    name="email"
-                    type="email"
-                    placeholder="Email"
-                    class="mb-2 h-full w-full rounded border border-background-300 bg-background-200 p-2"
-                />
-                <button class="w-50 whitespace-nowrap rounded bg-primary px-2">Debug Login</button>
-            </form>
-        </Debug>
     </Tile>
 </Layout>

@@ -55,7 +55,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             <TableCol as="th" scope="column">
                 <If expression="has_started or is_admin or is_judge">
                     <Link
-                        color="accent"
+                        color="secondary"
+                        underline
                         href={`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`}
                     >
                         <Variable expression="problem.name" />
