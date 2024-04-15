@@ -409,6 +409,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         testInput.value = input.trim();
                         runDebugButton.click();
                     }
+                    if (testSectionHeader) {
+                        testSectionHeader.dataset.expanded = "true";
+                    }
                 },
                 testButtonTemplate
             );
