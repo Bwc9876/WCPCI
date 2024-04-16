@@ -20,6 +20,8 @@ export interface Props {
     description?: string;
     animate?: boolean;
     class?: string;
+    bodyClass?: string;
+    navSpacerClass?: string;
     makeTile?: boolean;
     noIndex?: boolean;
     noTemplate?: boolean;
@@ -33,6 +35,8 @@ const {
     description = "Compete in contests and earn prizes at WCPC",
     path: urlSuffix,
     class: className,
+    bodyClass,
+    navSpacerClass,
     makeTile = false,
     noIndex = false,
     animate = true,
@@ -89,63 +93,82 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
     <body
         class:list={[
             noGrow ? "h-screen max-h-screen overflow-hidden" : "min-h-screen",
-            "container mx-auto flex flex-col justify-stretch bg-background px-2 text-text md:px-5"
+            "container mx-auto flex flex-col justify-stretch bg-background px-2 text-text md:px-5",
+            bodyClass ?? ""
         ]}
     >
         <header>
-            <Tile as="nav" class="my-4 flex justify-center gap-3">
-                <Link color="white" aria-label="Home" href="/" class="flex flex-row gap-2 sm:me-4">
-                    <Image src={iconBig} alt="WCPC Logo" width={50} height={50} />
-                    <span class="my-auto hidden text-lg font-bold sm:inline">WCPC</span>
+            <Tile
+                as="nav"
+                class="my-4 flex flex-row flex-wrap justify-center gap-2 text-lg font-bold"
+            >
+                <Link color="white" aria-label="Home" href="/" class="me-4 flex flex-row gap-2">
+                    <Image
+                        class="my-auto h-[45px] w-[45px]"
+                        src={iconBig}
+                        alt="WCPC Logo"
+                        width={50}
+                        height={50}
+                    />
+                    <span class="my-auto text-xl font-bold">WCPC</span>
                 </Link>
-                <Link color="white" class="my-auto" href="/contests">All Contests</Link>
-                <slot name="nav-left" />
-                <span class="flex-grow"></span>
-                {
-                    !noTemplate && (
-                        <If debugEval={true} expression="logged_in">
-                            <Link
-                                href="/settings/profile"
-                                color="inherit"
-                                class="group flex flex-row gap-2 rounded-full bg-secondary p-1 hover:text-text-500 md:pe-5"
-                            >
-                                <Avatar class="group-hover:border-2 group-hover:border-solid group-hover:border-accent" />
-                                <span class="my-auto hidden md:block">
-                                    <Variable expression="name" debugEval="Ben C" />
-                                </span>
-                            </Link>
-                            <Link
-                                aria-label="Logout"
-                                href="/auth/logout"
-                                class="group flex rounded-full bg-secondary py-1 pe-2 ps-3"
-                            >
-                                <Icon
-                                    size={30}
-                                    name="tabler:logout"
-                                    class="my-auto text-text group-hover:text-red-500"
-                                />
-                            </Link>
-                            <Else slot="else">
-                                <Button
-                                    as="a"
-                                    href="/auth/login"
-                                    color="primary"
-                                    icon="tabler:login-2"
-                                    class="my-auto"
-                                    size="lg"
-                                >
-                                    Login / Sign-Up
-                                </Button>
-                            </Else>
-                        </If>
-                    )
-                }
+                <div class="flex flex-row flex-wrap justify-center gap-4 sm:grow">
+                    <div class="flex flex-row flex-wrap justify-center gap-2 justify-self-start">
+                        <Link color="white" class="my-auto" href="/contests">All Contests</Link>
+                        <slot name="nav-left" />
+                    </div>
+                    <span class:list={["hidden grow", navSpacerClass ?? "sm:block"]}></span>
+                    {
+                        !noTemplate && (
+                            <If debugEval={true} expression="logged_in">
+                                <div class="flex flex-row justify-center gap-2 justify-self-end align-middle">
+                                    <Link
+                                        href="/settings/profile"
+                                        color="inherit"
+                                        class="group flex w-fit flex-row gap-2 rounded-full bg-secondary p-1 hover:text-text-500"
+                                    >
+                                        <Avatar
+                                            size={45}
+                                            class="group-hover:border-2 group-hover:border-solid group-hover:border-accent"
+                                        />
+                                        {/*<span class="my-auto">
+                                            <Variable expression="name | truncate(length=20)" debugEval="Benjamin Wade Crocker" />
+                                        </span>*/}
+                                    </Link>
+                                    {/*<Link
+                                        aria-label="Logout"
+                                        href="/auth/logout"
+                                        class="group flex w-fit rounded-full bg-secondary py-1 pe-2 ps-3"
+                                    >
+                                        <Icon
+                                            size={30}
+                                            name="tabler:logout"
+                                            class="my-auto text-text group-hover:text-red-500"
+                                        />
+                                    </Link>*/}
+                                </div>
+                                <Else slot="else">
+                                    <Button
+                                        as="a"
+                                        href="/auth/login"
+                                        color="primary"
+                                        icon="tabler:login-2"
+                                        class="my-auto w-fit"
+                                        size="lg"
+                                    >
+                                        Login / Sign-Up
+                                    </Button>
+                                </Else>
+                            </If>
+                        )
+                    }
+                </div>
             </Tile>
         </header>
         <main
             id="main"
             class:list={[
-                "grow",
+                "grow overflow-x-hidden",
                 noGrow ? "overflow-y-hidden" : "",
                 makeTile
                     ? `flex flex-col gap-2 rounded-2xl bg-background-100 bg-background-100 p-4`

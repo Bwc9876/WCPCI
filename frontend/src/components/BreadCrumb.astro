@@ -9,7 +9,7 @@ export interface Props {
 const { entries, class: className } = Astro.props;
 ---
 
-<ul class:list={["flex flex-row gap-2", className ?? ""]}>
+<ul class:list={["flex flex-row flex-wrap gap-2", className ?? ""]}>
     {
         entries.map(([name, link], i) => (
             <>

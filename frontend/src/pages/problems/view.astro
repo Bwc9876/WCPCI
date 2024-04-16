@@ -19,9 +19,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 ---
 
 <ContestLayout
-    noGrow
+    bodyClass="lg:h-screen lg:max-h-screen lg:overflow-hidden"
     path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`
-    class="flex flex-col justify-stretch gap-4"
+    class="flex flex-col gap-4 overflow-y-hidden"
     title=`${variable("problem.name")}`
     description={description}
 >
@@ -47,7 +47,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 ]
             ]}
         />
-        <div class="flex flex-row gap-4">
+        <div class="flex flex-row flex-wrap gap-4">
             <Title class="my-auto"><Variable expression="problem.name" /></Title>
             <If expression="logged_in">
                 <ProblemRun casesName="case_count" objName="last_run" class="grow" />
@@ -103,12 +103,12 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             </div>
         </div>
     </Tile>
-    <div class="flex grow flex-row gap-4 overflow-hidden">
+    <div class="flex min-h-0 grow flex-col gap-4 lg:flex-row">
         <Tile
-            class="group flex flex-row gap-1 overflow-hidden !p-0 has-[[data-expanded='true']]:w-2/5"
+            class="group flex flex-row gap-1 self-stretch overflow-hidden lg:!p-0 lg:has-[[data-expanded='true']]:w-2/5"
         >
             <div
-                class="mb-4 ms-4 mt-4 flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden"
+                class="flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden lg:mb-4 lg:ms-4 lg:mt-4"
             >
                 <h2 class="text-2xl">Description</h2>
                 <small class="text-gray-500"
@@ -116,7 +116,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         expression="problem.cpu_time | pluralize"
                     /></small
                 >
-                <div class="overflow-y-auto">
+                <div class="h-96 overflow-y-auto lg:h-full">
                     <div class="overflow-y-auto" id="rendered-md">
                         <Variable
                             expression="render_markdown(md=problem.description) | safe"
@@ -128,7 +128,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             <div
                 data-expanded="true"
                 id="description-section-chevron"
-                class="group flex justify-center self-stretch px-2 align-middle"
+                class="group hidden justify-center self-stretch px-2 align-middle lg:flex"
             >
                 <Icon
                     class="my-auto hidden group-[[data-expanded='true']]:inline"
@@ -142,8 +142,8 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 />
             </div>
         </Tile>
-        <div class="group flex w-3/5 grow flex-col gap-4">
-            <Tile class="flex h-[60%] grow flex-col gap-2">
+        <div class="group flex grow flex-col gap-4 lg:w-3/5">
+            <Tile class="flex min-h-72 grow flex-col gap-2 lg:h-[60%]">
                 <h2 class="text-2xl">Editor</h2>
                 <div class="flex flex-row gap-2">
                     <img
@@ -194,11 +194,13 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                     />
                 </div>
             </Tile>
-            <Tile class="group flex flex-col gap-2 has-[[data-expanded='true']]:h-[40%]">
+            <Tile
+                class="group flex flex-col gap-2 max-lg:h-96 lg:has-[[data-expanded='true']]:h-[40%]"
+            >
                 <div
                     data-expanded="true"
                     id="test-section-heading"
-                    class="group flex flex-row justify-center gap-2 self-stretch align-middle"
+                    class="group hidden flex-row justify-center gap-2 self-stretch align-middle lg:flex"
                 >
                     <Icon
                         class="my-auto hidden group-[[data-expanded='true']]:inline"
@@ -212,8 +214,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                     />
                     <h2 class="select-none text-center text-2xl">Test Solution</h2>
                 </div>
+                <h2 class="text-2xl lg:hidden">Test Solution</h2>
                 <div
-                    class="flex w-full grow flex-row gap-4 group-has-[[data-expanded='false']]:hidden"
+                    class="flex w-full grow flex-row gap-4 lg:group-has-[[data-expanded='false']]:hidden"
                 >
                     <div class="flex h-full grow flex-col gap-2">
                         <Field

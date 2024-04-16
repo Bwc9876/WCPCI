@@ -2,12 +2,10 @@
 import Form from "@/components/Form.astro";
 import Field from "@/components/Field.astro";
 import For from "../tera/For.astro";
-import Else from "../tera/Else.astro";
 import { variable } from "@/lib/tera";
 import Avatar from "../Avatar.astro";
 import Variable from "../tera/Variable.astro";
 import Button from "../Button.astro";
-import Title from "../Title.astro";
 ---
 
 <Form class="!w-full !max-w-full">
@@ -69,9 +67,10 @@ import Title from "../Title.astro";
                 max={1000}
             />
         </div>
-        <div class="flex flex-col gap-4 lg:w-4/6 lg:px-8">
+        <div class="flex flex-col gap-4 lg:w-1/2 lg:px-8">
             <Field
                 name="add-judge"
+                label="Judges"
                 type="select"
                 id="new-judge-input"
                 options={[["~~Add~~", "Select a User To Add"]]}

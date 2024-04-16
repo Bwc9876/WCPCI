@@ -3,15 +3,18 @@ import Link from "@/components/Link.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Layout from "@/layouts/Layout.astro";
 import type { Props as LayoutProps } from "@/layouts/Layout.astro";
-import { variable } from "@/lib/tera";
+import { teraIf, variable } from "@/lib/tera";
 
 export type Props = LayoutProps;
 
-const { title, ...rest } = Astro.props;
+const { title, navSpacerClass, ...rest } = Astro.props;
+
+const debugLoggedIn = true;
 ---
 
 <Layout
     title={title ? `${title} - ${variable("contest.name")}` : variable("contest.name")}
+    navSpacerClass={`${teraIf("logged_in", "md:block", "lg:block", "md:block", true)}${navSpacerClass ? ` ${navSpacerClass}` : ""}`}
     {...rest}
 >
     <Fragment slot="head">
@@ -20,7 +23,7 @@ const { title, ...rest } = Astro.props;
     <Fragment slot="nav-left">
         <Link
             color="white"
-            class="my-auto border-l-2 border-l-secondary-200 ps-2"
+            class="my-auto lg:border-l-2 lg:border-l-secondary-200 lg:ps-2"
             href={`/contests/${variable("contest.id")}`}
         >
             <Variable expression="contest.name" />

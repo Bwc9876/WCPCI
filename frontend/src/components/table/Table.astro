@@ -11,24 +11,29 @@ export interface Props extends HTMLAttributes<"table"> {
 const { class: className, headings = [], ...rest } = Astro.props;
 ---
 
-<table
-    class:list={["table-auto border-2 border-solid border-secondary-200", className ?? ""]}
-    {...rest}
->
-    <thead>
-        <TableRow class="border-b-solid border-b-2 border-b-secondary-200 !bg-secondary-200">
-            <slot name="header">
-                {
-                    headings.map((heading) => (
-                        <TableCol as="th" scope="col" class="text-left">
-                            {heading}
-                        </TableCol>
-                    ))
-                }
-            </slot>
-        </TableRow>
-    </thead>
-    <tbody>
-        <slot />
-    </tbody>
-</table>
+<div class="w-full overflow-x-auto">
+    <table
+        class:list={[
+            "w-full table-auto border-2 border-solid border-secondary-200",
+            className ?? ""
+        ]}
+        {...rest}
+    >
+        <thead>
+            <TableRow class="border-b-solid border-b-2 border-b-secondary-200 !bg-secondary-200">
+                <slot name="header">
+                    {
+                        headings.map((heading) => (
+                            <TableCol as="th" scope="col" class="text-left">
+                                {heading}
+                            </TableCol>
+                        ))
+                    }
+                </slot>
+            </TableRow>
+        </thead>
+        <tbody>
+            <slot />
+        </tbody>
+    </table>
+</div>
