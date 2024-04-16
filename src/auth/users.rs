@@ -104,7 +104,7 @@ impl User {
         }
     }
 
-    pub async fn login_oauth<'a>(
+    pub async fn login_with<'a>(
         db: &mut DbPoolConnection,
         cookies: &'a CookieJar<'a>,
         data: impl UserMigration,
@@ -189,6 +189,12 @@ impl User {
                 .map_err(|e| e.to_string())?;
 
         Ok(user)
+    }
+}
+
+impl UserMigration for User {
+    fn migrate(self, _default_language: &str) -> User {
+        self
     }
 }
 

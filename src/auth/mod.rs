@@ -22,6 +22,7 @@ use self::{
 
 mod github;
 mod google;
+mod saml;
 
 pub mod csrf;
 pub mod sessions;
@@ -112,6 +113,7 @@ pub fn stage() -> AdHoc {
             });
         rocket
             .manage(AdminUsers(admins))
+            .attach(saml::stage())
             .attach(OAuth2::<GitHubLogin>::fairing("github"))
             .attach(OAuth2::<GoogleLogin>::fairing("google"))
             .attach(csrf::stage())
@@ -150,7 +152,7 @@ trait CallbackHandler {
                         Ok(user_info) => {
                             let db_conn = &mut *db;
                             if let Err(why) =
-                                User::login_oauth(db_conn, cookies, user_info, default_language)
+                                User::login_with(db_conn, cookies, user_info, default_language)
                                     .await
                             {
                                 error!("Failed to log in user: {:?}", why);

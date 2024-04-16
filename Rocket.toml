@@ -21,6 +21,18 @@ public_dir = "public"
 admins = [ "bwc9876@gmail.com" ]
 timezone = "America/New_York"
 
+[debug.saml]
+entity_id = "urn:wcpc:saml-debugging"
+idp_meta_url = "https://mocksaml.com/api/namespace/wcpc_testing_provider/saml/metadata"
+contact_person = "Ben"
+contact_email = "bwc9876@example.org"
+contact_telephone = "555-555-5555"
+organization = "WCPC"
+
+[debug.saml.attrs]
+display_name = "firstName"
+email = "email"
+
 [debug.run]
 max_program_length = 100000
 default_language = "python"

@@ -1,4 +1,5 @@
 /target
+saml_testing/
 database.sqlite*
 .sqlx/
 .dev.env
