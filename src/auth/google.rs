@@ -130,6 +130,20 @@ impl CallbackHandler for GoogleLogin {
         user: &User,
         user_info: Self::IntermediateUserInfo,
     ) -> Result<bool, String> {
+        let other_exists = sqlx::query!(
+            "SELECT * FROM user WHERE google_id = ? AND id != ?",
+            user_info.user_id,
+            user.id
+        )
+        .fetch_optional(&mut **db)
+        .await
+        .map_err(|e| e.to_string())?
+        .is_some();
+
+        if other_exists {
+            return Ok(false);
+        }
+
         sqlx::query!(
             "UPDATE user SET google_id = ? WHERE id = ?",
             user_info.user_id,

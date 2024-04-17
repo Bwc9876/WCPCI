@@ -30,6 +30,10 @@ impl TemplatedForm for ProfileFormTemplate<'_> {
                 "display_name".to_string(),
                 self.user.display_name.as_deref().unwrap_or("").to_string(),
             ),
+            (
+                "profile_picture_source".to_string(),
+                self.user.profile_picture_source.clone(),
+            ),
         ])
     }
 }
@@ -40,6 +44,8 @@ pub struct ProfileForm<'r> {
     bio: &'r str,
     #[field(validate = len(..=32))]
     display_name: &'r str,
+    #[field(validate = len(..=10))]
+    profile_picture_source: &'r str,
 }
 
 #[get("/profile")]
@@ -69,17 +75,23 @@ pub async fn profile_post(
         let display_name = if name.is_empty() { None } else { Some(name) };
         user.display_name = display_name.map(|s| s.to_string());
         user.bio = value.bio.to_string();
-        let res = sqlx::query!(
-            "UPDATE user SET bio = ?, display_name = ? WHERE id = ?",
-            value.bio,
-            display_name,
-            user.id
-        )
-        .execute(&mut **db)
-        .await;
-        if let Err(why) = res {
-            error!("Failed to update user {}: {:?}", user.id, why);
-            return SettingsProfilePostResponse::Error(Status::InternalServerError);
+        user.profile_picture_source = value.profile_picture_source.to_string();
+        if value.profile_picture_source == "gravatar" || value.profile_picture_source == "github" {
+            let res = sqlx::query!(
+                "UPDATE user SET bio = ?, display_name = ?, profile_picture_source = ? WHERE id = ?",
+                value.bio,
+                display_name,
+                value.profile_picture_source,
+                user.id
+            )
+            .execute(&mut **db)
+            .await;
+            if let Err(why) = res {
+                error!("Failed to update user {}: {:?}", user.id, why);
+                return SettingsProfilePostResponse::Error(Status::InternalServerError);
+            }
+        } else {
+            return SettingsProfilePostResponse::Error(Status::BadRequest);
         }
     };
 

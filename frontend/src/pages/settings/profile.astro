@@ -3,8 +3,6 @@ import Settings from "@/layouts/Settings.astro";
 import Form from "@/components/Form.astro";
 import Field from "@/components/Field.astro";
 import { variable } from "@/lib/tera";
-import Label from "@/components/Label.astro";
-import Button from "@/components/Button.astro";
 ---
 
 <Settings path="/settings/profile" title="Profile">
@@ -25,21 +23,15 @@ import Button from "@/components/Button.astro";
             type="textarea"
             help="Write a little about yourself, this will be public when someone views your profile"
         />
-        <Label
+        <Field
             label="Profile Picture"
-            help="Profile pictures are taken from Gravatar, click the button above to login/create a gravatar account and set your picture"
-        >
-            <Button
-                class="my-1 w-fit"
-                as="a"
-                size="md"
-                color="secondary"
-                icon="tabler:brand-gravatar"
-                href="https://gravatar.com/connect"
-                target="_blank"
-            >
-                Set Profile Picture on Gravatar.com
-            </Button>
-        </Label>
+            name="profile_picture_source"
+            help="Select which service to use for profile pictures. Gravatar is the default but you can use GitHub if it's linked"
+            type="select"
+            options={[
+                ["gravatar", "Gravatar"],
+                ["github", "GitHub"]
+            ]}
+        />
     </Form>
 </Settings>

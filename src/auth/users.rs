@@ -80,7 +80,6 @@ pub struct User {
     pub default_language: String,
     pub created_at: NaiveDateTime,
     pub profile_picture_source: String,
-    pub gravatar_email: Option<String>,
     pub github_id: Option<i64>,
     pub google_id: Option<String>,
 }
@@ -104,7 +103,6 @@ impl User {
             profile_picture_source: "gravatar".to_string(),
             bio: String::new(),
             email,
-            gravatar_email: None,
             default_display_name: display_name,
             color_scheme: ColorScheme::default(),
             default_language: default_language.to_string(),

@@ -17,7 +17,7 @@ export default defineConfig({
     compressHTML: true,
     integrations: [
         tailwind({ nesting: true }),
-        icon(),
+        icon({ include: { tabler: ["*"] } }),
         shield({ sri: { hashesModule: modulePath } })
     ]
 });

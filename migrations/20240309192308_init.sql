@@ -12,9 +12,8 @@ CREATE TABLE IF NOT EXISTS user (
     default_language TEXT NOT NULL,
     color_scheme TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    gravatar_email TEXT,
-    github_id INTEGER,
-    google_id TEXT
+    github_id INTEGER UNIQUE,
+    google_id TEXT UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS session (

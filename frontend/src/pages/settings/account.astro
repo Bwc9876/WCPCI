@@ -5,6 +5,7 @@ import Field from "@/components/Field.astro";
 import { variable } from "@/lib/tera";
 import Button from "@/components/Button.astro";
 import Label from "@/components/Label.astro";
+import Connection from "@/components/Connection.astro";
 ---
 
 <Settings path="/settings/account" title="Account">
@@ -13,10 +14,18 @@ import Label from "@/components/Label.astro";
             noTemplate
             label="Email"
             type="email"
-            help="Your email comes from the service you used to initially sign in. To sign in with another service make sure it uses the same email"
+            help="Your email comes from the service you used to initially register. To sign in with another service link it below"
             value={variable("user.email")}
             readonly
         />
+        <Label
+            innerSpanClass="flex flex-col w-full gap-2"
+            label="Connections"
+            help="You can link other services to your account as an option to sign in with."
+        >
+            <Connection name="github" label="GitHub" icon="tabler:brand-github" />
+            <Connection name="google" label="Google" icon="tabler:brand-google" />
+        </Label>
         <Label
             label="Delete Account"
             help="This will delete your account and all associated data. This action is irreversible."

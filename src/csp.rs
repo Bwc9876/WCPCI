@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 const SRI_HASHES_FILE: &str = "sriHashes.json";
 const GRAVATAR_URL: &str = "https://www.gravatar.com/avatar/";
+const GH_AVATAR_URL: &str = "https://avatars.githubusercontent.com/u/";
 const GOOGLE_FONTS_URL: &str = "https://fonts.googleapis.com/ https://fonts.gstatic.com/";
 const TABLER_URL: &str =
     "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/";
@@ -36,7 +37,7 @@ fn stage_inner(path: &Path) -> AdHoc {
         "require-trusted-types-for 'script'".to_string(),
         format!("style-src 'self' 'unsafe-inline' {GOOGLE_FONTS_URL}"),
         format!("font-src 'self' data: {GOOGLE_FONTS_URL}"),
-        format!("img-src 'self' {GRAVATAR_URL} {TABLER_URL}"),
+        format!("img-src 'self' {GRAVATAR_URL} {GH_AVATAR_URL} {TABLER_URL}"),
         format!(
             "script-src 'self' 'unsafe-inline' {} {}",
             join_hashes(&hashes.ext_script_hashes),

@@ -64,7 +64,6 @@ impl Participant {
                     created_at: row.created_at,
                     github_id: row.github_id,
                     google_id: row.google_id,
-                    gravatar_email: row.gravatar_email,
                 };
                 (participant, user)
             })

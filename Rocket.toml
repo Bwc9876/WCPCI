@@ -18,7 +18,7 @@ url = "http://localhost:8000"
 secret_key = "12345678901234567890123456789012345678901234"
 template_dir = "frontend/dist"
 public_dir = "public"
-admins = [ "bwc9876@gmail.com" ]
+admins = [ "bwc9876@example.com" ]
 timezone = "America/New_York"
 
 [debug.saml]

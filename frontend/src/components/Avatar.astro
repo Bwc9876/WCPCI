@@ -1,9 +1,9 @@
 ---
-import { variable } from "@/lib/tera";
+import { teraIf, variable } from "@/lib/tera";
 import type { HTMLAttributes } from "astro/types";
 
 export interface Props extends HTMLAttributes<"img"> {
-    emailVar?: string;
+    userVar?: string;
     name?: string;
     size?: number;
     noTemplate?: boolean;
@@ -11,7 +11,7 @@ export interface Props extends HTMLAttributes<"img"> {
 
 const {
     name,
-    emailVar = "user.email",
+    userVar = "user",
     size = 40,
     noTemplate = false,
     class: className,
@@ -21,7 +21,11 @@ const {
 const src =
     noTemplate || import.meta.env.DEV
         ? `https://gravatar.com/avatar/5aec02087368de589b8d33275c370ca7e876c956006aebc96d1bbc6c90e5e340?size=${size}&d=identicon&r=pg`
-        : variable(`gravatar(email=${emailVar}, size=${size})`);
+        : teraIf(
+              `${userVar}.profile_picture_source == 'github' and ${userVar}.github_id`,
+              `https://avatars.githubusercontent.com/u/${variable("user.github_id")}?s=${size}&v=4`,
+              variable(`gravatar(email=${userVar}.email, size=${size})`)
+          );
 ---
 
 <img
