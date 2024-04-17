@@ -71,6 +71,7 @@ impl Decode<'_, sqlx::Sqlite> for ColorScheme {
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct User {
     pub id: i64,
+    pub sso_id: String,
     pub email: String,
     pub bio: String,
     pub default_display_name: String,
@@ -78,10 +79,10 @@ pub struct User {
     pub color_scheme: ColorScheme,
     pub default_language: String,
     pub created_at: NaiveDateTime,
-}
-
-pub trait UserMigration {
-    fn migrate(self, default_language: &str) -> User;
+    pub profile_picture_source: String,
+    pub gravatar_email: Option<String>,
+    pub github_id: Option<i64>,
+    pub google_id: Option<String>,
 }
 
 impl User {
@@ -91,36 +92,35 @@ impl User {
             .unwrap_or(&self.default_display_name)
     }
 
-    pub fn temporary(email: String, display_name: String, default_language: &str) -> Self {
+    pub fn temporary(
+        id: String,
+        email: String,
+        display_name: String,
+        default_language: &str,
+    ) -> Self {
         Self {
             id: 0,
+            sso_id: id,
+            profile_picture_source: "gravatar".to_string(),
             bio: String::new(),
             email,
+            gravatar_email: None,
             default_display_name: display_name,
             color_scheme: ColorScheme::default(),
             default_language: default_language.to_string(),
             display_name: None,
             created_at: chrono::offset::Utc::now().naive_utc(),
+            github_id: None,
+            google_id: None,
         }
     }
 
-    pub async fn login_with<'a>(
+    pub async fn login(
+        &self,
         db: &mut DbPoolConnection,
-        cookies: &'a CookieJar<'a>,
-        data: impl UserMigration,
-        default_language: &str,
+        cookies: &CookieJar<'_>,
     ) -> Result<(), String> {
-        let user: User = data.migrate(default_language);
-
-        let existing = Self::get_by_email(db, &user.email).await.unwrap();
-
-        let user = if let Some(user) = existing {
-            user
-        } else {
-            user.insert(db).await.map_err(|e| e.to_string())?
-        };
-
-        let session = Session::create(db, user.id).await?;
+        let session = Session::create(db, self.id).await?;
 
         let expires =
             OffsetDateTime::from_unix_timestamp(session.expires_at.and_utc().timestamp()).unwrap();
@@ -135,10 +135,40 @@ impl User {
         Ok(())
     }
 
+    async fn register<'a>(
+        self,
+        db: &mut DbPoolConnection,
+        cookies: &'a CookieJar<'a>,
+    ) -> Result<User, String> {
+        let user = self.insert(db).await.map_err(|e| e.to_string())?;
+        user.login(db, cookies).await?;
+        Ok(user)
+    }
+
+    pub async fn login_or_register<'a>(
+        self,
+        db: &mut DbPoolConnection,
+        cookies: &'a CookieJar<'a>,
+    ) -> Result<(User, bool), String> {
+        let existing = sqlx::query_as!(User, "SELECT * FROM user WHERE sso_id = ?", self.sso_id)
+            .fetch_optional(&mut **db)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(user) = existing {
+            user.login(db, cookies).await?;
+            Ok((user, false))
+        } else {
+            let user = self.register(db, cookies).await;
+            user.map(|u| (u, true))
+        }
+    }
+
     pub async fn insert(self, db: &mut DbPoolConnection) -> Result<User, String> {
         let new = sqlx::query_as!(
             User,
-            "INSERT INTO user (email, default_display_name, color_scheme, default_language) VALUES (?, ?, ?, ?) RETURNING *",
+            "INSERT INTO user (sso_id, email, default_display_name, color_scheme, default_language) VALUES (?, ?, ?, ?, ?) RETURNING *",
+            self.sso_id,
             self.email,
             self.default_display_name,
             self.color_scheme,
@@ -176,25 +206,6 @@ impl User {
             .map_err(|e| e.to_string())?;
 
         Ok(users)
-    }
-
-    async fn get_by_email(
-        db: &mut DbPoolConnection,
-        username: &str,
-    ) -> Result<Option<User>, String> {
-        let user: Option<User> =
-            sqlx::query_as!(User, "SELECT * FROM user WHERE email = ?", username)
-                .fetch_optional(&mut **db)
-                .await
-                .map_err(|e| e.to_string())?;
-
-        Ok(user)
-    }
-}
-
-impl UserMigration for User {
-    fn migrate(self, _default_language: &str) -> User {
-        self
     }
 }
 

@@ -2,22 +2,23 @@
 
 use log::{error, warn};
 use rocket::{
-    catch, catchers, fairing::AdHoc, get, http::CookieJar, response::Redirect, routes, State,
+    catch, catchers,
+    fairing::AdHoc,
+    get,
+    http::{CookieJar, Status},
+    response::Redirect,
+    routes,
 };
 use rocket_dyn_templates::Template;
-use rocket_oauth2::{OAuth2, TokenResponse};
 
 use crate::{
     context_with_base,
     db::{DbConnection, DbPoolConnection},
-    run::CodeInfo,
 };
 
 use self::{
-    github::GitHubLogin,
-    google::GoogleLogin,
     sessions::Session,
-    users::{AdminUsers, User, UserMigration},
+    users::{AdminUsers, User},
 };
 
 mod github;
@@ -58,50 +59,6 @@ async fn logout(mut db: DbConnection, cookies: &CookieJar<'_>) -> Redirect {
     Redirect::to("/")
 }
 
-#[get("/login/github")]
-fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> Redirect {
-    oauth2.get_redirect(cookies, &["user:read"]).unwrap()
-}
-
-#[get("/callback/github")]
-async fn github_callback(
-    mut db: DbConnection,
-    token: TokenResponse<GitHubLogin>,
-    cookies: &CookieJar<'_>,
-    code_info: &State<CodeInfo>,
-) -> Redirect {
-    let handler = GitHubLogin(token.access_token().to_string());
-    handler
-        .handle_callback(&mut db, cookies, &code_info.run_config.default_language)
-        .await
-}
-
-#[get("/login/google")]
-fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> Redirect {
-    oauth2
-        .get_redirect(
-            cookies,
-            &[
-                "https://www.googleapis.com/auth/userinfo.email",
-                "https://www.googleapis.com/auth/userinfo.profile",
-            ],
-        )
-        .unwrap()
-}
-
-#[get("/callback/google")]
-async fn google_callback(
-    mut db: DbConnection,
-    token: TokenResponse<GoogleLogin>,
-    cookies: &CookieJar<'_>,
-    code_info: &State<CodeInfo>,
-) -> Redirect {
-    let handler = GoogleLogin(token.access_token().to_string());
-    handler
-        .handle_callback(&mut db, cookies, &code_info.run_config.default_language)
-        .await
-}
-
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Auth App", |rocket| async {
         let admins: Vec<String> = rocket
@@ -114,74 +71,97 @@ pub fn stage() -> AdHoc {
         rocket
             .manage(AdminUsers(admins))
             .attach(saml::stage())
-            .attach(OAuth2::<GitHubLogin>::fairing("github"))
-            .attach(OAuth2::<GoogleLogin>::fairing("google"))
+            .attach(github::stage())
+            .attach(google::stage())
             .attach(csrf::stage())
             .register("/", catchers![unauthorized])
-            .mount(
-                "/auth",
-                routes![
-                    login,
-                    logout,
-                    github_login,
-                    github_callback,
-                    google_login,
-                    google_callback // TODO: Add SAML Option: https://github.com/njaremko/samael
-                ],
-            )
+            .mount("/auth", routes![login, logout,])
     })
 }
 
 #[rocket::async_trait]
 trait CallbackHandler {
-    type IntermediateUserInfo: serde::de::DeserializeOwned + UserMigration + Sync + Send;
+    type IntermediateUserInfo: serde::de::DeserializeOwned + Sync + Send;
     const SERVICE_NAME: &'static str;
 
     fn get_request_client(&self) -> reqwest::RequestBuilder;
+
+    async fn get_user(
+        &self,
+        db: &mut DbPoolConnection,
+        user: Self::IntermediateUserInfo,
+    ) -> Result<Option<User>, String>;
+
+    async fn link_to(
+        &self,
+        db: &mut DbPoolConnection,
+        user: &User,
+        user_info: Self::IntermediateUserInfo,
+    ) -> Result<bool, String>;
+
+    async fn handle_link_callback(
+        &self,
+        db: &mut DbPoolConnection,
+        user: &User,
+    ) -> Result<Result<Redirect, Status>, String> {
+        let user_info = self.fetch_user_info().await?;
+        self.link_to(db, user, user_info).await.map(|linked| {
+            if linked {
+                Ok(Redirect::to("/settings/account"))
+            } else {
+                Err(Status::Conflict)
+            }
+        })
+    }
 
     async fn handle_callback(
         &self,
         db: &mut DbPoolConnection,
         cookies: &CookieJar<'_>,
-        default_language: &str,
-    ) -> rocket::response::Redirect {
-        match self.get_request_client().send().await {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    match resp.json::<Self::IntermediateUserInfo>().await {
-                        Ok(user_info) => {
-                            let db_conn = &mut *db;
-                            if let Err(why) =
-                                User::login_with(db_conn, cookies, user_info, default_language)
-                                    .await
-                            {
-                                error!("Failed to log in user: {:?}", why);
-                            }
-                        }
-                        Err(why) => {
-                            error!(
-                                "Failed to parse user info from {}: {why:?}",
-                                Self::SERVICE_NAME
-                            );
-                        }
-                    }
-                } else {
-                    error!(
-                        "Failed to get user info from {}: {:?}",
-                        Self::SERVICE_NAME,
-                        resp.text().await
-                    );
-                }
-            }
-            Err(why) => {
-                error!(
-                    "Failed to send request to {}: {:?}",
-                    Self::SERVICE_NAME,
-                    why
-                );
-            }
-        }
+    ) -> Result<Result<Redirect, Status>, String> {
+        let user_info = self.fetch_user_info().await?;
 
-        Redirect::to("/")
+        let db_conn = &mut *db;
+
+        let user = self
+            .get_user(db_conn, user_info)
+            .await
+            .map_err(|e| format!("Failed to get user info from {}: {e:?}", Self::SERVICE_NAME))?;
+
+        if let Some(user) = user {
+            user.login(db_conn, cookies)
+                .await
+                .map_err(|e| format!("Failed to login user from {}: {e:?}", Self::SERVICE_NAME))?;
+            Ok(Ok(Redirect::to("/")))
+        } else {
+            Ok(Err(Status::Unauthorized))
+        }
+    }
+
+    async fn fetch_user_info(&self) -> Result<Self::IntermediateUserInfo, String> {
+        let resp = self
+            .get_request_client()
+            .send()
+            .await
+            .map_err(|e| format!("Failed to send request to {}: {e:?}", Self::SERVICE_NAME))?;
+
+        if resp.status().is_success() {
+            let user_info = resp
+                .json::<Self::IntermediateUserInfo>()
+                .await
+                .map_err(|e| {
+                    format!(
+                        "Failed to parse user info from {}: {e:?}",
+                        Self::SERVICE_NAME
+                    )
+                })?;
+            Ok(user_info)
+        } else {
+            Err(format!(
+                "Failed to get user info from {}: {}",
+                Self::SERVICE_NAME,
+                resp.status()
+            ))
+        }
     }
 }

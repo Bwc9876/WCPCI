@@ -183,27 +183,27 @@ async fn acs(
             })
             .collect::<HashMap<_, _>>();
 
-        if let (Some(display_name), Some(email)) = (
+        let id = assertion.subject.and_then(|s| s.name_id.map(|n| n.value));
+
+        if let (Some(id), Some(display_name), Some(email)) = (
+            id,
             attrs_map.get(&so.attrs.display_name),
             attrs_map.get(&so.attrs.email),
         ) {
             let user = User::temporary(
+                id,
                 email.clone(),
                 display_name.clone(),
                 &code_info.run_config.default_language,
             );
-            if let Err(why) = User::login_with(
-                &mut db,
-                cookies,
-                user,
-                &code_info.run_config.default_language,
-            )
-            .await
-            {
-                warn!("Couldn't log in user: {why}");
-                Err(Status::InternalServerError)
-            } else {
-                Ok(Redirect::to("/"))
+            match user.login_or_register(&mut db, cookies).await {
+                Err(why) => {
+                    warn!("Couldn't log / register in user: {why}");
+                    Err(Status::InternalServerError)
+                }
+                Ok((_user, is_new)) => {
+                    Ok(Redirect::to(if is_new { "/settings/profile" } else { "/" }))
+                }
             }
         } else {
             warn!(
@@ -221,7 +221,7 @@ async fn acs(
 struct UrlPrefixGuard(String);
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_ignite("SAML Auth App", |rocket| async {
+    AdHoc::on_ignite("SAML Auth", |rocket| async {
         let figment = rocket.figment();
         let url = figment
             .extract_inner::<String>("url")

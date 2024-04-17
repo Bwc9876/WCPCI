@@ -1,4 +1,5 @@
 User-agent: *
-Disallow: /auth/login/*/
 Disallow: /auth/logout/
 Disallow: /auth/saml/*/
+Disallow: /auth/github/*/
+Disallow: /auth/google/*/

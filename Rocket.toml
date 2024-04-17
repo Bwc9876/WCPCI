@@ -7,11 +7,11 @@ url = "./database.sqlite"
 
 [default.oauth.github]
 provider = "GitHub"
-redirect_uri = "http://localhost:8000/auth/callback/github"
+redirect_uri = "http://localhost:8000/auth/github/callback"
 
 [default.oauth.google]
 provider = "Google"
-redirect_uri = "http://localhost:8000/auth/callback/google"
+redirect_uri = "http://localhost:8000/auth/google/callback"
 
 [debug]
 url = "http://localhost:8000"

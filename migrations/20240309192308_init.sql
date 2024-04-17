@@ -3,13 +3,18 @@
 
 CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY NOT NULL,
+    sso_id TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
+    profile_picture_source TEXT NOT NULL DEFAULT 'gravatar',
     bio TEXT NOT NULL DEFAULT '',
-    default_display_name VARCHAR(100) NOT NULL,
+    default_display_name TEXT NOT NULL,
     display_name VARCHAR(32),
     default_language TEXT NOT NULL,
     color_scheme TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    gravatar_email TEXT,
+    github_id INTEGER,
+    google_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS session (

@@ -54,12 +54,17 @@ impl Participant {
                 let user = User {
                     id: row.id,
                     bio: row.bio,
+                    sso_id: row.sso_id,
+                    profile_picture_source: row.profile_picture_source,
                     color_scheme: row.color_scheme.into(),
                     default_language: row.default_language,
                     display_name: row.display_name,
                     default_display_name: row.default_display_name,
                     email: row.email,
                     created_at: row.created_at,
+                    github_id: row.github_id,
+                    google_id: row.google_id,
+                    gravatar_email: row.gravatar_email,
                 };
                 (participant, user)
             })
