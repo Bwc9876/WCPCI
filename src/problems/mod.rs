@@ -8,6 +8,7 @@ mod cases;
 mod completions;
 mod delete;
 mod edit;
+mod io;
 mod new;
 mod runs;
 mod view;
@@ -202,7 +203,7 @@ impl<'r> TemplatedForm for ProblemFormTemplate<'r> {
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Problem Stage", |rocket| async {
-        rocket.mount(
+        rocket.attach(io::stage()).mount(
             "/contests",
             routes![
                 view::list_problems_get,

@@ -29,11 +29,4 @@ const description = `View the problems for ${variable("contest.name")}, WCPC`;
     <ProblemsTable
         overrideEmptyText={`${tag("if started")}No Problems${tag("else")}This contest hasn't started yet, check back when it does!${tag("endif")}`}
     />
-    <If debugEval={true} expression="can_edit">
-        <Button
-            class="w-fit self-end"
-            as="a"
-            href={`/contests/${variable("contest.id")}/problems/new`}>Create New Problem</Button
-        >
-    </If>
 </ContestLayout>

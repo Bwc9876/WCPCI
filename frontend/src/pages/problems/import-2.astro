@@ -8,8 +8,8 @@ import Title from "@/components/Title.astro";
 
 <ContestLayout
     noIndex
-    path=`/contests/${variable("contest.id")}/problems/new`
-    title="New Problem"
+    path=`/contests/${variable("contest.id")}/problems/import`
+    title="Import Problem"
     makeTile
 >
     <BreadCrumb
@@ -17,9 +17,9 @@ import Title from "@/components/Title.astro";
             ["Contests", "/contests"],
             [variable("contest.name"), `/contests/${variable("contest.id")}`],
             ["Problems", `/contests/${variable("contest.id")}/problems`],
-            ["New", `/contests/${variable("contest.id")}/problems/new`]
+            ["Import", `/contests/${variable("contest.id")}/problems/import`]
         ]}
     />
     <Title>Create Problem</Title>
-    <ProblemForm submitWord="Create" />
+    <ProblemForm action={`/contests/${variable("contest.id")}/problems/new`} submitWord="Create" />
 </ContestLayout>

@@ -138,14 +138,6 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                     <h2 class="text-2xl font-bold">Problems</h2>
                     <Tag expression="set contest_id = contest.id" />
                     <ProblemsTable class="overflow-y-auto" />
-                    <If debugEval={true} expression="can_edit">
-                        <Button
-                            class="w-fit self-end"
-                            as="a"
-                            href={`/contests/${variable("contest.id")}/problems/new`}
-                            >Create New Problem</Button
-                        >
-                    </If>
                 </Tile>
             </If>
         </div>
@@ -161,7 +153,7 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                                 name={variable(
                                     "participant.1.display_name | default(value=participant.1.default_display_name)"
                                 )}
-                                emailVar="participant.1.email"
+                                userVar="participant.1"
                             />
                             <span class="my-auto"
                                 ><Variable
@@ -193,7 +185,7 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                                 name={variable(
                                     "participant.1.display_name | default(value=participant.1.default_display_name)"
                                 )}
-                                emailVar="participant.1.email"
+                                userVar="participant.1"
                             />
                             <span class="my-auto"
                                 ><Variable

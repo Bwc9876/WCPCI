@@ -1,6 +1,8 @@
 ---
 import { variable } from "@/lib/tera";
 import TemplatedTable from "./TemplatedTable.astro";
+import If from "../tera/If.astro";
+import Button from "../Button.astro";
 
 export type Props = {
     class?: string;
@@ -22,6 +24,12 @@ const { overrideEmptyText, class: className } = Astro.props;
             icon: "tabler:pencil"
         },
         {
+            name: "Export",
+            condition: "logged_in and can_edit",
+            action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/export`,
+            icon: "tabler:database-export"
+        },
+        {
             name: "Delete",
             condition: "logged_in and can_edit",
             action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/delete`,
@@ -34,3 +42,21 @@ const { overrideEmptyText, class: className } = Astro.props;
     columns={[{ name: "name" }, { name: "cpu_time", label: "CPU Time (seconds)" }]}
     emptyText={overrideEmptyText ?? "No Problems Have Been Made Yet."}
 />
+<If debugEval={true} expression="can_edit">
+    <div class="flex flex-row gap-2">
+        <span class="grow"></span>
+        <Button
+            class="w-fit self-end"
+            as="a"
+            icon="tabler:plus"
+            href={`/contests/${variable("contest.id")}/problems/new`}>Create New Problem</Button
+        >
+        <Button
+            class="w-fit self-end"
+            as="a"
+            icon="tabler:database-import"
+            color="secondary"
+            href={`/contests/${variable("contest.id")}/problems/import`}>Import Problem</Button
+        >
+    </div>
+</If>
