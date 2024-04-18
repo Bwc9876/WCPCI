@@ -20,10 +20,8 @@ pub struct LanguageConfig {
     #[serde(rename(serialize = "fileName"))]
     /// Name of the file to save user submitted code to
     pub file_name: String,
-    #[serde(skip_serializing)]
     /// Command to compile the program.
     pub compile_cmd: String,
-    #[serde(skip_serializing)]
     /// Command to run the program. This will be passed the case's input in stdin
     pub run_cmd: String,
 }
@@ -32,7 +30,7 @@ const fn default_max_program_length() -> usize {
     100_000
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 pub struct RunConfig {
     /// Max program length in bytes (max and default is 100,000)

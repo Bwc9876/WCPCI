@@ -25,6 +25,8 @@ mod github;
 mod google;
 mod saml;
 
+pub use saml::{SamlOptions, PREFERRED_SSO_BINDING};
+
 pub mod csrf;
 pub mod sessions;
 pub mod users;

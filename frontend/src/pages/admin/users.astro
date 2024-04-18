@@ -1,0 +1,26 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import UserAdminTable from "@/components/table/UserAdminTable.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Title from "@/components/Title.astro";
+---
+
+<Layout noIndex makeTile title="User Admin" path="/admin/users">
+    <BreadCrumb
+        entries={[
+            ["Admin", "/admin"],
+            ["Users", "/admin/users"]
+        ]}
+    />
+    <Title>All Users</Title>
+    <UserAdminTable
+        actions={[
+            {
+                name: "Delete",
+                icon: "tabler:trash",
+                color: "danger",
+                action: (id) => `/admin/users/${id}/delete`
+            }
+        ]}
+    />
+</Layout>

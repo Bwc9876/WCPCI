@@ -78,12 +78,14 @@ impl JudgeRun {
         db: &mut DbPoolConnection,
         user_id: i64,
         problem_id: i64,
+        limit: i64,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             JudgeRun,
-            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 10",
+            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT ?",
             user_id,
-            problem_id
+            problem_id,
+            limit
         )
         .fetch_all(&mut **db)
         .await
@@ -166,7 +168,7 @@ pub async fn runs(
     if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
         let contest = Contest::get(&mut db, contest_id).await.unwrap();
         let runs = if let Some(user) = user {
-            JudgeRun::list(&mut db, user.id, problem.id)
+            JudgeRun::list(&mut db, user.id, problem.id, JudgeRun::MAX_RUNS_PER_USER)
                 .await
                 .unwrap_or_default()
         } else {

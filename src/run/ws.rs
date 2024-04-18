@@ -84,7 +84,7 @@ async fn websocket_loop(
 ) {
     let mut _manager = manager.lock().await;
     let mut started_rx = _manager.subscribe();
-    let mut shutdown_rx = _manager.subscribe_shutdown();
+    let mut shutdown_rx = _manager.subscribe_shutdown(&user_id).await;
     let mut updated_rx = _manager.get_handle_for_problem(problem.id);
     let state_rx = _manager.get_handle(user_id, problem.id).await;
     drop(_manager);

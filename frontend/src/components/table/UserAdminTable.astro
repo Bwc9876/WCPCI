@@ -1,0 +1,35 @@
+---
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import type { Props as TemplatedTableProps } from "@/components/table/TemplatedTable.astro";
+
+import { variable } from "@/lib/tera";
+
+export type Props = {
+    userVar?: string;
+    actions: TemplatedTableProps["actions"];
+    addCols?: TemplatedTableProps["columns"];
+};
+
+const { actions, addCols, userVar } = Astro.props;
+
+const colPrefix = userVar ? `${userVar}.` : "";
+---
+
+<TemplatedTable
+    actions={actions}
+    listName="users"
+    itemName="da_user"
+    columns={[
+        {
+            name: `${colPrefix}id`,
+            label: "ID"
+        },
+        {
+            name: `${colPrefix}display_name | default(value=da_user.${colPrefix}default_display_name)`,
+            label: "User",
+            avatarVar: `${colPrefix}da_user`,
+            makeLink: `/profile/${variable(`da_user.${colPrefix}id`)}`
+        },
+        ...(addCols ?? [])
+    ]}
+/>

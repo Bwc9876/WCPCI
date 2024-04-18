@@ -54,7 +54,7 @@ pub async fn problem_import(
             Err(Status::Forbidden)
         }
     } else {
-        return Err(Status::NotFound);
+        Err(Status::NotFound)
     }
 }
 
@@ -123,9 +123,9 @@ pub async fn problem_import_post(
             let ctx = context_with_base_authed!(user, contest, form: form_template);
             Ok(Template::render("problems/import", ctx))
         } else {
-            return Err(Status::Forbidden);
+            Err(Status::Forbidden)
         }
     } else {
-        return Err(Status::NotFound);
+        Err(Status::NotFound)
     }
 }

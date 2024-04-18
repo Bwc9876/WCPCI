@@ -17,7 +17,7 @@ use super::{JobState, JobStateReceiver};
 
 type UserId = i64;
 
-type RunHandle = Arc<Mutex<Option<(i64, JobStateReceiver)>>>;
+type RunHandle = Arc<Mutex<Option<(i64, JobStateReceiver, (ShutDownSender, ShutdownReceiver))>>>;
 
 pub type JobStartedMessage = (UserId, i64, JobStateReceiver);
 pub type JobStartedReceiver = tokio::sync::broadcast::Receiver<JobStartedMessage>;
@@ -28,6 +28,7 @@ pub type ProblemUpdatedReceiver = tokio::sync::watch::Receiver<ProblemUpdatedMes
 pub type ProblemUpdatedSender = tokio::sync::watch::Sender<ProblemUpdatedMessage>;
 
 pub type ShutdownReceiver = tokio::sync::watch::Receiver<bool>;
+pub type ShutDownSender = tokio::sync::watch::Sender<bool>;
 
 pub struct RunManager {
     config: RunConfig,
@@ -60,12 +61,32 @@ impl RunManager {
         }
     }
 
+    pub async fn all_active_jobs(&self) -> Vec<(UserId, i64)> {
+        let mut active_jobs = Vec::with_capacity(self.jobs.len());
+        for (user_id, handle) in self.jobs.iter() {
+            let handle = handle.lock().await;
+            if let Some((problem_id, _, _)) = handle.as_ref() {
+                active_jobs.push((*user_id, *problem_id));
+            }
+        }
+        active_jobs
+    }
+
     pub fn subscribe(&self) -> JobStartedReceiver {
         self.job_started_channel.0.subscribe()
     }
 
-    pub fn subscribe_shutdown(&self) -> ShutdownReceiver {
-        self.shutdown_rx.clone()
+    pub async fn subscribe_shutdown(&self, user_id: &UserId) -> ShutdownReceiver {
+        if let Some(handle) = self.jobs.get(user_id) {
+            let handle = handle.lock().await;
+            if let Some((_, _, (_, rx))) = handle.as_ref() {
+                rx.clone()
+            } else {
+                self.shutdown_rx.clone()
+            }
+        } else {
+            self.shutdown_rx.clone()
+        }
     }
 
     async fn start_job(&mut self, request: JobRequest) -> Result<(), String> {
@@ -91,14 +112,20 @@ impl RunManager {
             .get(&request.language)
             .ok_or_else(|| format!("Language {} not supported by runner", request.language))?;
 
-        let (job, state_rx) = Job::new(id, request, self.shutdown_rx.clone(), language_config)
+        let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+
+        let (job, state_rx) = Job::new(id, request, shutdown_rx.clone(), language_config)
             .await
             .map_err(|e| {
                 error!("Couldn't create job: {:?}", e);
                 "Judge Error".to_string()
             })?;
 
-        let handle = Arc::new(Mutex::new(Some((problem_id, state_rx.clone()))));
+        let handle = Arc::new(Mutex::new(Some((
+            problem_id,
+            state_rx.clone(),
+            (shutdown_tx, shutdown_rx),
+        ))));
 
         self.jobs.insert(user_id, handle.clone());
 
@@ -192,6 +219,24 @@ impl RunManager {
         }
     }
 
+    pub async fn shutdown_job(&mut self, user_id: UserId) {
+        if let Some(handle) = self.jobs.remove(&user_id) {
+            let handle = handle.lock().await;
+            if let Some((_, _, (tx, _))) = handle.as_ref() {
+                tx.send(true).ok();
+            }
+        }
+    }
+
+    pub async fn shutdown(&mut self) {
+        for (_, handle) in self.jobs.drain() {
+            let handle = handle.lock().await;
+            if let Some((_, _, (tx, _))) = handle.as_ref() {
+                tx.send(true).ok();
+            }
+        }
+    }
+
     pub async fn update_problem(&mut self, problem_id: i64) {
         if let Some(handle) = self.problem_updated_channels.remove(&problem_id) {
             handle.send(()).ok();
@@ -203,8 +248,8 @@ impl RunManager {
             let handle = handle.lock().await;
             handle
                 .as_ref()
-                .filter(|(id, _)| *id == problem_id)
-                .map(|(_, rx)| rx.clone())
+                .filter(|(id, _, _)| *id == problem_id)
+                .map(|(_, rx, _)| rx.clone())
         } else {
             None
         }

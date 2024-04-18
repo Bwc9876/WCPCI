@@ -206,9 +206,13 @@ pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Templating", |rocket| async {
         let figment = rocket.figment();
         let url_prefix = figment.extract_inner::<String>("url").unwrap_or_default();
+        let admins = figment
+            .extract_inner::<Vec<String>>("admins")
+            .unwrap_or_default();
 
         rocket.attach(Template::custom(move |e| {
             let url_prefix = url_prefix.clone();
+            let admins = admins.clone();
             e.tera.register_function("in_debug", in_debug);
             e.tera.register_function("gravatar", gravatar_function);
             e.tera.register_function("fake_attr", fake_attr);
@@ -219,6 +223,19 @@ pub fn stage() -> AdHoc {
                 });
             e.tera
                 .register_function("len_of_form_data_list", len_of_form_data_list);
+            e.tera
+                .register_function("is_admin", move |args: FunctionArgs| {
+                    if let Some(user) = args.get("user").and_then(|o| o.as_object()) {
+                        Ok(tera::Value::Bool(
+                            user.get("email")
+                                .and_then(|e| e.as_str())
+                                .map(|e| admins.contains(&e.to_string()))
+                                .unwrap_or_default(),
+                        ))
+                    } else {
+                        Err(tera::Error::msg("user object not passed!"))
+                    }
+                });
         }))
     })
 }

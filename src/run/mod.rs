@@ -39,9 +39,12 @@ pub fn stage() -> AdHoc {
             None => return Err(rocket),
         };
 
-        let shutdown_fairing = AdHoc::on_shutdown("Shutdown Runners / Sockets", |_| {
+        let shutdown_fairing = AdHoc::on_shutdown("Shutdown Runners / Sockets", |rocket| {
             Box::pin(async move {
                 tx.send(true).ok();
+                if let Some(manager) = rocket.state::<ManagerHandle>() {
+                    manager.lock().await.shutdown().await;
+                }
             })
         });
 

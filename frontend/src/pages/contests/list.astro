@@ -10,6 +10,7 @@ import Title from "@/components/Title.astro";
     <Title>Contests</Title>
     <TemplatedTable
         listName="contests"
+        emptyText="No Contests"
         itemLink={{
             action: (id: string) => `/contests/${id}`
         }}
@@ -32,7 +33,7 @@ import Title from "@/components/Title.astro";
             { name: "name" },
             { name: "start_time", overrideList: "start_times" },
             { name: "registration_deadline", overrideList: "registration_deadlines" },
-            { name: "max_participants" }
+            { name: 'max_participants | default(value="None")', label: "Max Participants" }
         ]}
     />
     <If debugEval={true} expression="is_admin">

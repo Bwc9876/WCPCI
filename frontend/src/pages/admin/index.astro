@@ -1,0 +1,56 @@
+---
+import Button from "@/components/Button.astro";
+import Title from "@/components/Title.astro";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import If from "@/components/tera/If.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Layout from "@/layouts/Layout.astro";
+---
+
+<Layout noIndex makeTile title="Site Admin" path="/admin">
+    <Title>Site Admin</Title>
+    <p>This is the site admin page. From here you can manage users, runners, and contests.</p>
+    <h2 class="text-2xl font-bold">Actions</h2>
+    <div class="flex flex-row flex-wrap gap-4">
+        <Button size="lg" class="w-fit" as="a" href="/admin/users" icon="tabler:user"
+            >User Admin</Button
+        >
+        <Button size="lg" class="w-fit" as="a" href="/admin/runs" icon="tabler:player-play"
+            >Runner Admin</Button
+        >
+        <Button size="lg" class="w-fit" as="a" href="/contests" icon="tabler:trophy"
+            >Manage Contests</Button
+        >
+    </div>
+    <h2 class="text-2xl font-bold">Info</h2>
+    <h3 class="text-xl font-bold">Versions</h3>
+    <p>WCPC: <code><Variable expression="version" /></code></p>
+    <If expression="commit_hash">
+        <p>WCPC Commit Hash: <code><Variable expression="commit_hash" /></code></p>
+    </If>
+    <p>
+        rustc: <code><Variable expression="rustc_version" /></code>
+        <p>Astro: <code>{Astro.generator}</code></p>
+        <h3 class="text-xl font-bold">Runner Info</h3>
+        <p>Default Language: <code><Variable expression="run_config.default_language" /></code></p>
+        <h4 class="text-lg font-bold">Languages</h4>
+        <TemplatedTable
+            listName="run_config.languages"
+            itemName="lang"
+            isMap
+            columns={[
+                { name: "lang_key", label: "id", forceNoPrefix: true },
+                { name: "name" },
+                { name: "tablerIcon" },
+                { name: "monacoContribution" },
+                { name: "fileName" },
+                { name: "compile_cmd" },
+                { name: "run_cmd" }
+            ]}
+        />
+        <h3 class="text-xl font-bold">SAML Info</h3>
+        <p>SP Entity ID: <code><Variable expression="sp_id" /></code></p>
+        <p>IdP Entity ID: <code><Variable expression="idp_id" /></code></p>
+        <p>IdP SSO Binding: <code><Variable expression="idp_sso_binding" /></code></p>
+    </p>
+</Layout>

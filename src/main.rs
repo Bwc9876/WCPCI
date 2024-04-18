@@ -4,6 +4,7 @@ use rocket_dyn_templates::Template;
 #[macro_use]
 extern crate rocket_dyn_templates;
 
+mod admin;
 mod auth;
 mod contests;
 mod csp;
@@ -60,6 +61,7 @@ fn rocket() -> _ {
         .attach(serve::stage())
         .attach(auth::stage())
         .attach(settings::stage())
+        .attach(admin::stage())
         .attach(contests::stage())
         .attach(problems::stage())
         .attach(leaderboard::stage())

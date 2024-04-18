@@ -67,7 +67,7 @@ impl Contest {
     }
 
     pub async fn list(db: &mut DbPoolConnection) -> Vec<Self> {
-        sqlx::query_as!(Contest, "SELECT * FROM contest")
+        sqlx::query_as!(Contest, "SELECT * FROM contest ORDER BY created_at DESC")
             .fetch_all(&mut **db)
             .await
             .unwrap_or_default()

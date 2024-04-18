@@ -115,6 +115,9 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                 <div class="flex flex-row flex-wrap justify-center gap-4 sm:grow">
                     <div class="flex flex-row flex-wrap justify-center gap-2 justify-self-start">
                         <Link color="white" class="my-auto" href="/contests">All Contests</Link>
+                        <If expression="logged_in and is_admin(user=user)">
+                            <Link color="white" class="my-auto" href="/admin">Site Admin</Link>
+                        </If>
                         <slot name="nav-left" />
                     </div>
                     <span class:list={["hidden grow", navSpacerClass ?? "sm:block"]}></span>
@@ -131,21 +134,7 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                                             size={45}
                                             class="group-hover:border-2 group-hover:border-solid group-hover:border-accent"
                                         />
-                                        {/*<span class="my-auto">
-                                            <Variable expression="name | truncate(length=20)" debugEval="Benjamin Wade Crocker" />
-                                        </span>*/}
                                     </Link>
-                                    {/*<Link
-                                        aria-label="Logout"
-                                        href="/auth/logout"
-                                        class="group flex w-fit rounded-full bg-secondary py-1 pe-2 ps-3"
-                                    >
-                                        <Icon
-                                            size={30}
-                                            name="tabler:logout"
-                                            class="my-auto text-text group-hover:text-red-500"
-                                        />
-                                    </Link>*/}
                                 </div>
                                 <Else slot="else">
                                     <Button

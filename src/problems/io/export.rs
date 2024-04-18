@@ -33,6 +33,6 @@ pub async fn problem_export(
             Err(Status::Forbidden)
         }
     } else {
-        return Err(Status::NotFound);
+        Err(Status::NotFound)
     }
 }

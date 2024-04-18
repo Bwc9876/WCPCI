@@ -23,7 +23,7 @@ fn email_oid() -> String {
     "urn:oid:0.9.2342.19200300.100.1.3".to_string()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AttrOptions {
     #[serde(default = "cn_oid")]
     display_name: String,
@@ -31,8 +31,8 @@ struct AttrOptions {
     email: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct SamlOptions {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SamlOptions {
     entity_id: String,
     idp_meta_url: Option<String>,
     certificate: Option<String>,
@@ -44,7 +44,7 @@ struct SamlOptions {
     attrs: AttrOptions,
 }
 
-const PREFERRED_SSO_BINDING: &str = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
+pub const PREFERRED_SSO_BINDING: &str = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
 const NAME_ID_FORMAT: &str = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent";
 
 impl SamlOptions {
@@ -113,7 +113,14 @@ async fn login(
     sp: &State<ServiceProvider>,
     relay_url: &State<UrlPrefixGuard>,
 ) -> Result<Redirect, String> {
-    let base = sp.sso_binding_location(PREFERRED_SSO_BINDING).unwrap();
+    let base = sp
+        .sso_binding_location(PREFERRED_SSO_BINDING)
+        .ok_or_else(|| {
+            format!(
+                "SAML IDP Doesn't Support Preferred SSO Binding ({}). Did the IDP change metadata?",
+                PREFERRED_SSO_BINDING
+            )
+        })?;
     let req = sp
         .make_authentication_request(&base)
         .map_err(|e| format!("Couldn't Create Authn Request: {e}"))?;

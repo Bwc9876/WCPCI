@@ -176,6 +176,7 @@ impl Job {
             &config.file_name,
             &request.program,
             request.cpu_time,
+            shutdown_rx.clone(),
         )
         .await;
         match res {
@@ -224,6 +225,7 @@ impl Job {
                 self.state.complete_case(0, why.into());
             }
             self.publish_state();
+            self.runner.cleanup().await;
             return (self.state, self.started_at);
         }
         info!(
@@ -262,6 +264,7 @@ impl Job {
                     }
                     if self.shutdown_rx.has_changed().unwrap_or(false) {
                         info!("Job {} Received Shutdown Signal, Cancelling", self.id);
+                        self.runner.cleanup().await;
                         return (self.state, self.started_at);
                     }
                 }
@@ -292,6 +295,7 @@ impl Job {
         }
 
         info!("Job {} Finished", self.id);
+        self.runner.cleanup().await;
         (self.state, self.started_at)
     }
 
