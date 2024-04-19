@@ -154,6 +154,19 @@ impl User {
             .map_err(|e| e.to_string())?;
 
         if let Some(user) = existing {
+            // Update the user's display name and email if they have changed
+            if user.email != self.email || user.default_display_name != self.default_display_name {
+                let res = sqlx::query!(
+                    "UPDATE user SET email = ?, default_display_name = ? WHERE id = ?",
+                    self.email,
+                    self.default_display_name,
+                    user.id
+                )
+                .execute(&mut **db)
+                .await;
+
+                res.map_err(|e| format!("Failed to update user data: {e}"))?;
+            }
             user.login(db, cookies).await?;
             Ok((user, false))
         } else {
