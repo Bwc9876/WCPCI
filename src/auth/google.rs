@@ -157,7 +157,7 @@ impl CallbackHandler for GoogleLogin {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_ignite("Google OAuth2", |rocket| async {
+    AdHoc::on_ignite("Google Auth", |rocket| async {
         rocket
             .attach(OAuth2::<GoogleLogin>::fairing("google"))
             .mount(

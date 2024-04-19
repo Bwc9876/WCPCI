@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use log::warn;
+use log::{info, warn};
 use rocket::{
     fairing::AdHoc, form::Form, get, http::CookieJar, http::Status, post, response::Redirect,
     routes, FromForm, State,
@@ -68,6 +68,7 @@ impl SamlOptions {
             });
 
         if let Some(idp_meta_url) = &self.idp_meta_url {
+            info!("SAML App is fetching IDP metadata from {idp_meta_url}...");
             let resp = reqwest::get(idp_meta_url)
                 .await
                 .map_err(|e| format!("Couldn't fetch IDP metadata: {e}"))?;
@@ -75,6 +76,7 @@ impl SamlOptions {
                 .text()
                 .await
                 .map_err(|e| format!("Couldn't read IDP metadata: {e}"))?;
+            info!("SAML App fetched IDP metadata successfully");
             let idp_meta: EntityDescriptor = samael::metadata::de::from_str(&text)
                 .map_err(|e| format!("Couldn't parse IDP metadata: {e}"))?;
             sp.idp_metadata(idp_meta);

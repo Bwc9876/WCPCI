@@ -8,10 +8,12 @@ import Button from "@/components/Button.astro";
     noIndex
     path="/"
     title="Error"
-    class="flex flex-col justify-center gap-4 align-middle"
+    class="flex flex-col justify-center gap-8 align-middle"
     noTemplate
     makeTile
 >
-    <h1 class="text-center text-4xl"><Variable expression="message" /></h1>
-    <Button icon="tabler:home" size="2xl" class="mx-auto w-fit" as="a" href="/">Home</Button>
+    <h1 class="text-center text-5xl"><Variable expression="message" /></h1>
+    <Button icon="tabler:home" size="2xl" class="mx-auto w-fit px-8 py-4" as="a" href="/"
+        >Home</Button
+    >
 </Layout>
