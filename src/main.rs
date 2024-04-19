@@ -27,12 +27,6 @@ async fn index(user: Option<&User>) -> Template {
     Template::render("index", ctx)
 }
 
-#[get("/styles")]
-async fn styles(user: Option<&User>) -> Template {
-    let ctx = context_with_base!(user,);
-    Template::render("styles", ctx)
-}
-
 #[catch(default)]
 fn error(status: Status, _request: &Request) -> Template {
     let message = status.to_string();
@@ -52,7 +46,7 @@ fn rocket() -> _ {
     dotenvy::dotenv().ok();
 
     rocket::build()
-        .mount("/", routes![index, styles])
+        .mount("/", routes![index])
         .register("/", catchers![error])
         .attach(csp::stage())
         .attach(db::stage())

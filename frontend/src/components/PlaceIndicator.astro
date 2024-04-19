@@ -13,28 +13,33 @@ const { placeVar, ...rest } = Astro.props;
 
 <span
     data-place={variable(placeVar)}
-    class="group relative flex flex-row gap-2 text-center"
+    class="group relative flex flex-row justify-center gap-2 text-center align-middle"
     {...rest}
 >
     <Icon
-        size={28}
+        size={35}
         name="tabler:trophy-filled"
         class:list={[
             "hidden",
             "m-auto",
+            "relative",
             "group-[[data-place='1']]:inline",
             "group-[[data-place='2']]:inline",
             "group-[[data-place='3']]:inline",
-            "group-[[data-place='1']]:text-[#fad94a]",
-            "group-[[data-place='2']]:text-[#9babba]",
-            "group-[[data-place='3']]:text-[#b97c2a]"
+            "group-[[data-place='1']]:text-[var(--first-color)]",
+            "group-[[data-place='2']]:text-[var(--second-color)]",
+            "group-[[data-place='3']]:text-[var(--third-color)]"
         ]}
     />
     <span
         class:list={[
             "m-auto",
-            "text-lg",
-            "left-[calc(50%-4px)] top-[2px]",
+            "font-black",
+            "text-xl",
+            "inset-0",
+            "flex",
+            "align-middle",
+            "justify-center",
             "group-[[data-place='1']]:text-text-100",
             "group-[[data-place='1']]:text-sm",
             "group-[[data-place='1']]:absolute",
@@ -44,6 +49,12 @@ const { placeVar, ...rest } = Astro.props;
             "group-[[data-place='3']]:text-text-100",
             "group-[[data-place='3']]:text-sm",
             "group-[[data-place='3']]:absolute"
-        ]}><Variable expression={placeVar} /></span
+        ]}
     >
+        <span
+            class="relative group-[[data-place='1']]:top-[6px] group-[[data-place='2']]:top-[6px] group-[[data-place='3']]:top-[6px]"
+        >
+            <Variable expression={placeVar} />
+        </span>
+    </span>
 </span>

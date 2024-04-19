@@ -1,5 +1,9 @@
 ---
-import "@fontsource/roboto";
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
+import "@fontsource/roboto/700.css";
+import "@fontsource/roboto/900.css";
+import "@fontsource/roboto-mono";
 import { ViewTransitions } from "astro:transitions";
 import hero from "@/assets/hero.png";
 import iconBig from "@/assets/icon_big.png";
@@ -254,6 +258,10 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                         --accent-800: #f5e2a3;
                         --accent-900: #faf1d1;
                         --accent-950: #fdf8e8;
+
+                        --first-color: #fad94a;
+                        --second-color: #9babba;
+                        --third-color: #b97c2a;
                     }
                 }
 
@@ -283,17 +291,17 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                     --secondary-900: #1e151e;
                     --secondary-950: #0f0b0f;
 
-                    --primary-50: #fce5ff;
-                    --primary-100: #f9ccff;
-                    --primary-200: #f399ff;
-                    --primary-300: #ed66ff;
-                    --primary-400: #e733ff;
-                    --primary-500: #e100ff;
-                    --primary-600: #b400cc;
-                    --primary-700: #870099;
-                    --primary-800: #5a0066;
-                    --primary-900: #2d0033;
-                    --primary-950: #17001a;
+                    --primary-50: #edd8f0;
+                    --primary-100: #e1b9e7;
+                    --primary-200: #d586df;
+                    --primary-300: #da5deb;
+                    --primary-400: #cf2ee4;
+                    --primary-500: #cd00e9;
+                    --primary-600: #a100b6;
+                    --primary-700: #720082;
+                    --primary-800: #4d0057;
+                    --primary-900: #19001d;
+                    --primary-950: #080009;
 
                     --background-50: #f6eef7;
                     --background-100: #ecddee;
@@ -307,18 +315,21 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                     --background-900: #201122;
                     --background-950: #100811;
 
-                    --accent-50: #fdf8e8;
-                    --accent-100: #faf1d1;
-                    --accent-200: #f5e2a3;
-                    --accent-300: #f0d475;
-                    --accent-400: #ecc546;
-                    --accent-500: #e7b718;
-                    --accent-600: #b99213;
-                    --accent-700: #8a6e0f;
-                    --accent-800: #5c490a;
-                    --accent-900: #2e2505;
-                    --accent-950: #171202;
-                    a: #c08ac733;
+                    --accent-50: #e5d1e8;
+                    --accent-100: #e6bcec;
+                    --accent-200: #d686e1;
+                    --accent-300: #a846b5;
+                    --accent-400: #9b1fab;
+                    --accent-500: #860097;
+                    --accent-600: #720082;
+                    --accent-700: #690077;
+                    --accent-800: #43004c;
+                    --accent-900: #140017;
+                    --accent-950: #060007;
+
+                    --first-color: #aa953a;
+                    --second-color: #9babba;
+                    --third-color: #b97c2a;
                 }
 
                 :root.dark {
@@ -381,6 +392,10 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                     --accent-800: #f5e2a3;
                     --accent-900: #faf1d1;
                     --accent-950: #fdf8e8;
+
+                    --first-color: #fad94a;
+                    --second-color: #9babba;
+                    --third-color: #b97c2a;
                 }
             }
         </style>

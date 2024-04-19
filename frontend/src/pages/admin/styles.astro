@@ -13,10 +13,20 @@ import Table from "@/components/table/Table.astro";
 import TableRow from "@/components/table/TableRow.astro";
 import TableCol from "@/components/table/TableCol.astro";
 import PlaceIndicator from "@/components/PlaceIndicator.astro";
+import Title from "@/components/Title.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
 ---
 
-<Layout noIndex path="/styles" class="flex flex-col gap-10" title="Style Testing">
-    <Tile class="text-2xl"> This is all just for testing my styles, don't mind me. </Tile>
+<Layout noIndex path="/styles" class="flex flex-col gap-2" title="Style Testing">
+    <Tile>
+        <BreadCrumb
+            entries={[
+                ["Admin", "/admin"],
+                ["Styles", "/styles"]
+            ]}
+        />
+        <Title>Style Testing Page</Title>
+    </Tile>
     <Tile class="flex flex-row gap-5">
         Links:
         <Link href="#">Accent</Link>
@@ -100,7 +110,7 @@ import PlaceIndicator from "@/components/PlaceIndicator.astro";
     </Tile>
     <Tile>
         Place Indicators
-        <Table headings={["User", "Place"]}>
+        <Table headings={["Place", "User"]}>
             <TableRow>
                 <TableCol><PlaceIndicator placeVar="1" /></TableCol>
                 <TableCol>Best Person</TableCol>
@@ -149,9 +159,9 @@ import PlaceIndicator from "@/components/PlaceIndicator.astro";
             <Field
                 noTemplate
                 value="guh@guh.com"
-                name="email.guy_bleh-fuck"
+                name="email.guy_bleh"
                 type="email"
-                help="I'm an email field that's read only!"
+                help="I'm an email field that's read only"
                 readonly
             />
             <Field
@@ -160,7 +170,7 @@ import PlaceIndicator from "@/components/PlaceIndicator.astro";
                 label="Disabled Email Field"
                 name="email"
                 type="email"
-                help="I'm an email field that's disabled :("
+                help="I'm an email field that's disabled"
                 disabled
             />
             <Field

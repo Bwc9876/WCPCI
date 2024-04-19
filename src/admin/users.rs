@@ -29,9 +29,7 @@ pub async fn delete_user_get(
     _admin: &Admin,
     _token: &CsrfToken,
 ) -> Result<Template, Status> {
-    let target_user = User::get(&mut db, id)
-        .await
-        .ok_or(Status::NotFound)?;
+    let target_user = User::get(&mut db, id).await.ok_or(Status::NotFound)?;
     let ctx = context_with_base_authed!(user, target_user);
     Ok(Template::render("admin/delete_user", ctx))
 }
@@ -43,9 +41,7 @@ pub async fn delete_user_post(
     _admin: &Admin,
     _token: &VerifyCsrfToken,
 ) -> Result<Redirect, Status> {
-    let target_user = User::get(&mut db, id)
-        .await
-        .ok_or(Status::NotFound)?;
+    let target_user = User::get(&mut db, id).await.ok_or(Status::NotFound)?;
     target_user.delete(&mut db).await.map_err(|e| {
         error!("Failed to delete user: {:?}", e);
         Status::InternalServerError

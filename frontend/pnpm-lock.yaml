@@ -49,6 +49,9 @@ devDependencies:
   '@fontsource/roboto':
     specifier: ^5.0.12
     version: 5.0.12
+  '@fontsource/roboto-mono':
+    specifier: ^5.0.17
+    version: 5.0.17
   '@iconify-json/tabler':
     specifier: ^1.1.110
     version: 1.1.110
@@ -820,6 +823,10 @@ packages:
     os: [win32]
     requiresBuild: true
     optional: true
+
+  /@fontsource/roboto-mono@5.0.17:
+    resolution: {integrity: sha512-MU6FrAyG7DWMCL8mu0JDPvB2tnFcn/lYvVKixzqHb2uefRsLaD6OBFfF1q5RMFsKcFHyPySHM7ZcGw/Q6A1/FA==}
+    dev: true
 
   /@fontsource/roboto@5.0.12:
     resolution: {integrity: sha512-x0o17jvgoSSbS9OZnUX2+xJmVRvVCfeaYJjkS7w62iN7CuJWtMf5vJj8LqgC7ibqIkitOHVW+XssRjgrcHn62g==}

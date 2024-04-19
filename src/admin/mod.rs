@@ -57,12 +57,19 @@ async fn index(
     Template::render("admin", ctx)
 }
 
+#[get("/styles")]
+async fn styles(user: &User, _admin: &Admin) -> Template {
+    let ctx = context_with_base_authed!(user,);
+    Template::render("admin/styles", ctx)
+}
+
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Admin", |rocket| async {
         rocket.mount(
             "/admin",
             routes![
                 index,
+                styles,
                 users::users,
                 users::delete_user_get,
                 users::delete_user_post,
