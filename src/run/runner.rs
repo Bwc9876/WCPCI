@@ -1,6 +1,6 @@
 use std::{path::PathBuf, process::Stdio};
 
-use log::{error, info, warn};
+use log::{error, info};
 use tokio::io::AsyncWriteExt;
 use tokio::{io::AsyncReadExt, select};
 
@@ -209,7 +209,6 @@ impl Runner {
 impl Drop for Runner {
     fn drop(&mut self) {
         if !self.cleaned {
-            warn!("Dropping Runner, prefer not to do this as it'll be sync (call Runner::cleanup)");
             std::fs::remove_dir_all(&self.temp_path).unwrap_or_else(|e| {
                 error!("Couldn't remove temp dir: {e:?}");
             });

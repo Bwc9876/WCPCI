@@ -40,10 +40,14 @@ fn error(status: Status, _request: &Request) -> Template {
 #[launch]
 fn rocket() -> _ {
     if cfg!(debug_assertions) {
+        println!("Loading .dev.env...");
         dotenvy::from_filename(".dev.env").ok();
     }
 
+    println!("Loading .env...");
     dotenvy::dotenv().ok();
+
+    println!("Start of WCPC v{}", env!("CARGO_PKG_VERSION"));
 
     rocket::build()
         .mount("/", routes![index])
