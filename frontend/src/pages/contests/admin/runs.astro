@@ -1,0 +1,52 @@
+---
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Title from "@/components/Title.astro";
+import RunAdminActiveTable from "@/components/table/RunAdminActiveTable.astro";
+import If from "@/components/tera/If.astro";
+import Button from "@/components/Button.astro";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    makeTile
+    title="Runs"
+    path=`/contests/${variable("contest.id")}/admin/runs`
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Admin", `/contests/${variable("contest.id")}/admin`],
+            ["Runs", `/contests/${variable("contest.id")}/admin/runs`]
+        ]}
+    />
+    <Title>Runs for <Variable expression="contest.name" /></Title>
+    <h2 class="text-2xl font-bold">Active Runs</h2>
+    <RunAdminActiveTable
+        actions={[
+            {
+                name: "Stop",
+                icon: "tabler:player-stop-filled",
+                color: "danger",
+                action: () =>
+                    `/contests/${variable("contest.id")}/admin/runs/${variable("row.user.id")}/${variable("row.problem.id")}/cancel`
+            }
+        ]}
+    />
+    <h2 class="text-2xl font-bold">Completions</h2>
+    <p>Go to a specific problem to view completions.</p>
+    <TemplatedTable
+        listName="problems"
+        itemName="problem"
+        itemLink={{
+            action: (id) => `/contests/${variable("contest.id")}/admin/runs/problems/${id}`
+        }}
+        idColName="slug"
+        columns={[{ name: "name" }]}
+    />
+</ContestLayout>

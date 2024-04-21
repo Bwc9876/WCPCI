@@ -1,0 +1,52 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Field from "@/components/Field.astro";
+import Form from "@/components/Form.astro";
+import Title from "@/components/Title.astro";
+import Variable from "@/components/tera/Variable.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    makeTile
+    title={`Completions for ${variable("problem.name")}`}
+    path=`/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}/edit/`
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Admin", `/contests/${variable("contest.id")}/admin`],
+            ["Runs", `/contests/${variable("contest.id")}/admin/runs`],
+            [
+                "Completions",
+                `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}`
+            ],
+            [variable("user.email"), ""]
+        ]}
+    />
+    <Title
+        >Completion for <Variable
+            expression="target_user.display_name | default(value=target_user.default_display_name)"
+        /> in <Variable expression="problem.name" /></Title
+    >
+    <Form>
+        <Field
+            type="number"
+            name="completed_in"
+            label="Completed In (Minutes)"
+            help="Time it took for the user to complete the problem in minutes, leave as nothing to mark it as unsolved"
+        />
+        <Field
+            type="number"
+            name="number_wrong"
+            label="Number Wrong"
+            required
+            help="The amount of incorrect attempts the user submitted before getting it right"
+            min="0"
+        />
+    </Form>
+</ContestLayout>

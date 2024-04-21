@@ -10,6 +10,7 @@ const problemName = variable("problem_name | default(value=problem.name)");
 ---
 
 <ContestLayout
+    showAdminVar="true"
     noIndex
     path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}/edit`
     title={`Edit Problem: ${problemName}`}

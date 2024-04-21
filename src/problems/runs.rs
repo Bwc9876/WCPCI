@@ -4,8 +4,10 @@ use rocket::get;
 use rocket::http::Status;
 use rocket_dyn_templates::Template;
 
+use crate::auth::users::Admin;
 use crate::auth::users::User;
 use crate::contests::Contest;
+use crate::contests::Participant;
 use crate::context_with_base;
 use crate::db::{DbConnection, DbPoolConnection};
 use crate::run::JobState;
@@ -162,6 +164,7 @@ pub async fn runs(
     contest_id: i64,
     slug: &str,
     tz: ClientTimeZone,
+    admin: Option<&Admin>,
     user: Option<&User>,
     mut db: DbConnection,
 ) -> RunsResponse {
@@ -174,6 +177,12 @@ pub async fn runs(
         } else {
             vec![]
         };
+        let participant = if let Some(user) = user {
+            Participant::get(&mut db, contest_id, user.id).await
+        } else {
+            None
+        };
+        let can_edit = admin.is_some() || participant.map_or(false, |p| p.is_judge);
         let tz = tz.timezone();
         let formatted_times = runs
             .iter()
@@ -182,7 +191,7 @@ pub async fn runs(
             .collect::<Vec<_>>();
         RunsResponse::Ok(Template::render(
             "problems/runs",
-            context_with_base!(user, runs, contest, problem, formatted_times, max_runs: JudgeRun::MAX_RUNS_PER_USER),
+            context_with_base!(user, runs, contest, problem, can_edit, formatted_times, max_runs: JudgeRun::MAX_RUNS_PER_USER),
         ))
     } else {
         RunsResponse::NotFound(Status::NotFound)

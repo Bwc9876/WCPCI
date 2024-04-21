@@ -5,6 +5,7 @@ import { variable } from "@/lib/tera";
 ---
 
 <ContestLayout
+    showAdminVar="true"
     noIndex
     path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}/delete`
     title=`Delete ${variable("problem.name")}`

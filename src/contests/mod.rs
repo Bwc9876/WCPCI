@@ -13,6 +13,7 @@ use crate::{
     times::{datetime_to_html_time, ClientTimeZone, FormDateTime},
 };
 
+mod admin;
 mod delete;
 mod edit;
 mod join;
@@ -278,7 +279,7 @@ struct ContestForm<'r> {
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Contests App", |rocket| async {
-        rocket.mount(
+        rocket.attach(admin::stage()).mount(
             "/contests",
             routes![
                 list::contests_list,

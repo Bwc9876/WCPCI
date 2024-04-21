@@ -16,6 +16,7 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
 ---
 
 <ContestLayout
+    showAdminVar="is_admin or is_judge"
     path=`/contests/${variable("contest.id")}/leaderboard`
     title="Leaderboard"
     description={description}

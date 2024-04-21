@@ -12,6 +12,7 @@ const description = `View the problems for ${variable("contest.name")}, WCPC`;
 ---
 
 <ContestLayout
+    showAdminVar="logged_in and can_edit"
     path=`/contests/${variable("contest.id")}/problems`
     class="!gap-3"
     title="Problems"

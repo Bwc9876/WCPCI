@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 
 use crate::{auth::users::User, db::DbPoolConnection};
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Participant {
     pub p_id: i64,
     pub user_id: i64,
@@ -25,17 +25,17 @@ impl Participant {
         .flatten()
     }
 
-    // pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Option<Self> {
-    //     sqlx::query_as!(
-    //         Participant,
-    //         "SELECT * FROM participant WHERE p_id = ?",
-    //         p_id
-    //     )
-    //     .fetch_optional(&mut **db)
-    //     .await
-    //     .ok()
-    //     .flatten()
-    // }
+    pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Option<Self> {
+        sqlx::query_as!(
+            Participant,
+            "SELECT * FROM participant WHERE p_id = ?",
+            p_id
+        )
+        .fetch_optional(&mut **db)
+        .await
+        .ok()
+        .flatten()
+    }
 
     pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Vec<(Self, User)> {
         let res = sqlx::query!("SELECT participant.*, user.* FROM participant JOIN user ON participant.user_id = user.id WHERE contest_id = ?", contest_id)
@@ -68,6 +68,17 @@ impl Participant {
                 (participant, user)
             })
             .collect()
+    }
+
+    pub async fn delete(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM participant WHERE contest_id = ? AND user_id = ?",
+            self.contest_id,
+            self.user_id
+        )
+        .execute(&mut **db)
+        .await
+        .map(|_| ())
     }
 
     pub async fn list_judge(db: &mut DbPoolConnection, contest_id: i64) -> Vec<User> {

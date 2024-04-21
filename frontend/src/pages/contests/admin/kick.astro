@@ -1,0 +1,29 @@
+---
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
+import { variable } from "@/lib/tera";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    makeTile
+    title="Kick Participant"
+    path=`/contests/${variable("contest.id")}/admin/participants/${variable("target_participant.p_id")}/kick`
+>
+    <DeleteForm
+        breadcrumb={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Admin", `/contests/${variable("contest.id")}/admin`],
+            ["Participants", `/contests/${variable("contest.id")}/admin/participants`],
+            [
+                "Kick",
+                `/contests/${variable("contest.id")}/admin/participants/${variable("target_participant.p_id")}/kick`
+            ]
+        ]}
+        backLink={`/contests/${variable("contest.id")}/admin/participants`}
+        title="Kick Participant"
+        prompt={`Are you sure you want to kick ${variable("target_user.email")} from ${variable("contest.name")}? This will clear all submissions and scores, they will be removed from the leaderboard.`}
+    />
+</ContestLayout>

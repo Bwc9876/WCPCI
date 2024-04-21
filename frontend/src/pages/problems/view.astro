@@ -19,6 +19,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 ---
 
 <ContestLayout
+    showAdminVar="logged_in and can_edit"
     bodyClass="lg:h-screen lg:max-h-screen lg:overflow-hidden"
     path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`
     class="flex flex-col gap-4 overflow-y-hidden"

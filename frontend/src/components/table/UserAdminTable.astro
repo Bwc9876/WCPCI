@@ -6,18 +6,21 @@ import { variable } from "@/lib/tera";
 
 export type Props = {
     userVar?: string;
+    listName?: string;
+    idColName?: string;
     actions: TemplatedTableProps["actions"];
     addCols?: TemplatedTableProps["columns"];
 };
 
-const { actions, addCols, userVar } = Astro.props;
+const { actions, addCols, userVar, listName = "users", idColName } = Astro.props;
 
 const colPrefix = userVar ? `${userVar}.` : "";
 ---
 
 <TemplatedTable
     actions={actions}
-    listName="users"
+    idColName={idColName}
+    listName={listName}
     itemName="da_user"
     columns={[
         {
@@ -27,7 +30,7 @@ const colPrefix = userVar ? `${userVar}.` : "";
         {
             name: `${colPrefix}display_name | default(value=da_user.${colPrefix}default_display_name)`,
             label: "User",
-            avatarVar: `${colPrefix}da_user`,
+            avatarVar: `da_user${userVar ? `.${userVar}` : ""}`,
             makeLink: `/profile/${variable(`da_user.${colPrefix}id`)}`
         },
         ...(addCols ?? [])

@@ -77,10 +77,7 @@ pub async fn cancel_run(
 ) -> Result<Template, Status> {
     let manager = manager_handle.lock().await;
     if manager.get_handle(user_id, problem_id).await.is_some() {
-        let target_user = User::get(&mut db, user_id).await.ok_or_else(|| {
-            error!("Couldn't find user with id {}", user_id);
-            Status::InternalServerError
-        })?;
+        let target_user = User::get(&mut db, user_id).await.ok_or(Status::NotFound)?;
         Ok(Template::render(
             "admin/runs_cancel",
             context_with_base_authed!(user, target_user, problem_id),

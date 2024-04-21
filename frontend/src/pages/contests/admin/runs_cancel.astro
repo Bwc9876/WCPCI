@@ -1,0 +1,30 @@
+---
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    makeTile
+    title="Cancel Run"
+    path=`/contests/${variable("contest.id")}/admin/runs/${variable("target_user.id")}/${variable("problem_id")}/cancel`
+>
+    <DeleteForm
+        title="Cancel Run"
+        breadcrumb={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Admin", `/contests/${variable("contest.id")}/admin`],
+            ["Runs", `/contests/${variable("contest.id")}/admin/runs`],
+            [
+                "Cancel",
+                `/contests/${variable("contest.id")}/admin/runs/${variable("target_user.id")}/${variable("problem_id")}/cancel`
+            ]
+        ]}
+        backLink={`/contests/${variable("contest.id")}/admin/runs`}
+        noAppendWarning
+        prompt={`Are you sure you want to cancel the run started by ${variable("target_user.email")}? It will not be written to the database nor count as a penalty.`}
+    />
+</ContestLayout>
