@@ -162,9 +162,7 @@ impl Leaderboard {
     }
 
     pub fn remove_participant(&mut self, participant_id: i64) {
-        println!("Removing participant {}", participant_id);
         self.scores.retain(|s| s.participant_id != participant_id);
-        println!("Scores: {:?}", self.scores);
         self.send_msg(LeaderboardUpdateMessage::FullRefresh);
     }
 

@@ -2,6 +2,7 @@
 import Avatar from "@/components/Avatar.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import Button from "@/components/Button.astro";
+import Form from "@/components/Form.astro";
 import Progress from "@/components/Progress.astro";
 import Tile from "@/components/Tile.astro";
 import Title from "@/components/Title.astro";
@@ -46,6 +47,20 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
             </div>
             <span class="grow"></span>
             <div class="flex flex-row flex-wrap justify-end gap-2 align-middle">
+                <If expression="logged_in and not participant and not can_edit">
+                    <Form noTemplate action={`/contests/${variable("contest.id")}/join`}>
+                        <Fragment slot="hr"></Fragment>
+                        <Fragment slot="submit">
+                            <Button
+                                class="my-auto"
+                                color="primary"
+                                id="sign-up"
+                                icon="tabler:user-plus"
+                                size="lg">Sign Up</Button
+                            >
+                        </Fragment>
+                    </Form>
+                </If>
                 <Button
                     class:list={[
                         "my-auto",
@@ -53,7 +68,7 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                             ? "hidden"
                             : `${tag("if not started and not can_edit", true)}hidden${tag("endif")}`
                     ]}
-                    color="primary"
+                    color="secondary"
                     id="go-to-problems"
                     icon="tabler:puzzle"
                     size="lg"
@@ -94,7 +109,10 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                         href={`/contests/${variable("contest.id")}/admin`}
                     />
                 </If>
-                <If debugEval={true} expression="not started and not can_edit">
+                <If
+                    debugEval={true}
+                    expression="not started and not can_edit and participant or not logged_in"
+                >
                     <span id="countdown" class="my-auto text-xl text-gray-500">
                         Contest starts <span id="start-word">at</span>
                         <span
@@ -116,7 +134,7 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
             </Tile>
             <If
                 debugEval={true}
-                expression="logged_in and not can_edit and started and problems_total != 0"
+                expression="logged_in and participant and not can_edit and started and problems_total != 0"
             >
                 <Tile class="flex flex-col justify-center align-middle">
                     <label class="flex flex-col gap-2 text-2xl font-bold">

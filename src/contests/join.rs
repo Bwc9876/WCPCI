@@ -2,6 +2,7 @@ use log::error;
 use rocket::{
     get,
     http::Status,
+    post,
     request::{FromRequest, Outcome},
     response::Redirect,
     State,
@@ -42,7 +43,7 @@ impl<'r> FromRequest<'r> for NoPrefetch {
     }
 }
 
-#[get("/<contest_id>/join", rank = 10)]
+#[post("/<contest_id>/join", rank = 10)]
 pub async fn join_contest(
     mut db: DbConnection,
     contest_id: i64,
