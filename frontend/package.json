@@ -29,8 +29,8 @@
         "typescript": "^5.4.5"
     },
     "devDependencies": {
-        "@fontsource/roboto": "^5.0.12",
-        "@fontsource/roboto-mono": "^5.0.17",
+        "@fontsource/roboto": "^5.0.13",
+        "@fontsource/roboto-mono": "^5.0.18",
         "@iconify-json/tabler": "^1.1.110",
         "@kindspells/astro-shield": "^1.3.5",
         "@types/katex": "^0.16.7",
