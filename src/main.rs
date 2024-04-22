@@ -4,6 +4,12 @@ use rocket_dyn_templates::Template;
 #[macro_use]
 extern crate rocket_dyn_templates;
 
+#[macro_use]
+extern crate serde;
+
+#[macro_use]
+extern crate rocket;
+
 mod admin;
 mod auth;
 mod contests;

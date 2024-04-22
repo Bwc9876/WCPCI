@@ -1,6 +1,5 @@
 use log::error;
 use rocket::{
-    get,
     http::Status,
     post,
     request::{FromRequest, Outcome},
