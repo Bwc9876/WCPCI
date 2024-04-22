@@ -27,10 +27,12 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
         forceNoPrefix?: boolean;
         avatarVar?: string;
         overrideList?: string;
+        class?: string;
         placeIndicator?: string;
         centerHeader?: boolean;
         makeLink?: string;
     }[];
+    rowId?: string;
     itemLink?: {
         class?: string;
         color?: LinkColor;
@@ -51,6 +53,7 @@ const {
     listName,
     itemName = "item",
     idColName = "id",
+    rowId,
     isMap = false,
     emptyText = "No items to display",
     addColSpan = 0,
@@ -117,10 +120,14 @@ const emptyColSpan = renderAction
         }
     </Fragment>
     <For sourceList={listName} itemName={isMap ? `${itemName}_key, ${itemName}` : itemName}>
-        <TableRow>
+        <TableRow id={rowId ?? `${listName}-${itemName}-${variable("loop.index0")}`}>
             {
                 columns.map((col, i) => (
-                    <TableCol scope={i === 0 ? "row" : undefined} as={i === 0 ? "th" : "td"}>
+                    <TableCol
+                        class={col.class ?? ""}
+                        scope={i === 0 ? "row" : undefined}
+                        as={i === 0 ? "th" : "td"}
+                    >
                         {col.avatarVar && (
                             <Avatar
                                 class:list={["me-2 inline"]}

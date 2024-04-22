@@ -285,7 +285,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 
 <script>
     import type { CodeInfo } from "@/lib/editor";
-    import type { WebSocketRequest } from "@/lib/ws";
+    import type { WebSocketRequest } from "@/lib/problem_ws";
     import type * as monaco from "monaco-editor";
 
     let ws: WebSocket | null = null;
@@ -372,7 +372,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
 
         if (loggedIn) {
-            import("@/lib/ws").then((c) => {
+            import("@/lib/problem_ws").then((c) => {
                 console.debug("Preparing to connect to WebSocket");
                 ws = c.default(
                     contestId,

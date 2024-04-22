@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 
 use crate::db::DbPoolConnection;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ProblemCompletion {
     pub participant_id: i64,
     pub problem_id: i64,

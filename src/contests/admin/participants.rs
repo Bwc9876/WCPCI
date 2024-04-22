@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, post, response::Redirect};
+use rocket::{get, http::Status, post, response::Redirect, State};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
     contests::{Contest, Participant},
     context_with_base_authed,
     db::DbConnection,
+    leaderboard::LeaderboardManagerHandle,
 };
 
 #[derive(Serialize, Debug)]
@@ -59,7 +60,7 @@ pub async fn kick_participant_get(
         let participant = Participant::get(&mut db, contest_id, user.id).await;
         let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
         if allowed {
-            let target_participant = Participant::get(&mut db, contest_id, p_id)
+            let target_participant = Participant::by_id(&mut db, p_id)
                 .await
                 .ok_or(Status::NotFound)?;
             let target_user = User::get(&mut db, target_participant.user_id)
@@ -80,6 +81,7 @@ pub async fn kick_participant_post(
     contest_id: i64,
     p_id: i64,
     mut db: DbConnection,
+    leaderboards: &State<LeaderboardManagerHandle>,
     user: &User,
     _token: &VerifyCsrfToken,
     admin: Option<&Admin>,
@@ -88,13 +90,17 @@ pub async fn kick_participant_post(
         let participant = Participant::get(&mut db, contest_id, user.id).await;
         let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
         if allowed {
-            let target_participant = Participant::get(&mut db, contest_id, p_id)
+            let target_participant = Participant::by_id(&mut db, p_id)
                 .await
                 .ok_or(Status::NotFound)?;
             target_participant.delete(&mut db).await.map_err(|e| {
                 log::error!("Failed to delete participant: {:?}", e);
                 Status::InternalServerError
             })?;
+            let mut leaderboard_manager = leaderboards.lock().await;
+            leaderboard_manager
+                .delete_participant_for_contest(p_id, contest_id)
+                .await;
             Ok(Redirect::to(format!(
                 "/contests/{}/admin/participants",
                 contest_id

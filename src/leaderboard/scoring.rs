@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::NaiveDateTime;
 
 use crate::{
@@ -6,12 +8,37 @@ use crate::{
     problems::ProblemCompletion,
 };
 
+#[derive(Serialize, Clone, Copy, Debug)]
+pub struct ScoreEntry {
+    pub id: i64,
+    pub score: i64,
+    pub time_taken: i64, // (In Minutes)
+    pub num_wrong: i64,
+}
+
+impl ScoreEntry {
+    pub fn from_completion(
+        completion: &ProblemCompletion,
+        contest_start: NaiveDateTime,
+        contest_penalty_minutes: i64,
+    ) -> Self {
+        Self {
+            id: completion.problem_id,
+            score: (completion.completed_at.unwrap() - contest_start).num_seconds()
+                + (completion.number_wrong * contest_penalty_minutes * 60),
+            time_taken: (completion.completed_at.unwrap() - contest_start).num_minutes(),
+            num_wrong: completion.number_wrong,
+        }
+    }
+}
+
+#[derive(Serialize, Clone, Debug)]
 pub struct ParticipantScores {
     contest_start: NaiveDateTime,
     contest_penalty_minutes: i64,
     pub participant_id: i64,
     pub user_id: i64,
-    pub scores: Vec<(i64, i64)>, // id, score
+    pub scores: HashMap<i64, ScoreEntry>,
 }
 
 impl ParticipantScores {
@@ -20,20 +47,19 @@ impl ParticipantScores {
         id: i64,
         contest_start: NaiveDateTime,
         contest_penalty_minutes: i64,
-    ) -> Vec<(i64, i64)> {
+    ) -> HashMap<i64, ScoreEntry> {
         let completions = ProblemCompletion::get_for_participant(db, id).await;
         completions
             .into_iter()
             .filter_map(|c| {
-                c.completed_at.map(|d| {
+                c.completed_at.map(|_| {
                     (
                         c.problem_id,
-                        (d - contest_start).num_seconds()
-                            + (c.number_wrong * contest_penalty_minutes * 60),
+                        ScoreEntry::from_completion(&c, contest_start, contest_penalty_minutes),
                     )
                 })
             })
-            .collect::<Vec<_>>()
+            .collect::<HashMap<_, _>>()
     }
 
     pub async fn new(
@@ -61,6 +87,31 @@ impl ParticipantScores {
         .await;
     }
 
+    pub fn process_completion(&mut self, completion: &ProblemCompletion) {
+        if completion.participant_id == self.participant_id {
+            if let Some(entry) = self.scores.get_mut(&completion.problem_id) {
+                if completion.completed_at.is_some() {
+                    *entry = ScoreEntry::from_completion(
+                        completion,
+                        self.contest_start,
+                        self.contest_penalty_minutes,
+                    );
+                } else {
+                    self.scores.remove(&completion.problem_id);
+                }
+            } else if completion.completed_at.is_some() {
+                self.scores.insert(
+                    completion.problem_id,
+                    ScoreEntry::from_completion(
+                        completion,
+                        self.contest_start,
+                        self.contest_penalty_minutes,
+                    ),
+                );
+            }
+        }
+    }
+
     pub async fn update_contest(&mut self, db: &mut DbPoolConnection, contest: &Contest) {
         self.contest_start = contest.start_time;
         self.contest_penalty_minutes = contest.penalty;
@@ -84,16 +135,12 @@ impl PartialOrd for ParticipantScores {
 
 impl Ord for ParticipantScores {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.scores
-            .len()
-            .cmp(&other.scores.len())
-            .then(
-                self.scores
-                    .iter()
-                    .map(|(_, score)| score)
-                    .sum::<i64>()
-                    .cmp(&other.scores.iter().map(|(_, score)| score).sum()),
-            )
-            .reverse()
+        self.scores.len().cmp(&other.scores.len()).reverse().then(
+            self.scores
+                .values()
+                .map(|s| s.score)
+                .sum::<i64>()
+                .cmp(&other.scores.values().map(|s| s.score).sum()),
+        )
     }
 }

@@ -7,6 +7,7 @@ import TemplatedTable from "@/components/table/TemplatedTable.astro";
 import Else from "@/components/tera/Else.astro";
 import For from "@/components/tera/For.astro";
 import If from "@/components/tera/If.astro";
+import Tag from "@/components/tera/Tag.astro";
 import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
@@ -29,10 +30,41 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             ["Leaderboard", `/contests/${variable("contest.id")}/leaderboard`]
         ]}
     />
-    <Title>Leaderboard for <Variable expression="contest.name" /></Title>
+    <div class="flex flex-row gap-4">
+        <Title
+            id="dataElem"
+            class="grow"
+            data-contest-penalty={variable("contest.penalty")}
+            data-contest-id={variable("contest.id")}
+            >Leaderboard for <Variable expression="contest.name" /></Title
+        >
+        <div
+            id="live-indicator"
+            data-live="false"
+            class="group flex flex-row gap-1 text-lg font-bold"
+        >
+            <Icon
+                size={24}
+                name="tabler:circle-filled"
+                class="my-auto hidden animate-pulse text-red-500 group-[[data-live=true]]:inline"
+            />
+            <Icon
+                size={24}
+                name="tabler:circle-x"
+                class="my-auto hidden text-gray-500 group-[[data-live=false]]:inline"
+            />
+            <span class="my-auto hidden text-gray-500 group-[[data-live=false]]:inline"
+                >Not Live, Please Refresh</span
+            >
+            <span class="my-auto hidden text-red-500 group-[[data-live=true]]:inline">Live</span>
+        </div>
+    </div>
+
     <TemplatedTable
         addColSpan={100}
+        id="leaderboard"
         idColName="user.id"
+        rowId={`participant-row-${variable("entry.p_id")}`}
         emptyText="No one has joined this contest yet!"
         listName="entries"
         itemName="entry"
@@ -41,7 +73,7 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 name: "loop.index",
                 forceNoPrefix: true,
                 label: "Place",
-                placeIndicator: "",
+                placeIndicator: "place-indicator",
                 centerHeader: true
             },
             {
@@ -53,7 +85,7 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
         ]}
     >
         <For slot="head" sourceList="problems" itemName="problem">
-            <TableCol as="th" scope="column">
+            <TableCol class="text-center" as="th" scope="column">
                 <If expression="has_started or is_admin or is_judge">
                     <Link
                         color="accent"
@@ -70,22 +102,177 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             </TableCol>
         </For>
         <For sourceList="problems" itemName="problem">
+            <Tag expression="set problem_id=problem.id | as_str" />
             <TableCol
-                data-status={variable("problem.id in entry.problems_completed")}
+                data-status={variable("problem_id in entry.scores")}
                 class="group"
-                id=`problem-completion-indication-${variable("entry.user.id")}-${variable("problem.id")}`
+                id=`problem-completion-indication-${variable("entry.p_id")}-${variable("problem.id")}`
             >
-                <Icon
-                    size={30}
-                    name="tabler:circle-x"
-                    class="hidden text-gray-500 group-[[data-status=false]]:inline"
-                />
-                <Icon
-                    size={30}
-                    name="tabler:circle-check"
-                    class="hidden text-green-600 group-[[data-status=true]]:inline"
-                />
+                <div
+                    class="flex h-full flex-col justify-center whitespace-nowrap align-middle font-mono"
+                >
+                    <div class="mx-auto grow">
+                        <Icon
+                            size={30}
+                            name="tabler:circle-x"
+                            class="hidden text-gray-500 group-[[data-status=false]]:inline"
+                        />
+                        <Icon
+                            size={30}
+                            name="tabler:circle-check"
+                            class="hidden text-green-600 group-[[data-status=true]]:inline"
+                        />
+                    </div>
+                    <div class="time-taken self-stretch text-center">
+                        <Variable
+                            expression="format_time_taken(time=entry.scores[problem_id].time_taken | default(value=-1))"
+                        />
+                    </div>
+                    <div class="penalty self-stretch text-center">
+                        <Variable
+                            expression="entry.scores[problem_id].num_wrong | default(value=0)"
+                        /> (+<Variable
+                            expression="entry.scores[problem_id].num_wrong | default(value=0) * contest.penalty"
+                        />m)
+                    </div>
+                </div>
             </TableCol>
         </For>
     </TemplatedTable>
 </ContestLayout>
+
+<script>
+    import type { Message, ScoreEntry } from "@/lib/leaderboard_ws";
+
+    let ws: WebSocket | null = null;
+
+    const formatTimeTaken = (time: number) => {
+        const hours = Math.floor(time / 60);
+        const minutes = time % 60;
+        return `${hours === 0 ? "" : `${hours}h `}${minutes.toString()}m`;
+    };
+
+    document.addEventListener("astro:page-load", () => {
+        const dataElem = document.getElementById("dataElem")! as HTMLElement;
+        const contestId = dataElem.getAttribute("data-contest-id")!;
+        const contestPenalty = parseInt(dataElem.getAttribute("data-contest-penalty")!);
+        const liveIndicator = document.getElementById("live-indicator")!;
+
+        const updateScore = (participantId: number, problemId: number, score: ScoreEntry) => {
+            const elem = document.getElementById(
+                `problem-completion-indication-${participantId}-${problemId}`
+            )!;
+            elem.setAttribute("data-status", "true");
+            const timeTakenElem = elem.querySelector(".time-taken")!;
+            const penaltyElem = elem.querySelector(".penalty")!;
+            timeTakenElem.textContent = formatTimeTaken(score.time_taken);
+            penaltyElem.textContent = `${score.num_wrong} (+${score.num_wrong * contestPenalty}m)`;
+        };
+
+        const unComplete = (participantId: number, problemId: number) => {
+            const elem = document.getElementById(
+                `problem-completion-indication-${participantId}-${problemId}`
+            )!;
+            elem.setAttribute("data-status", "false");
+            const timeTakenElem = elem.querySelector(".time-taken")!;
+            const penaltyElem = elem.querySelector(".penalty")!;
+            timeTakenElem.textContent = "--";
+            penaltyElem.textContent = "0 (+0m)";
+        };
+
+        const rePlace = (participantId: number, _oldPos: number, newPos: number) => {
+            const row = document.getElementById(`participant-row-${participantId}`);
+            if (row) {
+                const indicator = row.querySelector(".place-indicator")! as HTMLElement;
+                indicator.dataset.place = (newPos + 1).toString();
+                const text = indicator.querySelector(".place-text")!;
+                text.textContent = (newPos + 1).toString();
+            }
+        };
+
+        const transition = "transform 1s cubic-bezier(.35,-0.25,.3,1.1)";
+
+        const reOrder = (newOrder: number[]) => {
+            const table = document.getElementById("leaderboard")!.querySelector("tbody")!;
+            [...table.children]
+                .map((node, i) => [i, newOrder[i], node])
+                .sort(([__, a, _], [____, b, ___]) => (a as number) - (b as number))
+                .forEach(([oldPos, newPos, node]) => {
+                    table.appendChild(node as Node);
+                    const rowHeight = (node as Element).getBoundingClientRect().height;
+                    const multiplier = (oldPos as number) - (newPos as number);
+                    console.debug("Reordering", oldPos, newPos, multiplier, rowHeight);
+                    const transform = `translateY(${multiplier * rowHeight}px)`;
+                    [...(node as Element).children].forEach((child) => {
+                        let childElem = child as HTMLElement;
+                        childElem.style.transform = transform;
+                        childElem.style.transition = "";
+                    });
+                });
+            setTimeout(resetPositions, 0);
+        };
+
+        const resetPositions = () => {
+            const table = document.getElementById("leaderboard")!.querySelector("tbody")!;
+            [...table.children].forEach((node, _) => {
+                [...node.children].forEach((child) => {
+                    let childElem = child as HTMLElement;
+                    childElem.style.transition = transition;
+                    childElem.style.transform = "";
+                });
+            });
+        };
+
+        const onMessage = (msg: Message) => {
+            console.debug("Received message", msg);
+            switch (msg.type) {
+                case "fullRefresh":
+                    window.location.reload();
+                    break;
+                case "completion":
+                    updateScore(msg.participantId, msg.score.id, msg.score);
+                    break;
+                case "unComplete":
+                    unComplete(msg.participantId, msg.problemId);
+                    break;
+                case "reOrder":
+                    Object.entries(msg.participantMap).forEach(
+                        ([participantId, [oldPos, newPos]]) => {
+                            console.debug("Reordering", participantId, oldPos, newPos);
+                            rePlace(parseInt(participantId), oldPos, newPos);
+                        }
+                    );
+                    const newOrder = Object.values(msg.participantMap)
+                        .sort(([a, _], [b, __]) => {
+                            return a - b;
+                        })
+                        .map(([_, newN]) => newN);
+                    reOrder(newOrder);
+                    break;
+            }
+        };
+
+        const onOpen = () => {
+            if (liveIndicator) {
+                liveIndicator.dataset.live = "true";
+            }
+        };
+
+        const onClose = () => {
+            if (liveIndicator) {
+                liveIndicator.dataset.live = "false";
+            }
+        };
+
+        import("@/lib/leaderboard_ws").then((c) => {
+            ws = c.default(parseInt(contestId), onMessage, onClose, onOpen);
+        });
+    });
+
+    document.addEventListener("astro:after-swap", () => {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+    });
+</script>

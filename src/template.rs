@@ -109,6 +109,26 @@ fn fake_attr(args: FunctionArgs) -> Result<Value, tera::Error> {
     Ok(tera::Value::String(format!("\"{attr}=\"{val}")))
 }
 
+fn format_time_taken(args: FunctionArgs) -> Result<Value, tera::Error> {
+    let taken = args
+        .get("time")
+        .and_then(|o| o.as_i64())
+        .ok_or(tera::Error::msg("time not passed!"))?;
+    if taken == -1 {
+        return Ok(tera::Value::String("--".to_string()));
+    }
+
+    let hours = taken / 60;
+    let minutes = taken % 60;
+    let hours_f = if hours == 0 {
+        "".to_string()
+    } else {
+        format!("{hours}h ")
+    };
+    let minutes_f = format!("{minutes}m");
+    Ok(tera::Value::String(format!("{hours_f}{minutes_f}")))
+}
+
 fn render_markdown(args: FunctionArgs) -> Result<Value, tera::Error> {
     let text = args
         .get("md")
@@ -216,6 +236,8 @@ pub fn stage() -> AdHoc {
             e.tera.register_function("in_debug", in_debug);
             e.tera.register_function("gravatar", gravatar_function);
             e.tera.register_function("fake_attr", fake_attr);
+            e.tera
+                .register_function("format_time_taken", format_time_taken);
             e.tera.register_function("render_markdown", render_markdown);
             e.tera
                 .register_function("url_prefix", move |_: FunctionArgs| {

@@ -4,6 +4,7 @@ use rocket::{fairing::AdHoc, get, http::Status, routes, State};
 
 mod manager;
 mod scoring;
+mod ws;
 
 pub use manager::{LeaderboardManager, LeaderboardManagerHandle};
 use rocket_dyn_templates::Template;
@@ -15,6 +16,8 @@ use crate::{
     context_with_base,
     db::DbConnection,
 };
+
+use self::ws::leaderboard_ws;
 
 #[derive(Responder)]
 enum LeaderboardResponse {
@@ -76,10 +79,19 @@ async fn leaderboard_get(
 }
 
 pub fn stage() -> AdHoc {
+    let (tx, rx) = tokio::sync::watch::channel(false);
+
     AdHoc::on_ignite("Leaderboard App", |rocket| async {
-        let manager = LeaderboardManager::new().await;
+        let shutdown_fairing = AdHoc::on_shutdown("Shutdown Leaderboard Sockets", |_rocket| {
+            Box::pin(async move {
+                tx.send(true).ok();
+            })
+        });
+
+        let manager = LeaderboardManager::new(rx).await;
         rocket
+            .attach(shutdown_fairing)
             .manage::<LeaderboardManagerHandle>(Arc::new(Mutex::new(manager)))
-            .mount("/", routes![leaderboard_get])
+            .mount("/", routes![leaderboard_get, leaderboard_ws])
     })
 }

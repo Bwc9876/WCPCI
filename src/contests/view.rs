@@ -37,7 +37,9 @@ pub async fn view_contest(
         let problems_done = if let Some(participant) = &participant {
             ProblemCompletion::get_for_participant(&mut db, participant.p_id)
                 .await
-                .len()
+                .into_iter()
+                .filter(|c| c.completed_at.is_some())
+                .count()
         } else {
             0
         };

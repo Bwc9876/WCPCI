@@ -7,7 +7,7 @@ use rocket::{
     http::Status,
     post,
     response::Redirect,
-    FromForm,
+    FromForm, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -19,6 +19,7 @@ use crate::{
     contests::{Contest, Participant},
     context_with_base_authed,
     db::DbConnection,
+    leaderboard::LeaderboardManagerHandle,
     problems::{Problem, ProblemCompletion},
     template::{FormTemplateObject, TemplatedForm},
 };
@@ -48,7 +49,7 @@ impl<'r> TemplatedForm for CompletionTemplateForm<'r> {
             ])
         } else {
             HashMap::from_iter([
-                ("completed_at".to_string(), "".to_string()),
+                ("completed_in".to_string(), "".to_string()),
                 ("number_wrong".to_string(), "0".to_string()),
             ])
         }
@@ -143,6 +144,7 @@ pub async fn edit_completion_post(
     contest_id: i64,
     problem_slug: &str,
     _token: &VerifyCsrfToken,
+    leaderboard_manager: &State<LeaderboardManagerHandle>,
     form: Form<Contextual<'_, ProblemCompletionForm>>,
     user: &User,
     admin: Option<&Admin>,
@@ -181,6 +183,10 @@ pub async fn edit_completion_post(
                 error!("Failed to upsert completion: {}", e);
                 Status::InternalServerError
             })?;
+            let mut leaderboard_manager = leaderboard_manager.lock().await;
+            leaderboard_manager
+                .process_completion(&completion, &contest)
+                .await;
             return Ok(EditCompletionResponse::Redirect(Redirect::to(format!(
                 "/contests/{}/admin/runs/problems/{}",
                 contest_id, problem_slug

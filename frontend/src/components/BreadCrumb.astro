@@ -9,19 +9,22 @@ export interface Props {
 const { entries, class: className } = Astro.props;
 ---
 
-<ul class:list={["flex flex-row flex-wrap gap-2", className ?? ""]}>
+<nav
+    aria-label="Breadcrumb navigation"
+    class:list={["flex flex-row flex-wrap gap-2", className ?? ""]}
+>
     {
         entries.map(([name, link], i) => (
             <>
-                <li class="capitalize">
+                <span class="capitalize">
                     {i === entries.length - 1 ? (
                         <span class="m-0 text-gray-400">{name}</span>
                     ) : (
                         <Link href={link}>{name}</Link>
                     )}
-                </li>
+                </span>
                 {i !== entries.length - 1 && <span class="m-0 text-gray-400">/</span>}
             </>
         ))
     }
-</ul>
+</nav>

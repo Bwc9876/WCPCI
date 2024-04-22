@@ -184,14 +184,12 @@ impl RunManager {
                                 error!("Couldn't write problem completion to db: {:?}", why);
                             }
 
-                            let mut leaderboard_manager = leaderboard_handle.lock().await;
-                            let leaderboard = leaderboard_manager
-                                .get_leaderboard(&mut conn, &contest)
-                                .await;
-                            drop(leaderboard_manager);
-                            let mut leaderboard = leaderboard.lock().await;
-
-                            leaderboard.update(&mut conn, participant.p_id).await;
+                            if completion.completed_at.is_some() {
+                                let mut leaderboard_manager = leaderboard_handle.lock().await;
+                                leaderboard_manager
+                                    .process_completion(&completion, &contest)
+                                    .await;
+                            }
                         }
                     }
                 }

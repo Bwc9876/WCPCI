@@ -1,5 +1,5 @@
 use log::error;
-use rocket::{get, http::Status, post, response::Redirect};
+use rocket::{get, http::Status, post, response::Redirect, State};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
     },
     context_with_base_authed,
     db::DbConnection,
+    leaderboard::LeaderboardManagerHandle,
 };
 
 #[get("/users")]
@@ -38,6 +39,7 @@ pub async fn delete_user_get(
 pub async fn delete_user_post(
     id: i64,
     mut db: DbConnection,
+    leaderboards: &State<LeaderboardManagerHandle>,
     _admin: &Admin,
     _token: &VerifyCsrfToken,
 ) -> Result<Redirect, Status> {
@@ -46,5 +48,7 @@ pub async fn delete_user_post(
         error!("Failed to delete user: {:?}", e);
         Status::InternalServerError
     })?;
+    let mut leaderboard_manager = leaderboards.lock().await;
+    leaderboard_manager.delete_user(id).await;
     Ok(Redirect::to("/admin/users"))
 }

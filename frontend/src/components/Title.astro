@@ -6,4 +6,4 @@ export type Props = HTMLAttributes<"h1">;
 const { class: className, ...rest } = Astro.props;
 ---
 
-<h1 class:list={["text-3xl font-bold", className ?? ""]}><slot /></h1>
+<h1 class:list={["text-3xl font-bold", className ?? ""]} {...rest}><slot /></h1>

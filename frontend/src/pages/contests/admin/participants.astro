@@ -30,7 +30,8 @@ import Title from "@/components/Title.astro";
         actions={[
             {
                 name: "Kick",
-                action: (id) => `/contests/${variable("contest.id")}/admin/participants/${id}/kick`,
+                action: (_id) =>
+                    `/contests/${variable("contest.id")}/admin/participants/${variable("da_user.participant.p_id")}/kick`,
                 icon: "tabler:shoe",
                 color: "danger"
             }

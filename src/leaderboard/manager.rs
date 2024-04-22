@@ -1,31 +1,46 @@
 use std::{collections::HashMap, sync::Arc};
 
-use sqlx::FromRow;
+use log::error;
+use sqlx::{FromRow, Row};
 use tokio::sync::Mutex;
 
 use crate::{
     auth::users::User,
     contests::{Contest, Participant},
     db::DbPoolConnection,
+    problems::ProblemCompletion,
 };
 
-use super::scoring::ParticipantScores;
+use super::scoring::{ParticipantScores, ScoreEntry};
 
 pub struct Leaderboard {
     pub contest: Contest,
     pub scores: Vec<ParticipantScores>,
+    tx: LeaderboardUpdateSender,
 }
 
 #[derive(Serialize)]
 pub struct LeaderboardEntry {
     pub user: User,
-    pub problems_completed: Vec<i64>,
+    pub p_id: i64,
+    pub scores: HashMap<String, ScoreEntry>,
 }
 
 impl Leaderboard {
-    pub async fn new(db: &mut DbPoolConnection, contest: Contest) -> Self {
+    pub async fn new(
+        db: &mut DbPoolConnection,
+        contest: Contest,
+    ) -> (Self, LeaderboardUpdateReceiver) {
         let scores = Self::get_scores(db, &contest).await;
-        Self { contest, scores }
+        let (tx, rx) = tokio::sync::broadcast::channel(16);
+        (
+            Self {
+                contest,
+                scores,
+                tx,
+            },
+            rx,
+        )
     }
 
     async fn get_scores(db: &mut DbPoolConnection, contest: &Contest) -> Vec<ParticipantScores> {
@@ -38,17 +53,11 @@ impl Leaderboard {
         scores
     }
 
-    // pub async fn standings(&self) -> Vec<(i64, Vec<i64>)> {
-    //     self.scores
-    //         .iter()
-    //         .map(|s| {
-    //             (
-    //                 s.participant_id,
-    //                 s.scores.iter().map(|(id, _)| *id).collect(),
-    //             )
-    //         })
-    //         .collect()
-    // }
+    fn send_msg(&self, msg: LeaderboardUpdateMessage) {
+        if let Err(why) = self.tx.send(msg) {
+            error!("Failed to send leaderboard update: {:?}", why);
+        }
+    }
 
     pub async fn full(&self, db: &mut DbPoolConnection) -> Vec<LeaderboardEntry> {
         let cases = self
@@ -61,19 +70,14 @@ impl Leaderboard {
         let scores = self
             .scores
             .iter()
-            .map(|s| {
-                (
-                    s.user_id,
-                    s.scores.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-                )
-            })
+            .map(|s| (s.user_id, s.scores.clone()))
             .collect::<HashMap<_, _>>();
         let query = format!(
             "
-            SELECT user.* FROM participant 
+            SELECT user.*, participant.p_id FROM participant 
             JOIN user ON participant.user_id = user.id 
             WHERE contest_id = ? AND is_judge = false
-            ORDER BY CASE participant.p_id {} ELSE 0 END DESC;
+            ORDER BY CASE participant.p_id {} ELSE 0 END;
         ",
             if cases.is_empty() {
                 "WHEN 0 THEN 0"
@@ -88,25 +92,80 @@ impl Leaderboard {
             .unwrap();
         res.into_iter()
             .map(|row| {
+                let p_id = row.try_get::<i64, _>("p_id").unwrap();
                 let user = User::from_row(&row).unwrap();
-                let problems_completed = scores.get(&user.id).unwrap();
+                let scores = scores.get(&user.id);
                 LeaderboardEntry {
                     user,
-                    problems_completed: problems_completed.clone(),
+                    p_id,
+                    scores: scores.map_or(HashMap::new(), |s| {
+                        s.clone()
+                            .into_iter()
+                            .map(|(k, v)| (k.to_string(), v))
+                            .collect::<HashMap<_, _>>()
+                    }),
                 }
             })
             .collect::<Vec<_>>()
     }
 
-    pub async fn update(&mut self, db: &mut DbPoolConnection, updated_participant: i64) {
-        let participant = self
+    pub fn process_completion(&mut self, completion: &ProblemCompletion) {
+        let original_order = self
+            .scores
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.participant_id, i))
+            .collect::<HashMap<_, _>>();
+
+        if let Some(participant) = self
             .scores
             .iter_mut()
-            .find(|s| s.participant_id == updated_participant);
-        if let Some(p) = participant {
-            p.refresh(db).await;
+            .find(|s| s.participant_id == completion.participant_id)
+        {
+            participant.process_completion(completion);
             self.scores.sort();
+            if completion.completed_at.is_some() {
+                self.send_msg(LeaderboardUpdateMessage::Completion {
+                    participant_id: completion.participant_id,
+                    score: ScoreEntry::from_completion(
+                        completion,
+                        self.contest.start_time,
+                        self.contest.penalty,
+                    ),
+                });
+            } else {
+                self.send_msg(LeaderboardUpdateMessage::UnComplete {
+                    participant_id: completion.participant_id,
+                    problem_id: completion.problem_id,
+                });
+            }
         }
+
+        let new_order = self
+            .scores
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.participant_id, i))
+            .collect::<HashMap<_, _>>();
+
+        let participant_map = original_order
+            .iter()
+            .map(|(k, v)| (*k, (*v, new_order[k])))
+            .collect::<HashMap<_, _>>();
+
+        self.send_msg(LeaderboardUpdateMessage::ReOrder { participant_map });
+    }
+
+    pub fn remove_user(&mut self, user_id: i64) {
+        self.scores.retain(|s| s.user_id != user_id);
+        self.send_msg(LeaderboardUpdateMessage::FullRefresh);
+    }
+
+    pub fn remove_participant(&mut self, participant_id: i64) {
+        println!("Removing participant {}", participant_id);
+        self.scores.retain(|s| s.participant_id != participant_id);
+        println!("Scores: {:?}", self.scores);
+        self.send_msg(LeaderboardUpdateMessage::FullRefresh);
     }
 
     pub fn stats_of(&self, user_id: i64) -> Option<(usize, usize)> {
@@ -127,17 +186,45 @@ impl Leaderboard {
             }
         }
         self.scores = Self::get_scores(db, &self.contest).await;
+        self.send_msg(LeaderboardUpdateMessage::FullRefresh);
     }
 }
 
-pub struct LeaderboardManager {
-    leaderboards: HashMap<i64, Arc<Mutex<Leaderboard>>>,
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum LeaderboardUpdateMessage {
+    FullRefresh,
+    #[serde(rename_all = "camelCase")]
+    UnComplete {
+        participant_id: i64,
+        problem_id: i64,
+    },
+    #[serde(rename_all = "camelCase")]
+    Completion {
+        participant_id: i64,
+        score: ScoreEntry,
+    },
+    #[serde(rename_all = "camelCase")]
+    ReOrder {
+        participant_map: HashMap<i64, (usize, usize)>,
+    },
 }
 
+pub type LeaderboardUpdateSender = tokio::sync::broadcast::Sender<LeaderboardUpdateMessage>;
+pub type LeaderboardUpdateReceiver = tokio::sync::broadcast::Receiver<LeaderboardUpdateMessage>;
+
+pub struct LeaderboardManager {
+    leaderboards: HashMap<i64, (Arc<Mutex<Leaderboard>>, LeaderboardUpdateReceiver)>,
+    shutdown_rx: ShutdownReceiver,
+}
+
+pub type ShutdownReceiver = tokio::sync::watch::Receiver<bool>;
+
 impl LeaderboardManager {
-    pub async fn new() -> Self {
+    pub async fn new(shutdown_rx: ShutdownReceiver) -> Self {
         Self {
             leaderboards: HashMap::new(),
+            shutdown_rx,
         }
     }
 
@@ -146,13 +233,56 @@ impl LeaderboardManager {
         db: &mut DbPoolConnection,
         contest: &Contest,
     ) -> Arc<Mutex<Leaderboard>> {
-        if let Some(leaderboard) = self.leaderboards.get(&contest.id) {
+        if let Some((leaderboard, _)) = self.leaderboards.get(&contest.id) {
             leaderboard.clone()
         } else {
-            let leaderboard = Leaderboard::new(db, contest.clone()).await;
+            let (leaderboard, rx) = Leaderboard::new(db, contest.clone()).await;
             let leaderboard = Arc::new(Mutex::new(leaderboard));
-            self.leaderboards.insert(contest.id, leaderboard.clone());
+            self.leaderboards
+                .insert(contest.id, (leaderboard.clone(), rx));
             leaderboard
+        }
+    }
+
+    pub fn subscribe_shutdown(&self) -> ShutdownReceiver {
+        self.shutdown_rx.clone()
+    }
+
+    pub async fn subscribe_leaderboard(
+        &mut self,
+        db: &mut DbPoolConnection,
+        contest: &Contest,
+    ) -> LeaderboardUpdateReceiver {
+        let leaderboard = self.get_leaderboard(db, contest).await;
+        let leaderboard = leaderboard.lock().await;
+        leaderboard.tx.subscribe()
+    }
+
+    pub async fn delete_user(&mut self, user_id: i64) {
+        for (leaderboard, _) in self.leaderboards.values() {
+            let mut leaderboard = leaderboard.lock().await;
+            leaderboard.remove_user(user_id);
+        }
+    }
+
+    pub async fn delete_participant_for_contest(&mut self, participant_id: i64, contest_id: i64) {
+        if let Some((leaderboard, _)) = self.leaderboards.get_mut(&contest_id) {
+            let mut leaderboard = leaderboard.lock().await;
+            leaderboard.remove_participant(participant_id);
+        }
+    }
+
+    pub async fn refresh_leaderboard(&mut self, db: &mut DbPoolConnection, contest: &Contest) {
+        if let Some((leaderboard, _)) = self.leaderboards.get_mut(&contest.id) {
+            let mut leaderboard = leaderboard.lock().await;
+            leaderboard.full_refresh(db, Some(contest)).await;
+        }
+    }
+
+    pub async fn process_completion(&mut self, completion: &ProblemCompletion, contest: &Contest) {
+        if let Some((leaderboard, _)) = self.leaderboards.get_mut(&contest.id) {
+            let mut leaderboard = leaderboard.lock().await;
+            leaderboard.process_completion(completion);
         }
     }
 }
