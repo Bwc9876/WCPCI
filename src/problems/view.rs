@@ -9,7 +9,7 @@ use crate::{
     run::CodeInfo,
 };
 
-use super::{JudgeRun, Problem, TestCase};
+use super::{JudgeRun, Problem, ProblemCompletion, TestCase};
 
 #[derive(Responder)]
 pub enum ProblemViewResponse {
@@ -59,20 +59,33 @@ pub async fn view_problem_get(
     slug: &str,
 ) -> ProblemViewResponse {
     if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
-        let is_judge = if let Some(user) = user {
-            Participant::get(&mut db, contest_id, user.id)
-                .await
-                .map(|p| p.is_judge)
-                .unwrap_or(false)
+        let participant = if let Some(user) = user {
+            Participant::get(&mut db, contest_id, user.id).await
         } else {
-            false
+            None
         };
+        let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
         let is_admin = admin.is_some();
 
         let contest = Contest::get(&mut db, contest_id).await.unwrap();
         if !contest.has_started() && !is_judge && !is_admin {
             return ProblemViewResponse::NotFound(Status::NotFound);
         }
+
+        let completion = if let Some(participant) = participant {
+            ProblemCompletion::get_for_problem_and_participant(
+                &mut db,
+                problem.id,
+                participant.p_id,
+            )
+            .await
+        } else {
+            None
+        };
+
+        let case_count = TestCase::count_for_problem(&mut db, problem.id)
+            .await
+            .unwrap_or(0);
 
         let last_run = if let Some(user) = user {
             JudgeRun::get_latest(&mut db, user.id, problem.id)
@@ -81,11 +94,11 @@ pub async fn view_problem_get(
                 .flatten()
         } else {
             None
-        };
-
-        let case_count = TestCase::count_for_problem(&mut db, problem.id)
-            .await
-            .unwrap_or(0);
+        }
+        .filter(|r| r.total_cases == case_count) // Don't show runs when test cases have changed
+        .filter(|r| {
+            r.error.is_some() || completion.map(|c| c.completed_at.is_some()).unwrap_or(true)
+        }); // Don't show run if judge overrode completion
 
         let languages = info.run_config.get_languages_for_dropdown();
         let code_info = &info.languages_json;

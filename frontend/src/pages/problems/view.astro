@@ -50,46 +50,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         />
         <div class="flex flex-row flex-wrap gap-4">
             <Title class="my-auto"><Variable expression="problem.name" /></Title>
-            <If expression="logged_in">
-                <ProblemRun casesName="case_count" objName="last_run" class="grow" />
-                <Else slot="else">
-                    <span class="grow"></span>
-                    <Button
-                        size="lg"
-                        as="a"
-                        href=`/auth/login`
-                        class="my-auto w-fit"
-                        icon="tabler:login-2"
-                        color="secondary">Login or Register to Submit</Button
-                    >
-                </Else>
-            </If>
             <div class="flex flex-row gap-1">
-                <Button
-                    as="button"
-                    disabled
-                    data-contest-id={variable("problem.contest_id")}
-                    data-problem-id={variable("problem.id")}
-                    data-problem-slug={variable("problem.slug")}
-                    data-default-language={variable("default_language")}
-                    data-logged-in={variable("logged_in")}
-                    data-color-preference={themeClass("light", "dark", "system")}
-                    class:list={["my-auto w-fit data-[logged-in='false']:hidden"]}
-                    id="submit"
-                    color="primary"
-                    icon="tabler:star">Submit!</Button
-                >
-                <If expression="logged_in">
-                    <Button
-                        size="lg"
-                        as="a"
-                        href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`
-                        class="my-auto w-fit"
-                        justIcon
-                        icon="tabler:clock"
-                        color="secondary"
-                    />
-                </If>
                 <If expression="can_edit">
                     <Button
                         size="lg"
@@ -112,6 +73,48 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 </If>
             </div>
         </div>
+    </Tile>
+    <Tile class="flex flex-row gap-2">
+        <h2 class="my-auto text-2xl">Your Progress</h2>
+        <If expression="logged_in">
+            <ProblemRun casesName="case_count" objName="last_run" class="grow" />
+            <Else slot="else">
+                <span class="grow"></span>
+                <Button
+                    size="lg"
+                    as="a"
+                    href=`/auth/login`
+                    class="my-auto w-fit"
+                    icon="tabler:login-2"
+                    color="secondary">Login or Register to Submit</Button
+                >
+            </Else>
+        </If>
+        <Button
+            as="button"
+            disabled
+            data-contest-id={variable("problem.contest_id")}
+            data-problem-id={variable("problem.id")}
+            data-problem-slug={variable("problem.slug")}
+            data-default-language={variable("default_language")}
+            data-logged-in={variable("logged_in")}
+            data-color-preference={themeClass("light", "dark", "system")}
+            class:list={["my-auto w-fit data-[logged-in='false']:hidden"]}
+            id="submit"
+            color="primary"
+            icon="tabler:star">Submit!</Button
+        >
+        <If expression="logged_in">
+            <Button
+                size="lg"
+                as="a"
+                href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`
+                class="my-auto w-fit"
+                justIcon
+                icon="tabler:clock"
+                color="secondary"
+            />
+        </If>
     </Tile>
     <div class="flex min-h-0 grow flex-col gap-4 lg:flex-row">
         <Tile
