@@ -3,8 +3,6 @@ import Link from "@/components/Link.astro";
 import Title from "@/components/Title.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Layout from "@/layouts/Layout.astro";
-
-import runExampleGif from "@/assets/run-example.gif";
 ---
 
 <Layout noIndex makeTile path=`/md-help`>
@@ -51,13 +49,6 @@ import runExampleGif from "@/assets/run-example.gif";
         >. This will generate a "Run Example" button on the problem description that allows
         contestants to directly run your test case with their code.
     </p>
-    <img
-        class="w-1/2"
-        height={runExampleGif.height}
-        width={runExampleGif.width}
-        src={runExampleGif.src}
-        alt="Run Example Gif"
-    />
 </Layout>
 
 <style is:global>
