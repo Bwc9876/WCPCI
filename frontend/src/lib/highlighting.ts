@@ -10,6 +10,7 @@ import kotlin from "highlight.js/lib/languages/kotlin";
 import haskell from "highlight.js/lib/languages/haskell";
 import c from "highlight.js/lib/languages/c";
 import cpp from "highlight.js/lib/languages/cpp";
+import markdown from "highlight.js/lib/languages/markdown";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("js", javascript);
@@ -24,6 +25,8 @@ hljs.registerLanguage("c", c);
 hljs.registerLanguage("cpp", cpp);
 hljs.registerLanguage("cc", cpp);
 hljs.registerLanguage("cxx", cpp);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("md", markdown);
 hljs.registerLanguage("example", plaintext);
 
 const makePreCode = (text: string): HTMLPreElement => {

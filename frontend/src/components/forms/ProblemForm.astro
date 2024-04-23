@@ -8,6 +8,7 @@ import Button from "../Button.astro";
 import { variable } from "@/lib/tera";
 import Label from "../Label.astro";
 import Variable from "../tera/Variable.astro";
+import Link from "../Link.astro";
 
 export type Props = Omit<ComponentProps<typeof Form>, "slot">;
 
@@ -19,13 +20,8 @@ const { ...props } = Astro.props;
     <div class="relative flex w-full flex-col gap-2 lg:flex-row">
         <div class="flex grow flex-col lg:w-2/6">
             <Field required name="name" maxlength={32} type="text" help="Max length: 32" />
-            <Field
-                name="description"
-                class="font-mono"
-                type="textarea"
-                rows={20}
-                help="Markdown formatting is supported"
-            />
+            <Field name="description" class="font-mono" type="textarea" rows={20} />
+            <Link href="/md-help" isExternal>Markdown Formatting Help</Link>
             <Field
                 required
                 name="cpu_time"

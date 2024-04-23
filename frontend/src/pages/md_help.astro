@@ -1,0 +1,92 @@
+---
+import Link from "@/components/Link.astro";
+import Title from "@/components/Title.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Layout from "@/layouts/Layout.astro";
+
+import runExampleGif from "@/assets/run-example.gif";
+---
+
+<Layout noIndex makeTile path=`/md-help`>
+    <Title>Markdown Formatting Help</Title>
+    <p>
+        First, take a look at <Link isExternal href="https://www.markdownguide.org/basic-syntax/"
+            >The Markdown Guide</Link
+        > for basic markdown syntax.
+    </p>
+    <p>
+        Note we currently <strong>do not support</strong> images in markdown, if you try to link one
+        it will fail to render on the actual problem page.
+    </p>
+    <h2 class="mt-4 text-2xl font-bold">GitHub Flavored Markdown</h2>
+    <p>
+        In addition to basic markdown we also support <Link
+            isExternal
+            href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"
+            >GitHub flavored markdown</Link
+        > which includes things like task lists, tables, and more.
+    </p>
+    <h2 class="mt-4 text-2xl font-bold">Math Display</h2>
+    <p>
+        We also support <Link href="https://katex.org/docs/supported.html" isExternal>KaTeX</Link> rendering
+        via <code>$</code> and <code>$$</code>, which allow you to render math equations. Examples:
+    </p>
+    <Variable expression={"render_markdown(md='```md\nInline Equation: $e = mc^2$\n```') | safe"} />
+    <p>
+        Inline Equation <code class="math-inline">{"e = mc^2"}</code>
+    </p>
+    <br />
+    <br />
+    <Variable
+        expression={"render_markdown(md='```md\nBlock Equation:\n$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$\n```') | safe"}
+    />
+    <p>Block Equation:</p>
+    <Variable
+        expression="render_markdown(md='$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$') | safe"
+    />
+    <h2 class="mt-4 text-2xl font-bold">Example Blocks</h2>
+    <p>
+        You can create example blocks by using the codeblock syntax with the language set to <code
+            >example</code
+        >. This will generate a "Run Example" button on the problem description that allows
+        contestants to directly run your test case with their code.
+    </p>
+    <img
+        class="w-1/2"
+        height={runExampleGif.height}
+        width={runExampleGif.width}
+        src={runExampleGif.src}
+        alt="Run Example Gif"
+    />
+</Layout>
+
+<style is:global>
+    :not(pre) > code:not(.language-math) {
+        @apply rounded bg-secondary-50 p-1 font-mono;
+    }
+
+    pre code.hljs {
+        @apply rounded-lg !bg-secondary-50;
+    }
+
+    pre
+        code:is([class*=" language-"], [class^="language-"]):not(.language-example):not(
+            .language-math
+        ):not(.hljs) {
+        @apply opacity-0;
+    }
+</style>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        import("@/lib/highlighting").then((c) => {
+            console.debug("Setting Up Code Block Highlighting");
+            c.default("main");
+        });
+
+        import("@/lib/math").then((c) => {
+            console.debug("Setting Up Math Block Highlighting");
+            c.default("main");
+        });
+    });
+</script>

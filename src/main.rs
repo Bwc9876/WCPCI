@@ -33,6 +33,12 @@ async fn index(user: Option<&User>) -> Template {
     Template::render("index", ctx)
 }
 
+#[get("/md-help")]
+async fn md_help(user: Option<&User>) -> Template {
+    let ctx = context_with_base!(user,);
+    Template::render("md_help", ctx)
+}
+
 #[catch(default)]
 fn error(status: Status, _request: &Request) -> Template {
     let message = status.to_string();
@@ -56,7 +62,7 @@ fn rocket() -> _ {
     println!("Start of WCPC v{}", env!("CARGO_PKG_VERSION"));
 
     rocket::build()
-        .mount("/", routes![index])
+        .mount("/", routes![index, md_help])
         .register("/", catchers![error])
         .attach(csp::stage())
         .attach(db::stage())
