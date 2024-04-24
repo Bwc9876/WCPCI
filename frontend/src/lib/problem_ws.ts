@@ -68,7 +68,8 @@ export default (
     testOutput: HTMLTextAreaElement,
     toggleButtons: (disabled: boolean) => void
 ) => {
-    const url = `ws://${window.location.host}/run/ws/${contestId}/${problemId}`;
+    const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const url = `${scheme}://${window.location.host}/run/ws/${contestId}/${problemId}`;
     console.debug("Connecting to WebSocket at", url);
     const ws = new WebSocket(url);
 

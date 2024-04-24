@@ -30,7 +30,10 @@ export default (
     onClose?: () => void,
     onOpen?: () => void
 ) => {
-    const ws = new WebSocket(`ws://${window.location.host}/contests/${contestId}/leaderboard/ws`);
+    const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(
+        `${scheme}://${window.location.host}/contests/${contestId}/leaderboard/ws`
+    );
     ws.onopen = () => {
         console.debug("Connected to leaderboard websocket");
         onOpen?.();
