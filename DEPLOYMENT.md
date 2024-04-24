@@ -11,11 +11,14 @@ Table of contents:
     - [Profile](#profile)
     - [Base](#base)
     - [TLS](#tls)
-    - [Database](#database)
-    - [OAuth](#oauth)
-    - [SAML](#saml)
+    - [Database Configuration](#database-configuration)
+    - [OAuth Configuration](#oauth-configuration)
+    - [SAML Configuration](#saml-configuration)
     - [Run](#run)
       - [Languages](#languages)
+  - [Database](#database)
+  - [OAuth](#oauth)
+  - [SAML](#saml)
 
 ## Prerequisites
 
@@ -57,6 +60,9 @@ Rocket uses profiles to make configuration different between what stage of devel
 
 ### Base
 
+- `cli_colors` - Whether to use colors and emoji in the CLI. (by default this is `true`)
+- `ident` - The identifier to send in the `Server` header, `WCPC` by default
+- `ip_header` - IP header to use for getting the user's IP address. By default this is `X-Real-IP` but can be changed to `X-Forwarded-For` if you're behind a reverse proxy.
 - `address` - The address to bind the application to.
 - `port` - The port to bind the application to.
 - `workers` - The number of workers to spawn for the application. (by default this is CPU count * 2)
@@ -76,23 +82,31 @@ For TLS configuration use the `tls` object. This object has the following fields
 - `tls.ciphers` - An array of ciphers to use for the TLS connection. (by default this is all TLS v1.3 and TLS v1.2 suites)
 - `tls.prefer_server_cipher_order` - Whether to prefer the server's cipher order over the client's cipher order. (by default this is `false`)
 
-### Database
+### Database Configuration
 
-- `databases.sqlite_db.url` - The file path to the SQLite database.
+- `databases.sqlite_db.url` - The file path to the SQLite database. See the [Database section](#database) for more information.
 
-### OAuth
+### OAuth Configuration
 
-- `oauth.github` - This is the OAuth configuration for GitHub.
+- `oauth.github` - This is the OAuth configuration for GitHub. See the [OAuth section](#oauth) for more information.
+  - `provider` - Set this to `GitHub`
+  - `redirect_uri` - Set to your URL and then `/auth/github/callback`
   - `client_id` - The client ID for the GitHub OAuth application.
   - `client_secret` - The client secret for the GitHub OAuth application.
-- `oauth.google` - This is the OAuth configuration for Google.
+- `oauth.google` - This is the OAuth configuration for Google. See the [OAuth section](#oauth) for more information.
+  - `provider` - Set this to `Google`
+  - `redirect_uri` - Set to your URL and then `/auth/google/callback`
   - `client_id` - The client ID for the Google OAuth application.
   - `client_secret` - The client secret for the Google OAuth application.
 
-### SAML
+### SAML Configuration
+
+See the [SAML section](#saml) for more information.
 
 - `saml.entity_id` - The entity ID for the SAML service provider, this can be anything but is recommended to be a URI by the SAML spec, this will need to be shared with the identity provider.
 - `saml.idp_metadata_url` - The URL the application will use to fetch the identity provider's metadata, this should be an XML endpoint.
+- `saml.cert` - The certificate to use to sign assertions with. This should be a PEM encoded certificate.
+- `saml.key` - The private key to use to sign assertions with. This should be a PEM encoded private key.
 - `saml.contact_name` - The name of the contact person for the SAML service provider.
 - `saml.contact_email` - The email of the contact person for the SAML service provider.
 - `saml.contact_telephone` - The telephone number of the contact person for the SAML service provider.
@@ -117,3 +131,23 @@ For TLS configuration use the `tls` object. This object has the following fields
 - `file_name` - The name of the file to save the user's code to when running a submission.
 - `compile_cmd` - The command to use to compile the code, this can be left blank if the language doesn't need to be compiled, but we'd recommend setting it to do static analysis of an interpreted language to be fair to all users. The source file is named as whatever is in `file_name`.
 - `run_cmd` - The command to use to run the code. This command will be passed the input of the testcase as stdin and should output the result of the program to stdout. The source file is named as whatever is in `file_name`.
+
+## Database
+
+The database must be a SQLite database, the application will create the file if it isn't present.
+
+On any updates to the application it should be able to migrate the database automatically, __but it may still be a good idea to back it up before updating__.
+
+## OAuth
+
+For Oauth, see the [section in configuration](#oauth-configuration) for what keys and values to use.
+
+You'll need to create GitHub and Google OAuth apps in order to use them as providers.
+
+See the [GitHub OAuth docs](https://docs.github.com/en/developers/apps/building-oauth-apps) and the [Google OAuth docs](https://developers.google.com/identity/protocols/oauth2) for more information.
+
+## SAML
+
+For SAML you'll need to configure your identity provider to trust the application. The application will need to know the entity ID and the metadata URL of the identity provider, as well as a certificate and private key to sign assertions with.
+
+This application supports HTTP-Post bindings, and at the moment only support SP-initiated SSO. More bindings and features may be added in the future.
