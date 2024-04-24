@@ -69,18 +69,12 @@ Rocket uses profiles to make configuration different between what stage of devel
 
 ### TLS
 
-__Before enabling TLS consider this note from the Rocket documentation:__
-
-> Rocket's built-in TLS is not considered ready for production use. It is intended for development use only.
-
-We'd recommend using a reverse proxy like Nginx or Caddy to handle TLS termination and then proxying to the Rocket application.
-
 For TLS configuration use the `tls` object. This object has the following fields:
 
 - `tls.certs` - The path to the certificate chain file
 - `tls.key` - The path to the private key file
-
-__Even if you're using a reverse proxy you should still set the `url` to `https://` so URLs are properly formatted__
+- `tls.ciphers` - An array of ciphers to use for the TLS connection. (by default this is all TLS v1.3 and TLS v1.2 suites)
+- `tls.prefer_server_cipher_order` - Whether to prefer the server's cipher order over the client's cipher order. (by default this is `false`)
 
 ### Database
 
