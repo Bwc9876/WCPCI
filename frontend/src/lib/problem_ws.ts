@@ -1,4 +1,5 @@
 import type { Status } from "@/components/CaseIndicator.astro";
+import confetti from "canvas-confetti";
 
 export type WebSocketRequest =
     | {
@@ -59,6 +60,10 @@ export type WebSocketMessage =
           error: string;
       };
 
+function randomInRange(min: number, max: number) {
+    return Math.random() * (max - min) + min;
+}
+
 export default (
     contestId: string,
     problemId: string,
@@ -80,6 +85,17 @@ export default (
             case "testing":
                 return state.status.status !== "pending" && state.status.status !== "running";
         }
+    };
+
+    const confettiForElem = (elem: Element, options: Partial<confetti.Options>) => {
+        const rect = elem.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        confetti({
+            ...options,
+            disableForReducedMotion: true,
+            origin: { x: (rect.left + rect.width / 2) / windowWidth, y: rect.top / windowHeight }
+        });
     };
 
     const typeToStatus: Record<CaseStatus["status"], Status> = {
@@ -107,9 +123,22 @@ export default (
                 switch (state.type) {
                     case "judging":
                         for (const [i, c] of state.cases.entries()) {
-                            document
-                                .querySelector(`[data-case-number='${i}']`)!
-                                .setAttribute("data-status", typeToStatus[c.status]);
+                            const elem = document.querySelector(
+                                `[data-case-number='${i}']`
+                            )! as HTMLElement;
+                            const currentStatus = elem.getAttribute("data-status");
+                            if (currentStatus === typeToStatus[c.status]) {
+                                continue;
+                            }
+                            if (c.status === "passed") {
+                                confettiForElem(elem, {
+                                    particleCount: randomInRange(30, 35),
+                                    angle: randomInRange(70, 110),
+                                    startVelocity: 15,
+                                    spread: 45
+                                });
+                            }
+                            elem.setAttribute("data-status", typeToStatus[c.status]);
                         }
                         if (complete) {
                             const firstWithErr = state.cases.find((c) => c.status === "failed");
@@ -119,6 +148,16 @@ export default (
                             } else {
                                 runMessageWrapper.setAttribute("data-status", "success");
                                 runMessage.innerText = "All Tests Passed!";
+                                confettiForElem(runMessage, {
+                                    particleCount: 40,
+                                    spread: 360,
+                                    ticks: 50,
+                                    gravity: 0,
+                                    decay: 0.8,
+                                    startVelocity: 30,
+                                    colors: ["FFE400", "FFBD00", "E89400", "FFCA6C", "FDFFB8"],
+                                    shapes: ["star"]
+                                });
                             }
                         } else {
                             runMessageWrapper.setAttribute("data-status", "loading");

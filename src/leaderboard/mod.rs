@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use chrono::TimeZone;
 use rocket::{fairing::AdHoc, get, http::Status, routes, State};
 
 mod manager;
@@ -15,6 +16,7 @@ use crate::{
     contests::{Contest, Participant},
     context_with_base,
     db::DbConnection,
+    times::{datetime_to_html_time, ClientTimeZone},
 };
 
 use self::ws::leaderboard_ws;
@@ -37,6 +39,7 @@ async fn leaderboard_get(
     mut db: DbConnection,
     leaderboard_manager: &State<LeaderboardManagerHandle>,
     contest_id: i64,
+    tz: ClientTimeZone,
     user: Option<&User>,
     admin: Option<&Admin>,
 ) -> LeaderboardResponse {
@@ -47,7 +50,7 @@ async fn leaderboard_get(
             .await
             .clone();
         drop(leaderboard_manager);
-        let leaderboard = leaderboard.lock().await;
+        let mut leaderboard = leaderboard.lock().await;
 
         let problems = sqlx::query_as!(
             ProblemIdTemp,
@@ -69,9 +72,14 @@ async fn leaderboard_get(
 
         let entries = leaderboard.full(&mut db).await;
 
+        let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
+        let start_local_html = datetime_to_html_time(&start_local);
+        let end_local = tz.timezone().from_utc_datetime(&contest.end_time);
+        let end_local_html = datetime_to_html_time(&end_local);
+
         LeaderboardResponse::Template(Template::render(
             "contests/leaderboard",
-            context_with_base!(user, has_started: contest.has_started(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
+            context_with_base!(user, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
         ))
     } else {
         LeaderboardResponse::Error(Status::NotFound)

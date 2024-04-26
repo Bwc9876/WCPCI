@@ -32,6 +32,7 @@ fn stage_inner(path: &Path) -> AdHoc {
     let directives: Vec<String> = vec![
         "default-src 'self'".to_string(),
         "object-src 'none'".to_string(),
+        "worker-src 'self' blob:".to_string(),
         "frame-ancestors 'none'".to_string(),
         format!("style-src 'self' 'unsafe-inline'"),
         format!("font-src 'self' data:"),

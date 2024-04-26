@@ -1,6 +1,7 @@
 ---
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import Link from "@/components/Link.astro";
+import Progress from "@/components/Progress.astro";
 import Title from "@/components/Title.astro";
 import TableCol from "@/components/table/TableCol.astro";
 import TemplatedTable from "@/components/table/TemplatedTable.astro";
@@ -36,6 +37,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             class="grow"
             data-contest-penalty={variable("contest.penalty")}
             data-contest-id={variable("contest.id")}
+            data-contest-start-time={variable("start_local_html")}
+            data-contest-end-time={variable("end_local_html")}
             >Leaderboard for <Variable expression="contest.name" /></Title
         >
         <div
@@ -59,6 +62,32 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             <span class="my-auto hidden text-red-500 group-[[data-live=true]]:inline">Live</span>
         </div>
     </div>
+
+    <If expression="is_running">
+        <div class="my-4 flex flex-row gap-4">
+            <div class="relative grow">
+                <If expression="contest.freeze_time != 0">
+                    <span
+                        style={`left: ${variable("freeze_percent")}%;`}
+                        class="absolute inset-y-0 right-auto w-1 bg-blue-400"></span>
+                    <Icon
+                        style={`left: calc(${variable("freeze_percent")}% - 10px);`}
+                        size={24}
+                        name="tabler:snowflake"
+                        class="absolute right-auto top-[-26px] text-blue-500"
+                    />
+                </If>
+                <Progress
+                    id="countdown-progress"
+                    class="h-full w-full"
+                    aria-label="Time Left"
+                    value={variable("progress")}
+                    max="100"
+                />
+            </div>
+            <span id="countdown">Ends In --h --m --s</span>
+        </div>
+    </If>
 
     <TemplatedTable
         addColSpan={100}
@@ -142,6 +171,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
 </ContestLayout>
 
 <script>
+    import { makeCountdown } from "@/lib/countdown";
+    import confetti from "canvas-confetti";
     import type { Message, ScoreEntry } from "@/lib/leaderboard_ws";
 
     let ws: WebSocket | null = null;
@@ -156,7 +187,55 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
         const dataElem = document.getElementById("dataElem")! as HTMLElement;
         const contestId = dataElem.getAttribute("data-contest-id")!;
         const contestPenalty = parseInt(dataElem.getAttribute("data-contest-penalty")!);
+        const startTime = new Date(dataElem.getAttribute("data-contest-start-time")!);
+        const endTime = new Date(dataElem.getAttribute("data-contest-end-time")!);
         const liveIndicator = document.getElementById("live-indicator")!;
+        const countdown = document.getElementById("countdown");
+        const countdownProgress = document.getElementById(
+            "countdown-progress"
+        ) as HTMLProgressElement | null;
+
+        if (countdown && countdownProgress) {
+            const totalSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+            const onTick = (time: string, seconds: number) => {
+                if (countdown) {
+                    countdown.textContent = `Ends in ${time}`;
+                }
+                if (countdownProgress) {
+                    console.debug("Progress", totalSeconds, seconds);
+                    countdownProgress.value = ((totalSeconds - seconds) / totalSeconds) * 100;
+                }
+            };
+            const onEnd = () => {
+                window.location.href = `${window.location.href}?ended=true`;
+            };
+            makeCountdown(endTime, onTick, onEnd);
+        } else if (window.location.search.includes("ended=true")) {
+            history.replaceState({}, document.title, window.location.pathname);
+            const options = {
+                particleCount: 2,
+                disableForReducedMotion: true,
+                spread: 55,
+                colors: ["#8f4999", "#ffe800"]
+            };
+            const end = Date.now() + 1000 * 10;
+            (function frame() {
+                confetti({
+                    ...options,
+                    angle: 60,
+                    origin: { x: 0 }
+                });
+                confetti({
+                    ...options,
+                    angle: 120,
+                    origin: { x: 1 }
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            })();
+        }
 
         const updateScore = (participantId: number, problemId: number, score: ScoreEntry) => {
             const elem = document.getElementById(

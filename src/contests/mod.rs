@@ -141,6 +141,19 @@ impl Contest {
         let now = chrono::offset::Utc::now().naive_utc();
         self.registration_deadline > now
     }
+
+    pub fn progress(&self) -> usize {
+        let now = chrono::offset::Utc::now().naive_utc();
+        let total_seconds = (self.end_time - self.start_time).num_seconds() as f64;
+        let elapsed_seconds = (now - self.start_time).num_seconds() as f64;
+        (elapsed_seconds / total_seconds * 100.0) as usize
+    }
+
+    pub fn freeze_percent(&self) -> usize {
+        let total_minutes = (self.end_time - self.start_time).num_minutes() as f64;
+        let freeze_minutes = total_minutes - (self.freeze_time as f64);
+        (freeze_minutes / total_minutes * 100.0) as usize
+    }
 }
 
 struct ContestFormTemplate<'r> {

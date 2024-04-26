@@ -232,6 +232,8 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
 </ContestLayout>
 
 <script>
+    import { makeCountdown } from "@/lib/countdown";
+
     document.addEventListener("astro:page-load", () => {
         const startWord = document.getElementById("start-word") as HTMLElement | null;
         const startTime = document.getElementById("start-time") as HTMLElement | null;
@@ -252,37 +254,17 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
         };
 
         if (startWord && startTime && countdown && goButton) {
-            const start = new Date(startTime.dataset.timeStr as string);
-            const now = new Date();
-            if (start > now) {
-                const updateTimer = () => {
-                    const now = new Date();
-                    const diff = start.getTime() - now.getTime();
-                    if (diff <= 0) {
-                        clearInterval(interval);
-                        countdown.classList.add("hidden");
-                        toggleButtons(false);
-                    } else {
-                        let days = Math.floor(diff / (1000 * 60 * 60 * 24)).toString();
-                        days = days === "0" ? "" : `${days}d `;
-                        let hours = Math.floor(
-                            (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-                        ).toString();
-                        hours = hours === "0" ? "" : `${hours}h `;
-                        let minutes = Math.floor(
-                            (diff % (1000 * 60 * 60)) / (1000 * 60)
-                        ).toString();
-                        minutes = minutes === "0" ? "" : `${minutes}m `;
-                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                        countdown.innerText = `Contest starts in ${days}${hours}${minutes}${seconds}s`;
-                    }
-                };
-                updateTimer();
-                const interval = setInterval(updateTimer, 1000);
-            } else {
+            const onEnd = () => {
                 countdown.classList.add("hidden");
                 toggleButtons(false);
-            }
+            };
+
+            const onTick = (time: string) => {
+                countdown.innerText = `Contest starts in ${time}`;
+            };
+
+            const start = new Date(startTime.dataset.timeStr as string);
+            makeCountdown(start, onTick, onEnd, onEnd);
         }
     });
 </script>

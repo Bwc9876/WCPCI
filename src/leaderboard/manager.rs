@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use chrono::NaiveDateTime;
 use log::error;
 use sqlx::{FromRow, Row};
 use tokio::sync::Mutex;
@@ -16,6 +17,7 @@ use super::scoring::{ParticipantScores, ScoreEntry};
 pub struct Leaderboard {
     pub contest: Contest,
     pub scores: Vec<ParticipantScores>,
+    last_update: Option<NaiveDateTime>,
     tx: LeaderboardUpdateSender,
 }
 
@@ -37,10 +39,21 @@ impl Leaderboard {
             Self {
                 contest,
                 scores,
+                last_update: None,
                 tx,
             },
             rx,
         )
+    }
+
+    fn is_frozen(&self) -> bool {
+        if self.contest.freeze_time == 0 {
+            return false;
+        }
+
+        let now = chrono::Utc::now().naive_utc();
+        let minutes_to_end = (self.contest.end_time - now).num_minutes();
+        dbg!(now) < dbg!(self.contest.end_time) && minutes_to_end <= self.contest.freeze_time
     }
 
     async fn get_scores(db: &mut DbPoolConnection, contest: &Contest) -> Vec<ParticipantScores> {
@@ -54,12 +67,25 @@ impl Leaderboard {
     }
 
     fn send_msg(&self, msg: LeaderboardUpdateMessage) {
+        if self.is_frozen() {
+            return;
+        }
         if let Err(why) = self.tx.send(msg) {
             error!("Failed to send leaderboard update: {:?}", why);
         }
     }
 
-    pub async fn full(&self, db: &mut DbPoolConnection) -> Vec<LeaderboardEntry> {
+    pub async fn full(&mut self, db: &mut DbPoolConnection) -> Vec<LeaderboardEntry> {
+        let now = chrono::Utc::now().naive_utc();
+        if self
+            .last_update
+            .map(|lu| now > self.contest.end_time && lu < self.contest.end_time)
+            .unwrap_or(true)
+        {
+            self.full_refresh(db, None).await;
+        } else {
+            self.last_update = Some(now);
+        }
         let cases = self
             .scores
             .iter()
@@ -110,6 +136,10 @@ impl Leaderboard {
     }
 
     pub fn process_completion(&mut self, completion: &ProblemCompletion) {
+        if self.is_frozen() {
+            return;
+        }
+
         let original_order = self
             .scores
             .iter()
