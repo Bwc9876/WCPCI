@@ -8,7 +8,7 @@ buildNpmPackage {
   src = ../frontend;
   packageJSON = ../frontend/package.json;
 
-  npmDepsHash = "sha256-xRrhLfGY/PO3mnjgwdECJbUDZYHGB1VPoMfdMeHkKzk=";
+  npmDepsHash = "sha256-AO9O/j7Ff95cNOKUlKUJrzyPOX7RoFz0TND3tY67LZw=";
 
   distPhase = "true";
   dontInstall = true;
