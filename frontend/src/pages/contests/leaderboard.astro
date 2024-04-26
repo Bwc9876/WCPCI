@@ -202,7 +202,6 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                     countdown.textContent = `Ends in ${time}`;
                 }
                 if (countdownProgress) {
-                    console.debug("Progress", totalSeconds, seconds);
                     countdownProgress.value = ((totalSeconds - seconds) / totalSeconds) * 100;
                 }
             };

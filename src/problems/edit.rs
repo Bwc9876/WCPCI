@@ -138,7 +138,7 @@ pub async fn edit_problem_post(
             }
         }
 
-        let form_ctx = FormTemplateObject::from_rocket_context(form_template, dbg!(&form.context));
+        let form_ctx = FormTemplateObject::from_rocket_context(form_template, &form.context);
         let contest = Contest::get(&mut db, contest_id).await.unwrap();
         ProblemEditResponse::Form(Template::render(
             "problems/edit",

@@ -53,7 +53,7 @@ impl Leaderboard {
 
         let now = chrono::Utc::now().naive_utc();
         let minutes_to_end = (self.contest.end_time - now).num_minutes();
-        dbg!(now) < dbg!(self.contest.end_time) && minutes_to_end <= self.contest.freeze_time
+        now < self.contest.end_time && minutes_to_end <= self.contest.freeze_time
     }
 
     async fn get_scores(db: &mut DbPoolConnection, contest: &Contest) -> Vec<ParticipantScores> {
