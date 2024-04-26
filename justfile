@@ -7,17 +7,18 @@ dev-watch:
     mprocs "cargo run" "cd frontend && pnpm watch"
 
 dev:
-    cd frontend && pnpm build
+    cd frontend && npm run build
     cargo run
 
 format:
     cargo fmt
-    cd frontend && pnpm format
+    cd frontend && npm run format
+    nix fmt
 
 lint:
     cargo lint
 
 update:
     cargo update
-    cd frontend && pnpm update --latest
+    cd frontend && npm update --latest
 

@@ -36,7 +36,6 @@ The server you're running on will need a few dependencies:
 To distribute this as a package you'll need to ensure that the above dependencies are installed on the target machine.
 In addition the following folder need to go along with the package:
 
-- `migrations/`
 - `frontend/dist/`
 - `public/`
 

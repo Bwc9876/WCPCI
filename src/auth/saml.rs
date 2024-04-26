@@ -31,6 +31,15 @@ struct AttrOptions {
     email: String,
 }
 
+impl Default for AttrOptions {
+    fn default() -> Self {
+        Self {
+            display_name: cn_oid(),
+            email: email_oid(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SamlOptions {
     entity_id: String,
@@ -41,6 +50,7 @@ pub struct SamlOptions {
     contact_email: Option<String>,
     contact_telephone: Option<String>,
     organization_name: Option<String>,
+    #[serde(default)]
     attrs: AttrOptions,
 }
 
