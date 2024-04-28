@@ -20,9 +20,8 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 
 <ContestLayout
     showAdminVar="logged_in and can_edit"
-    bodyClass="lg:h-screen lg:max-h-screen lg:overflow-hidden"
     path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`
-    class="flex flex-col gap-4 overflow-y-hidden"
+    class="flex flex-col gap-4 lg:overflow-y-hidden"
     title=`${variable("problem.name")}`
     description={description}
 >
@@ -117,9 +116,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             />
         </If>
     </Tile>
-    <div class="flex min-h-0 grow flex-col gap-4 lg:flex-row">
+    <div class="flex min-h-0 grow flex-col gap-4 lg:min-h-[100vh] lg:flex-row">
         <Tile
-            class="group flex flex-row gap-1 self-stretch overflow-hidden lg:!p-0 lg:has-[[data-expanded='true']]:w-2/5"
+            class="group flex max-h-[100vh] flex-row gap-1 overflow-hidden lg:!p-0 lg:has-[[data-expanded='true']]:w-2/5"
         >
             <div
                 class="flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden lg:mb-4 lg:ms-4 lg:mt-4"
