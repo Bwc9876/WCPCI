@@ -24,7 +24,8 @@ pub struct UserInfo {
 #[get("/login")]
 fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
     let mut cookie = Cookie::new("state-oauth-type", "login");
-    cookie.set_same_site(SameSite::None);
+    cookie.set_secure(false);
+    cookie.set_same_site(SameSite::Lax);
     cookies.add(cookie);
     oauth2.get_redirect(cookies, &SCOPES).map_err(|e| {
         error!("Error getting GitHub redirect: {}", e);
@@ -39,7 +40,8 @@ fn github_link(
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Status> {
     let mut cookie = Cookie::new("state-oauth-type", "link");
-    cookie.set_same_site(SameSite::None);
+    cookie.set_secure(false);
+    cookie.set_same_site(SameSite::Lax);
     cookies.add(cookie);
     oauth2.get_redirect(cookies, &SCOPES).map_err(|e| {
         error!("Error getting GitHub redirect: {}", e);
@@ -59,13 +61,17 @@ async fn github_callback(
     let state = cookies
         .get("state-oauth-type")
         .map(|c| c.value())
-        .ok_or(Status::BadRequest)?;
+        .ok_or_else(|| {
+            error!("No state-type cookie found for GitHub callback");
+            Status::BadRequest
+        })?;
 
     let res = if state == "login" {
         handler.handle_callback(&mut db, cookies).await
     } else if state == "link" && user.is_some() {
         handler.handle_link_callback(&mut db, user.unwrap()).await
     } else {
+        error!("Invalid state type for GitHub callback: {}", state);
         return Err(Status::BadRequest);
     }
     .map_err(|e| {

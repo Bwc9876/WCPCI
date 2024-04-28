@@ -9,10 +9,9 @@
       cli_colors = false;
       timezone = "America/New_York";
       admins = ["bwc9876@example.com"];
-      url = "http://127.0.0.1:8000";
       port = 8000;
       ip_header = "X-Forwarded-For";
-      address = "127.0.0.1";
+      address = "0.0.0.0";
 
       saml = {
         entity_id = "urn:wcpc:saml-debugging";
@@ -31,11 +30,9 @@
       oauth = {
         github = {
           provider = "GitHub";
-          redirect_uri = "http://localhost:8000/auth/github/callback";
         };
         google = {
           provider = "Google";
-          redirect_uri = "http://localhost:8000/auth/google/callback";
         };
       };
 
