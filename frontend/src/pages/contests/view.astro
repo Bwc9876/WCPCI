@@ -132,35 +132,6 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                 <h2 class="text-2xl font-bold">Description</h2>
                 <p><Variable expression="contest.description" /></p>
             </Tile>
-            <If
-                debugEval={true}
-                expression="logged_in and participant and not can_edit and started and problems_total != 0"
-            >
-                <Tile class="flex flex-col justify-center align-middle">
-                    <label class="flex flex-col gap-2 text-2xl font-bold">
-                        Your Progress
-                        <div class="flex flex-row gap-4">
-                            <Progress
-                                class="my-auto w-full"
-                                value={variable("problems_done", "14")}
-                                max={variable("problems_total", "20")}
-                            />
-                            <span class="my-auto min-w-max text-lg">
-                                <span>
-                                    <Variable expression="problems_done" debugEval="14" />
-                                    / <Variable expression="problems_total" debugEval="20" />
-                                </span>
-                                <span
-                                    >(<Variable
-                                        expression="problems_done / problems_total * 100 | round"
-                                        debugEval="70"
-                                    />%)</span
-                                >
-                            </span>
-                        </div>
-                    </label>
-                </Tile>
-            </If>
             <If debugEval={true} expression="started or can_edit">
                 <Tile class="flex grow flex-col gap-2 overflow-hidden">
                     <h2 class="text-2xl font-bold">Problems</h2>
