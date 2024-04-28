@@ -10,6 +10,7 @@ use rocket_oauth2::{OAuth2, TokenResponse};
 use crate::{
     db::{DbConnection, DbPoolConnection},
     error::prelude::*,
+    messages::Message,
 };
 
 use super::{users::User, CallbackHandler};
@@ -88,7 +89,7 @@ async fn google_unlink(mut db: DbConnection, user: &User) -> ResultResponse<Redi
         .await
         .context("Error unlinking Google account")?;
     if res.rows_affected() == 1 {
-        Ok(Redirect::to("/settings/account"))
+        Ok(Message::success("Google account unlinked").to("/settings/account"))
     } else {
         Err(Status::InternalServerError.into())
     }

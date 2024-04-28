@@ -5,6 +5,7 @@ use crate::{
     auth::users::{Admin, User},
     db::DbConnection,
     leaderboard::LeaderboardManagerHandle,
+    messages::Message,
     FormResponse,
 };
 
@@ -42,7 +43,8 @@ pub async fn join_contest(
                 .refresh_leaderboard(&mut db, &contest)
                 .await?;
 
-            Ok(Redirect::to(format!("/contests/{}/", contest_id)))
+            Ok(Message::success(&format!("Welcome to {}!", contest.name))
+                .to(&format!("/contests/{}/", contest_id)))
         }
     } else {
         Err(Status::Forbidden.into())

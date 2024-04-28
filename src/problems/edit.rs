@@ -2,9 +2,7 @@ use rocket::{
     form::{Contextual, Error, Form},
     get,
     http::Status,
-    post,
-    response::Redirect,
-    State,
+    post, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -17,6 +15,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    messages::Message,
     run::ManagerHandle,
     template::FormTemplateObject,
 };
@@ -106,7 +105,7 @@ pub async fn edit_problem_post(
             TestCase::save_for_problem(&mut db, problem.id, test_cases).await?;
             let mut manager = manager.lock().await;
             manager.update_problem(problem.id).await;
-            return Ok(Redirect::to(format!(
+            return Ok(Message::success("Problem Updated").to(&format!(
                 "/contests/{}/problems/{}",
                 contest_id, problem.slug
             )));

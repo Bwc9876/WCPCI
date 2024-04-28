@@ -15,6 +15,7 @@ use crate::{
     context_with_base,
     db::{DbConnection, DbPoolConnection},
     error::prelude::*,
+    messages::Message,
     ResultResponse,
 };
 
@@ -35,7 +36,7 @@ pub mod users;
 
 #[catch(401)]
 async fn unauthorized() -> Redirect {
-    Redirect::to("/auth/login")
+    Message::info("You need to be logged in to access this page").to("/auth/login")
 }
 
 #[get("/login")]
@@ -62,7 +63,7 @@ async fn logout(mut db: DbConnection, cookies: &CookieJar<'_>) -> ResultResponse
 
         cookies.remove_private(Session::TOKEN_COOKIE_NAME);
     }
-    Ok(Redirect::to("/"))
+    Ok(Message::success("Logged out").to("/"))
 }
 
 pub fn stage() -> AdHoc {
@@ -113,9 +114,16 @@ trait CallbackHandler {
         let user_info = self.fetch_user_info().await?;
         self.link_to(db, user, user_info).await.map(|linked| {
             if linked {
-                Ok(Redirect::to("/settings/account"))
+                Ok(
+                    Message::success(&format!("Linked your account to {}", Self::SERVICE_NAME))
+                        .to("/settings/account"),
+                )
             } else {
-                Err(Status::Conflict)
+                Ok(Message::error(&format!(
+                    "This {} account is already linked to another WCPC account",
+                    Self::SERVICE_NAME
+                ))
+                .to("/settings/account"))
             }
         })
     }

@@ -17,6 +17,7 @@ mod csp;
 mod db;
 mod error;
 mod leaderboard;
+mod messages;
 mod problems;
 mod profile;
 mod run;

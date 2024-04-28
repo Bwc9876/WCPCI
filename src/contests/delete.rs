@@ -1,4 +1,4 @@
-use rocket::{get, post, response::Redirect};
+use rocket::{get, post};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -8,6 +8,7 @@ use crate::{
     },
     context_with_base_authed,
     db::DbConnection,
+    messages::Message,
     FormResponse, ResultResponse,
 };
 
@@ -35,5 +36,5 @@ pub async fn delete_contest_post(
 ) -> FormResponse {
     let contest = Contest::get_or_404(&mut db, contest_id).await?;
     contest.delete(&mut db).await?;
-    Ok(Redirect::to("/contests"))
+    Ok(Message::success("Contest deleted").to("/contests"))
 }

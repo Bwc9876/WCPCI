@@ -17,6 +17,7 @@ import Tile from "@/components/Tile.astro";
 import Button from "@/components/Button.astro";
 import { themeClass, variable } from "@/lib/tera";
 import { Image } from "astro:assets";
+import { loremIpsum } from "lorem-ipsum";
 
 export interface Props {
     path: string;
@@ -101,6 +102,63 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
             bodyClass ?? ""
         ]}
     >
+        <div
+            data-show="false"
+            data-type="success"
+            id="alert"
+            class:list={[
+                "hidden",
+                "data-[show='true']:flex",
+                "flex-row",
+                "gap-2",
+                "text-white",
+                "group",
+                "data-[type=info]:bg-blue-500",
+                "data-[type=error]:bg-red-500",
+                "data-[type=success]:bg-green-600",
+                "data-[type=warning]:bg-yellow-700",
+                "p-4",
+                "rounded-md",
+                "shadow-md",
+                "fixed",
+                "right-8",
+                "bottom-8",
+                "overflow-hidden",
+                "max-w-[30%]",
+                "z-100"
+            ]}
+        >
+            <Icon
+                size={28}
+                name="tabler:info-circle"
+                class="my-auto hidden group-[[data-type=info]]:block"
+            />
+            <Icon
+                size={28}
+                name="tabler:circle-x"
+                class="my-auto hidden group-[[data-type=error]]:block"
+            />
+            <Icon
+                size={28}
+                name="tabler:check"
+                class="my-auto hidden group-[[data-type=success]]:block"
+            />
+            <Icon
+                size={28}
+                name="tabler:alert-triangle"
+                class="my-auto hidden group-[[data-type=warning]]:block"
+            />
+            <span class="my-auto font-bold" id="alert-text"
+                >{import.meta.env.DEV ? loremIpsum() : ""}</span
+            >
+            <Button
+                class="self-top bg-transparent text-white"
+                icon="tabler:x"
+                id="alert-close"
+                justIcon
+                color="custom"
+            />
+        </div>
         <header>
             <Tile
                 as="nav"
@@ -403,6 +461,32 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
             }
         </style>
         <script>
+            document.addEventListener("astro:page-load", () => {
+                const alert = document.getElementById("alert")! as HTMLElement;
+                const alertText = document.getElementById("alert-text")! as HTMLElement;
+                const alertClose = document.getElementById("alert-close")! as HTMLButtonElement;
+
+                alertClose.addEventListener("click", () => {
+                    alert.dataset.show = "false";
+                });
+
+                const params = new URLSearchParams(window.location.search);
+                const alertMessage = params.get("msg");
+                const alertType = params.get("msg_type");
+                if (alertMessage && alertType) {
+                    alertText.innerText = alertMessage;
+                    alert.dataset.type = alertType;
+                    alert.dataset.show = "true";
+                    params.delete("msg");
+                    params.delete("msg_type");
+                    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+                    history.replaceState({}, document.title, newUrl);
+                    setTimeout(() => {
+                        alert.dataset.show = "false";
+                    }, 6000);
+                }
+            });
+
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             document.cookie = `timezone=${encodeURIComponent(timezone)}; SameSite=Lax; max-age=31536000`;
         </script>

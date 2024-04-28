@@ -206,7 +206,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 }
             };
             const onEnd = () => {
-                window.location.href = `${window.location.href}?ended=true`;
+                const contestEndedMessage = encodeURIComponent("Contest Ended!");
+                window.location.href = `${window.location.href}?ended=true&msg=${contestEndedMessage}&msg_type=success`;
             };
             makeCountdown(endTime, onTick, onEnd);
         } else if (window.location.search.includes("ended=true")) {

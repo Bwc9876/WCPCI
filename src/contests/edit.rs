@@ -1,9 +1,7 @@
 use chrono::TimeZone;
 use rocket::{
     form::{Contextual, Form},
-    get, post,
-    response::Redirect,
-    State,
+    get, post, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -15,6 +13,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    messages::Message,
     template::FormTemplateObject,
     times::ClientTimeZone,
 };
@@ -109,7 +108,7 @@ pub async fn edit_contest_post(
             leaderboard.full_refresh(&mut db, Some(&contest)).await?;
         }
 
-        Ok(Redirect::to("/contests"))
+        Ok(Message::success("Contest Updated").to(&format!("/contests/{id}")))
     } else {
         let all_users = User::list(&mut db).await?;
         let judges = Participant::list_judge(&mut db, contest.id).await?;

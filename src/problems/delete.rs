@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, post, response::Redirect};
+use rocket::{get, http::Status, post};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -10,6 +10,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    messages::Message,
 };
 
 use super::Problem;
@@ -59,5 +60,5 @@ pub async fn delete_problem_post(
 
     let problem = Problem::get_or_404(&mut db, contest_id, slug).await?;
     problem.delete(&mut db).await?;
-    Ok(Redirect::to(format!("/contests/{}/problems", contest_id)))
+    Ok(Message::success("Problem Deleted").to(&format!("/contests/{}/problems", contest_id)))
 }

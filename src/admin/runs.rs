@@ -10,6 +10,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    messages::Message,
     run::ManagerHandle,
 };
 
@@ -100,7 +101,7 @@ pub async fn cancel_run_post(
         .await
         .ok_or(Status::NotFound)?;
     manager.shutdown_job(user_id).await;
-    Ok(Redirect::to("/admin/runs"))
+    Ok(Message::success("Run Cancelled").to("/admin/runs"))
 }
 
 #[get("/runs/cancel-all")]
@@ -117,5 +118,5 @@ pub async fn cancel_all_runs_post(
 ) -> Redirect {
     let mut manager = manager_handle.lock().await;
     manager.shutdown().await;
-    Redirect::to("/admin/runs")
+    Message::success("All Runs Cancelled").to("/admin/runs")
 }

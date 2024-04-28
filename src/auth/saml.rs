@@ -11,7 +11,7 @@ use samael::{
 };
 use serde::Deserialize;
 
-use crate::{db::DbConnection, error::prelude::*, run::CodeInfo};
+use crate::{db::DbConnection, error::prelude::*, messages::Message, run::CodeInfo};
 
 use super::users::User;
 
@@ -215,11 +215,15 @@ async fn acs(
                 display_name.clone(),
                 &code_info.run_config.default_language,
             );
-            let (_, is_new) = user
+            let (user, is_new) = user
                 .login_or_register(&mut db, cookies)
                 .await
                 .context("Couldn't log-in / register user")?;
-            Ok(Redirect::to(if is_new { "/settings/profile" } else { "/" }))
+            if is_new {
+                Ok(Message::info(&format!("Welcome to WCPC, {}! Please look through your settings before joining a competition", user.default_display_name)).to("/settings/profile"))
+            } else {
+                Ok(Redirect::to("/"))
+            }
         } else {
             warn!(
                 "No display name or email found in SAML response, looked for {} and {}",

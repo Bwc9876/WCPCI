@@ -2,12 +2,9 @@
 
 use std::collections::HashMap;
 
-use log::error;
 use rocket::{
     form::{Contextual, Form},
-    get,
-    http::Status,
-    post, FromForm, State,
+    get, post, FromForm, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -18,8 +15,10 @@ use crate::{
     },
     context_with_base_authed,
     db::DbConnection,
+    error::prelude::*,
+    messages::Message,
     run::CodeInfo,
-    template::{FormStatus, FormTemplateObject, TemplatedForm},
+    template::{FormTemplateObject, TemplatedForm},
 };
 
 struct ContestFormTemplate<'r> {
@@ -60,12 +59,6 @@ pub struct ContestForm<'r> {
     default_language: &'r str,
 }
 
-#[derive(Responder)]
-pub enum SettingsContestPostResponse {
-    Template(Template),
-    Error(Status),
-}
-
 #[post("/contest", data = "<form>")]
 pub async fn contest_settings_post(
     user: &User,
@@ -73,7 +66,7 @@ pub async fn contest_settings_post(
     mut db: DbConnection,
     _token: &CsrfToken,
     code_info: &State<CodeInfo>,
-) -> SettingsContestPostResponse {
+) -> FormResponse {
     let mut user = user.clone();
     let languages = code_info.run_config.get_languages_for_dropdown();
     if let Some(ref value) = form.value {
@@ -90,27 +83,17 @@ pub async fn contest_settings_post(
                 rocket::form::Error::validation("Invalid language").with_name("default_language");
             let rocket_ctx = &mut form.context;
             rocket_ctx.push_error(error);
-            let form_template = ContestFormTemplate { user: &user };
-            let mut form_ctx = FormTemplateObject::from_rocket_context(form_template, rocket_ctx);
-            form_ctx.status = FormStatus::Error;
-            let ctx = context_with_base_authed!(&user, form: form_ctx, languages);
-            return SettingsContestPostResponse::Template(Template::render(
-                "settings/contest",
-                ctx,
-            ));
         } else {
-            let res = sqlx::query!(
+            sqlx::query!(
                 "UPDATE user SET default_language = ?, color_scheme = ? WHERE id = ?",
                 user.default_language,
                 user.color_scheme,
                 user.id
             )
             .execute(&mut **db)
-            .await;
-            if let Err(why) = res {
-                error!("Failed to update user {}: {:?}", user.id, why);
-                return SettingsContestPostResponse::Error(Status::InternalServerError);
-            }
+            .await
+            .context("Failed to update user contest settings")?;
+            return Ok(Message::success("Your changes have been saved").to("/settings/contest"));
         }
     };
 
@@ -119,5 +102,5 @@ pub async fn contest_settings_post(
 
     let ctx = context_with_base_authed!(&user, form, languages);
 
-    SettingsContestPostResponse::Template(Template::render("settings/contest", ctx))
+    Err(Template::render("settings/contest", ctx).into())
 }

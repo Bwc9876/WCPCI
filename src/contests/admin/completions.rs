@@ -6,9 +6,7 @@ use rocket::{
     form::{Contextual, Form},
     get,
     http::Status,
-    post,
-    response::Redirect,
-    FromForm, State,
+    post, FromForm, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -21,6 +19,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     leaderboard::LeaderboardManagerHandle,
+    messages::Message,
     problems::{Problem, ProblemCompletion},
     template::{FormTemplateObject, TemplatedForm},
     FormResponse, ResultResponse,
@@ -174,7 +173,7 @@ pub async fn edit_completion_post(
             leaderboard_manager
                 .process_completion(&completion, &contest)
                 .await;
-            return Ok(Redirect::to(format!(
+            return Ok(Message::success("Completion Updated").to(&format!(
                 "/contests/{}/admin/runs/problems/{}",
                 contest_id, problem_slug
             )));

@@ -1,11 +1,7 @@
 use chrono::TimeZone;
-use log::error;
 use rocket::{
     form::{Contextual, Form},
-    get,
-    http::Status,
-    post,
-    response::Redirect,
+    get, post,
 };
 use rocket_dyn_templates::Template;
 
@@ -17,8 +13,10 @@ use crate::{
     contests::ContestForm,
     context_with_base_authed,
     db::DbConnection,
+    messages::Message,
     template::FormTemplateObject,
     times::ClientTimeZone,
+    FormResponse,
 };
 
 use super::{Contest, ContestFormTemplate, Participant};
@@ -42,14 +40,6 @@ pub async fn new_contest_get(
     Template::render("contests/new", ctx)
 }
 
-#[allow(clippy::large_enum_variant)]
-#[derive(Responder)]
-pub enum NewContestResponse {
-    Template(Template),
-    Redirect(Redirect),
-    Error(Status),
-}
-
 #[post("/new", data = "<form>")]
 pub async fn new_contest_post(
     mut db: DbConnection,
@@ -58,7 +48,7 @@ pub async fn new_contest_post(
     _admin: &Admin,
     _token: &VerifyCsrfToken,
     form: Form<Contextual<'_, ContestForm<'_>>>,
-) -> NewContestResponse {
+) -> FormResponse {
     if let Some(ref value) = form.value {
         let tz = timezone.timezone();
 
@@ -89,21 +79,11 @@ pub async fn new_contest_post(
             penalty,
             max_participants,
         );
-        match contest.insert(&mut db).await {
-            Err(why) => {
-                error!("Failed to insert contest: {}", why);
-                NewContestResponse::Error(Status::InternalServerError)
-            }
-            Ok(contest) => {
-                for judge in value.judges.keys() {
-                    let res = Participant::create_or_make_judge(&mut db, contest.id, *judge).await;
-                    if let Err(why) = res {
-                        error!("Failed to insert judge: {}", why);
-                    }
-                }
-                NewContestResponse::Redirect(Redirect::to("/contests"))
-            }
+        let contest = contest.insert(&mut db).await?;
+        for judge in value.judges.keys() {
+            Participant::create_or_make_judge(&mut db, contest.id, *judge).await?;
         }
+        Ok(Message::success("Contest Created").to(&format!("/contests/{}", contest.id)))
     } else {
         let form_template = ContestFormTemplate {
             contest: None,
@@ -112,6 +92,6 @@ pub async fn new_contest_post(
         };
         let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
         let ctx = context_with_base_authed!(user, form);
-        NewContestResponse::Template(Template::render("contests/new", ctx))
+        Err(Template::render("contests/new", ctx).into())
     }
 }

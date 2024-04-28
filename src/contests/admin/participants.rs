@@ -11,6 +11,7 @@ use crate::{
     db::DbConnection,
     error::prelude::*,
     leaderboard::LeaderboardManagerHandle,
+    messages::Message,
 };
 
 #[derive(Serialize, Debug)]
@@ -96,10 +97,8 @@ pub async fn kick_participant_post(
         leaderboard_manager
             .delete_participant_for_contest(p_id, contest_id)
             .await;
-        Ok(Redirect::to(format!(
-            "/contests/{}/admin/participants",
-            contest_id
-        )))
+        Ok(Message::success("Participant Kicked")
+            .to(&format!("/contests/{}/admin/participants", contest_id)))
     } else {
         Err(Status::Forbidden.into())
     }

@@ -3,7 +3,6 @@ use rocket::{
     get,
     http::Status,
     post,
-    response::Redirect,
 };
 use rocket_dyn_templates::Template;
 
@@ -16,6 +15,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    messages::Message,
     template::FormTemplateObject,
 };
 
@@ -82,10 +82,8 @@ pub async fn new_problem_post(
             let problem = problem.insert(&mut db).await?;
             let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
             TestCase::save_for_problem(&mut db, problem.id, test_cases).await?;
-            return Ok(Redirect::to(format!(
-                "/contests/{contest_id}/problems/{}",
-                problem.slug
-            )));
+            return Ok(Message::success("Problem Created")
+                .to(&format!("/contests/{contest_id}/problems/{}", problem.slug)));
         }
     }
 

@@ -9,6 +9,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    messages::Message,
     problems::{Problem, ProblemCompletion},
     run::ManagerHandle,
     times::{format_datetime_human_readable, ClientTimeZone},
@@ -133,7 +134,7 @@ pub async fn cancel_post(
             .await
             .ok_or(Status::NotFound)?;
         manager.shutdown_job(user_id).await;
-        Ok(Redirect::to(format!("/contests/{}/admin/runs", contest_id)))
+        Ok(Message::success("Run Cancelled").to(&format!("/contests/{}/admin/runs", contest_id)))
     } else {
         Err(Status::Forbidden.into())
     }

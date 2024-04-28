@@ -11,6 +11,7 @@ use crate::{
     db::DbConnection,
     error::prelude::*,
     leaderboard::LeaderboardManagerHandle,
+    messages::Message,
 };
 
 #[get("/users")]
@@ -48,5 +49,5 @@ pub async fn delete_user_post(
     })?;
     let mut leaderboard_manager = leaderboards.lock().await;
     leaderboard_manager.delete_user(id).await;
-    Ok(Redirect::to("/admin/users"))
+    Ok(Message::success("User deleted").to("/admin/users"))
 }

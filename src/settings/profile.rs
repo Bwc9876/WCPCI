@@ -2,12 +2,11 @@
 
 use std::collections::HashMap;
 
-use log::error;
 use rocket::form::{Contextual, Form, FromForm};
-use rocket::http::Status;
 use rocket::{get, post};
 use rocket_dyn_templates::Template;
 
+use crate::messages::Message;
 use crate::template::{FormTemplateObject, TemplatedForm};
 use crate::{
     auth::{
@@ -16,6 +15,7 @@ use crate::{
     },
     context_with_base_authed,
     db::DbConnection,
+    error::prelude::*,
 };
 
 struct ProfileFormTemplate<'r> {
@@ -56,19 +56,13 @@ pub fn profile_get(user: &User, _token: &CsrfToken) -> Template {
     Template::render("settings/profile", ctx)
 }
 
-#[derive(Responder)]
-pub enum SettingsProfilePostResponse {
-    Template(Template),
-    Error(Status),
-}
-
 #[post("/profile", data = "<form>")]
 pub async fn profile_post(
     mut db: DbConnection,
     user: &User,
     _token: &VerifyCsrfToken,
-    form: Form<Contextual<'_, ProfileForm<'_>>>,
-) -> SettingsProfilePostResponse {
+    mut form: Form<Contextual<'_, ProfileForm<'_>>>,
+) -> FormResponse {
     let mut user = user.clone();
     if let Some(ref value) = form.value {
         let name = value.display_name.trim();
@@ -77,7 +71,7 @@ pub async fn profile_post(
         user.bio = value.bio.to_string();
         user.profile_picture_source = value.profile_picture_source.to_string();
         if value.profile_picture_source == "gravatar" || value.profile_picture_source == "github" {
-            let res = sqlx::query!(
+            sqlx::query!(
                 "UPDATE user SET bio = ?, display_name = ?, profile_picture_source = ? WHERE id = ?",
                 value.bio,
                 display_name,
@@ -85,13 +79,13 @@ pub async fn profile_post(
                 user.id
             )
             .execute(&mut **db)
-            .await;
-            if let Err(why) = res {
-                error!("Failed to update user {}: {:?}", user.id, why);
-                return SettingsProfilePostResponse::Error(Status::InternalServerError);
-            }
+            .await.context("Failed to update user profile")?;
+            return Ok(Message::success("Your profile has been updated").to("/settings/profile"));
         } else {
-            return SettingsProfilePostResponse::Error(Status::BadRequest);
+            let err = rocket::form::Error::validation("Invalid profile picture source")
+                .with_name("profile_picture_source");
+            let rocket_ctx = &mut form.context;
+            rocket_ctx.push_error(err);
         }
     };
 
@@ -101,5 +95,5 @@ pub async fn profile_post(
     let ctx =
         context_with_base_authed!(&user, default_display_name: &user.default_display_name, form);
 
-    SettingsProfilePostResponse::Template(Template::render("settings/profile", ctx))
+    Err(Template::render("settings/profile", ctx).into())
 }
