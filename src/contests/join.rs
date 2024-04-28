@@ -40,7 +40,7 @@ pub async fn join_contest(
             let mut leaderboard_manager = leaderboard_handle.lock().await;
             leaderboard_manager
                 .refresh_leaderboard(&mut db, &contest)
-                .await;
+                .await?;
 
             Ok(Redirect::to(format!("/contests/{}/", contest_id)))
         }

@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, launch, response::Redirect, routes};
+use rocket::{get, launch, routes};
 use rocket_dyn_templates::Template;
 
 #[macro_use]

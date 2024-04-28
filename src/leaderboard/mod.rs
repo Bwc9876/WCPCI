@@ -65,7 +65,7 @@ async fn leaderboard_get(
         false
     };
 
-    let entries = leaderboard.full(&mut db).await;
+    let entries = leaderboard.full(&mut db).await?;
 
     let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
     let start_local_html = datetime_to_html_time(&start_local);

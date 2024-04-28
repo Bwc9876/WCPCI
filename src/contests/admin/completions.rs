@@ -125,13 +125,6 @@ pub struct ProblemCompletionForm {
     number_wrong: i64,
 }
 
-#[derive(Responder)]
-#[allow(clippy::large_enum_variant)]
-pub enum EditCompletionResponse {
-    Template(Template),
-    Redirect(Redirect),
-}
-
 #[post(
     "/contests/<contest_id>/admin/runs/problems/<problem_slug>/edit/<participant_id>",
     data = "<form>"

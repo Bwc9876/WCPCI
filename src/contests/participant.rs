@@ -132,7 +132,7 @@ impl Participant {
     }
 
     pub async fn remove(db: &mut DbPoolConnection, contest_id: i64, user_id: i64) -> Result {
-        let res = sqlx::query!(
+        sqlx::query!(
             "DELETE FROM participant WHERE contest_id = ? AND user_id = ?",
             contest_id,
             user_id
@@ -145,8 +145,7 @@ impl Participant {
                 "Can't delete participant with contest_id {} and user_id {}",
                 contest_id, user_id
             )
-        })?;
-        Ok(res)
+        })
     }
 
     pub async fn create_or_make_judge(

@@ -141,12 +141,13 @@ impl ParticipantScores {
         }
     }
 
-    pub async fn update_contest(&mut self, db: &mut DbPoolConnection, contest: &Contest) {
+    pub async fn update_contest(&mut self, db: &mut DbPoolConnection, contest: &Contest) -> Result {
         self.contest_start = contest.start_time;
         self.contest_penalty_minutes = contest.penalty;
         self.contest_end = contest.end_time;
         self.contest_freeze = contest.freeze_time;
-        self.refresh(db).await;
+        self.refresh(db).await?;
+        Ok(())
     }
 }
 

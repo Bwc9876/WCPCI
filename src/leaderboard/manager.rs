@@ -81,14 +81,14 @@ impl Leaderboard {
         }
     }
 
-    pub async fn full(&mut self, db: &mut DbPoolConnection) -> Vec<LeaderboardEntry> {
+    pub async fn full(&mut self, db: &mut DbPoolConnection) -> Result<Vec<LeaderboardEntry>> {
         let now = chrono::Utc::now().naive_utc();
         if self
             .last_update
             .map(|lu| now > self.contest.end_time && lu < self.contest.end_time)
             .unwrap_or(true)
         {
-            self.full_refresh(db, None).await;
+            self.full_refresh(db, None).await?;
         } else {
             self.last_update = Some(now);
         }
@@ -122,7 +122,8 @@ impl Leaderboard {
             .fetch_all(&mut **db)
             .await
             .unwrap();
-        res.into_iter()
+        let res = res
+            .into_iter()
             .map(|row| {
                 let p_id = row.try_get::<i64, _>("p_id").unwrap();
                 let user = User::from_row(&row).unwrap();
@@ -138,7 +139,8 @@ impl Leaderboard {
                     }),
                 }
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+        Ok(res)
     }
 
     pub fn process_completion(&mut self, completion: &ProblemCompletion) {
@@ -220,7 +222,7 @@ impl Leaderboard {
         if let Some(c) = contest {
             self.contest = c.clone();
             for s in &mut self.scores {
-                s.update_contest(db, c).await;
+                s.update_contest(db, c).await?;
             }
         }
         self.scores = Self::get_scores(db, &self.contest).await?;
@@ -313,11 +315,16 @@ impl LeaderboardManager {
         }
     }
 
-    pub async fn refresh_leaderboard(&mut self, db: &mut DbPoolConnection, contest: &Contest) {
+    pub async fn refresh_leaderboard(
+        &mut self,
+        db: &mut DbPoolConnection,
+        contest: &Contest,
+    ) -> Result {
         if let Some((leaderboard, _)) = self.leaderboards.get_mut(&contest.id) {
             let mut leaderboard = leaderboard.lock().await;
-            leaderboard.full_refresh(db, Some(contest)).await;
+            leaderboard.full_refresh(db, Some(contest)).await?;
         }
+        Ok(())
     }
 
     pub async fn process_completion(&mut self, completion: &ProblemCompletion, contest: &Contest) {

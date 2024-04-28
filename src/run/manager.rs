@@ -144,7 +144,9 @@ impl RunManager {
             }
             match pool.get().await {
                 Ok(mut conn) => {
-                    let run = JudgeRun::from_job_state(problem_id, user_id, program, language, &state, ran_at);
+                    let run = JudgeRun::from_job_state(
+                        problem_id, user_id, program, language, &state, ran_at,
+                    );
                     if let Err(why) = Self::save_run(
                         &mut conn,
                         contest_id,
@@ -174,6 +176,7 @@ impl RunManager {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn save_run(
         conn: &mut DbPoolConnection,
         contest_id: i64,
@@ -189,38 +192,27 @@ impl RunManager {
             .ok_or_else(|| anyhow!("Couldn't find contest with id {}", contest_id))?;
 
         let success = judge_run.success();
-        if let Err(why) = judge_run.write_to_db(conn).await {
-            error!("Couldn't write judge run to db: {:?}", why);
-        }
+        judge_run.write_to_db(conn).await?;
 
-        let participant = Participant::get(conn, contest_id, user_id)
-            .await?
-            .ok_or_else(|| {
-                anyhow!(
-                    "Couldn't find participant for user {} in contest {}",
-                    user_id,
-                    contest_id
-                )
-            })?;
+        let participant = Participant::get(conn, contest_id, user_id).await?;
 
-        if participant.is_judge || !contest.is_running() {
+        if participant.as_ref().map_or(true, |p| p.is_judge) || !contest.is_running() {
             return Ok(());
         }
 
-        let mut completion = ProblemCompletion::get_for_problem_and_participant(
-            conn,
-            problem_id,
-            participant.p_id,
-        )
-        .await
-        .context("While getting problem completion")?
-        .unwrap_or_else(|| {
-            ProblemCompletion::temp(
-                participant.p_id,
-                problem_id,
-                Some(ran_at).filter(|_| success),
-            )
-        });
+        let participant = participant.unwrap();
+
+        let mut completion =
+            ProblemCompletion::get_for_problem_and_participant(conn, problem_id, participant.p_id)
+                .await
+                .context("While getting problem completion")?
+                .unwrap_or_else(|| {
+                    ProblemCompletion::temp(
+                        participant.p_id,
+                        problem_id,
+                        Some(ran_at).filter(|_| success),
+                    )
+                });
 
         if success && completion.completed_at.is_none() {
             completion.completed_at = Some(ran_at);
@@ -228,9 +220,7 @@ impl RunManager {
             completion.number_wrong += 1;
         }
 
-        if let Err(why) = completion.upsert(conn).await {
-            error!("Couldn't write problem completion to db: {:?}", why);
-        }
+        completion.upsert(conn).await?;
 
         if completion.completed_at.is_some() {
             let mut leaderboard_manager = leaderboard_handle.lock().await;

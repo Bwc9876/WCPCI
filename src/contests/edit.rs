@@ -106,7 +106,7 @@ pub async fn edit_contest_post(
                 .await?;
             drop(leaderboard_manager);
             let mut leaderboard = leaderboard.lock().await;
-            leaderboard.full_refresh(&mut db, Some(&contest)).await;
+            leaderboard.full_refresh(&mut db, Some(&contest)).await?;
         }
 
         Ok(Redirect::to("/contests"))

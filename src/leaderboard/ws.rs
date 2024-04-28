@@ -1,9 +1,7 @@
 use log::error;
 use rocket::{
     futures::{SinkExt, StreamExt},
-    get,
-    http::Status,
-    State,
+    get, State,
 };
 use rocket_ws::{stream::DuplexStream, WebSocket};
 use tokio::select;

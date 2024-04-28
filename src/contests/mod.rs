@@ -124,12 +124,11 @@ impl Contest {
     }
 
     pub async fn delete(self, db: &mut DbPoolConnection) -> Result {
-        let res = sqlx::query!("DELETE FROM contest WHERE id = ?", self.id)
+        sqlx::query!("DELETE FROM contest WHERE id = ?", self.id)
             .execute(&mut **db)
             .await
             .map(|_| ())
-            .with_context(|| format!("Error deleting contest {}", self.id))?;
-        Ok(res)
+            .with_context(|| format!("Error deleting contest {}", self.id))
     }
 
     pub fn has_started(&self) -> bool {
