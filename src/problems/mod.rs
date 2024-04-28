@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use rocket::{fairing::AdHoc, routes, FromForm};
+use rocket::{fairing::AdHoc, http::Status, routes, FromForm};
 
 mod cases;
 mod completions;
@@ -17,7 +17,7 @@ pub use cases::TestCase;
 pub use completions::ProblemCompletion;
 pub use runs::JudgeRun;
 
-use crate::{db::DbPoolConnection, template::TemplatedForm};
+use crate::{db::DbPoolConnection, error::prelude::*, template::TemplatedForm, ResultResponse};
 
 use self::cases::TestCaseForm;
 
@@ -32,7 +32,11 @@ pub struct Problem {
 }
 
 impl Problem {
-    pub async fn by_id(db: &mut DbPoolConnection, contest_id: i64, id: i64) -> Option<Self> {
+    pub async fn by_id(
+        db: &mut DbPoolConnection,
+        contest_id: i64,
+        id: i64,
+    ) -> Result<Option<Self>> {
         sqlx::query_as!(
             Problem,
             "SELECT * FROM problem WHERE id = ? AND contest_id = ?",
@@ -41,8 +45,7 @@ impl Problem {
         )
         .fetch_optional(&mut **db)
         .await
-        .ok()
-        .flatten()
+        .with_context(|| format!("Failed to get problem with id {}", id))
     }
 
     pub async fn slug_exists(
@@ -50,7 +53,7 @@ impl Problem {
         slug: &str,
         contest_id: i64,
         problem_id: Option<i64>,
-    ) -> bool {
+    ) -> Result<bool> {
         if let Some(problem_id) = problem_id {
             sqlx::query!(
                 "SELECT * FROM problem WHERE contest_id = ? AND id != ? AND slug = ?",
@@ -61,7 +64,7 @@ impl Problem {
             .fetch_optional(&mut **db)
             .await
             .map(|o| o.is_some())
-            .unwrap_or(false)
+            .context("Failed to check if slug exists")
         } else {
             sqlx::query!(
                 "SELECT * FROM problem WHERE contest_id = ? AND slug = ?",
@@ -71,24 +74,37 @@ impl Problem {
             .fetch_optional(&mut **db)
             .await
             .map(|o| o.is_some())
-            .unwrap_or(false)
+            .context("Failed to check if slug exists")
         }
     }
 
-    pub async fn get(db: &mut DbPoolConnection, contest_id: i64, slug: &str) -> Option<Self> {
-        sqlx::query_as!(
+    pub async fn get(
+        db: &mut DbPoolConnection,
+        contest_id: i64,
+        slug: &str,
+    ) -> Result<Option<Self>> {
+        let problem = sqlx::query_as!(
             Problem,
             "SELECT * FROM problem WHERE contest_id = ? AND slug = ?",
             contest_id,
             slug
         )
         .fetch_optional(&mut **db)
-        .await
-        .ok()
-        .flatten()
+        .await?;
+        Ok(problem)
     }
 
-    pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Vec<Self> {
+    pub async fn get_or_404(
+        db: &mut DbPoolConnection,
+        contest_id: i64,
+        slug: &str,
+    ) -> ResultResponse<Self> {
+        Self::get(db, contest_id, slug)
+            .await?
+            .ok_or(Status::NotFound.into())
+    }
+
+    pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Result<Vec<Self>> {
         sqlx::query_as!(
             Problem,
             "SELECT * FROM problem WHERE contest_id = ?",
@@ -96,10 +112,10 @@ impl Problem {
         )
         .fetch_all(&mut **db)
         .await
-        .unwrap()
+        .context("Failed to get all problems")
     }
 
-    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Problem, sqlx::Error> {
+    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Problem> {
         sqlx::query_as!(
             Problem,
             "INSERT INTO problem (name, contest_id, slug, description, cpu_time) VALUES (?, ?, ?, ?, ?) RETURNING *",
@@ -110,10 +126,10 @@ impl Problem {
             self.cpu_time
         )
         .fetch_one(&mut **db)
-        .await
+        .await.context("Failed to insert new problem")
     }
 
-    pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, db: &mut DbPoolConnection) -> Result {
         sqlx::query_as!(
             Problem,
             "UPDATE problem SET name = ?, slug = ?, description = ?, cpu_time = ? WHERE id = ?",
@@ -126,9 +142,10 @@ impl Problem {
         .execute(&mut **db)
         .await
         .map(|_| ())
+        .with_context(|| format!("Failed to update problem with id {}", self.id))
     }
 
-    pub async fn delete(self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+    pub async fn delete(self, db: &mut DbPoolConnection) -> Result {
         sqlx::query!(
             "DELETE FROM problem WHERE id = ? AND contest_id = ?",
             self.id,
@@ -137,6 +154,7 @@ impl Problem {
         .execute(&mut **db)
         .await
         .map(|_| ())
+        .with_context(|| format!("Failed to delete problem with id {}", self.id))
     }
 
     pub fn temp(contest_id: i64, form: &ProblemForm) -> Self {

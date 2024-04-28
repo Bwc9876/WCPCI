@@ -1,4 +1,3 @@
-use log::error;
 use rocket::{get, http::Status, post, response::Redirect};
 use rocket_dyn_templates::Template;
 
@@ -10,17 +9,10 @@ use crate::{
     contests::{Contest, Participant},
     context_with_base_authed,
     db::DbConnection,
+    error::prelude::*,
 };
 
 use super::Problem;
-
-#[allow(clippy::large_enum_variant)]
-#[derive(Responder)]
-pub enum ProblemDeleteResponse {
-    Form(Template),
-    Redirect(Redirect),
-    Error(Status),
-}
 
 #[get("/<contest_id>/problems/<slug>/delete")]
 pub async fn delete_problem_get(
@@ -30,24 +22,21 @@ pub async fn delete_problem_get(
     mut db: DbConnection,
     slug: &str,
     _token: &CsrfToken,
-) -> ProblemDeleteResponse {
+) -> ResultResponse<Template> {
     let is_judge = Participant::get(&mut db, contest_id, user.id)
-        .await
+        .await?
         .map(|p| p.is_judge)
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemDeleteResponse::Error(Status::Forbidden);
+        return Err(Status::Forbidden.into());
     }
-    if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
-        let contest = Contest::get(&mut db, contest_id).await.unwrap();
-        ProblemDeleteResponse::Form(Template::render(
-            "problems/delete",
-            context_with_base_authed!(user, contest, problem),
-        ))
-    } else {
-        ProblemDeleteResponse::Error(Status::NotFound)
-    }
+    let problem = Problem::get_or_404(&mut db, contest_id, slug).await?;
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    Ok(Template::render(
+        "problems/delete",
+        context_with_base_authed!(user, contest, problem),
+    ))
 }
 
 #[post("/<contest_id>/problems/<slug>/delete")]
@@ -58,28 +47,17 @@ pub async fn delete_problem_post(
     slug: &str,
     _token: &VerifyCsrfToken,
     mut db: DbConnection,
-) -> ProblemDeleteResponse {
+) -> FormResponse {
     let is_judge = Participant::get(&mut db, contest_id, user.id)
-        .await
+        .await?
         .map(|p| p.is_judge)
         .unwrap_or(false);
     let is_admin = admin.is_some();
     if !is_judge && !is_admin {
-        return ProblemDeleteResponse::Error(Status::Forbidden);
+        return Err(Status::Forbidden.into());
     }
 
-    if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
-        let res = problem.delete(&mut db).await;
-        if let Err(e) = res {
-            error!("Failed to delete problem: {}", e);
-            ProblemDeleteResponse::Error(Status::InternalServerError)
-        } else {
-            ProblemDeleteResponse::Redirect(Redirect::to(format!(
-                "/contests/{}/problems",
-                contest_id
-            )))
-        }
-    } else {
-        ProblemDeleteResponse::Error(Status::NotFound)
-    }
+    let problem = Problem::get_or_404(&mut db, contest_id, slug).await?;
+    problem.delete(&mut db).await?;
+    Ok(Redirect::to(format!("/contests/{}/problems", contest_id)))
 }

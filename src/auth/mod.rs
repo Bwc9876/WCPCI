@@ -1,6 +1,6 @@
 #![allow(clippy::blocks_in_conditions)] // Needed for the derive of FromForm, rocket is weird
 
-use log::{error, warn};
+use log::warn;
 use rocket::{
     catch, catchers,
     fairing::AdHoc,
@@ -14,6 +14,8 @@ use rocket_dyn_templates::Template;
 use crate::{
     context_with_base,
     db::{DbConnection, DbPoolConnection},
+    error::prelude::*,
+    ResultResponse,
 };
 
 use self::{
@@ -43,22 +45,24 @@ async fn login(user: Option<&User>) -> Template {
 }
 
 #[get("/logout")]
-async fn logout(mut db: DbConnection, cookies: &CookieJar<'_>) -> Redirect {
+async fn logout(mut db: DbConnection, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
     if let Some(token) = cookies
         .get_private(Session::TOKEN_COOKIE_NAME)
         .map(|c| c.value().to_string())
     {
-        if let Some(session) = Session::from_token(&mut db, &token).await {
-            let res = sqlx::query!("DELETE FROM session WHERE id = ?", session.id)
+        let session = Session::from_token(&mut db, &token)
+            .await
+            .with_context(|| format!("Couldn't get session with token: {token}"))?;
+        if let Some(session) = session {
+            sqlx::query!("DELETE FROM session WHERE id = ?", session.id)
                 .execute(&mut **db)
-                .await;
-            if let Err(why) = res {
-                error!("Failed to delete session {}: {:?}", session.id, why);
-            }
+                .await
+                .map_err(|why| anyhow!("Failed to delete session {}: {why:?}", session.id))?;
         }
+
         cookies.remove_private(Session::TOKEN_COOKIE_NAME);
     }
-    Redirect::to("/")
+    Ok(Redirect::to("/"))
 }
 
 pub fn stage() -> AdHoc {
@@ -92,20 +96,20 @@ trait CallbackHandler {
         &self,
         db: &mut DbPoolConnection,
         user: Self::IntermediateUserInfo,
-    ) -> Result<Option<User>, String>;
+    ) -> Result<Option<User>>;
 
     async fn link_to(
         &self,
         db: &mut DbPoolConnection,
         user: &User,
         user_info: Self::IntermediateUserInfo,
-    ) -> Result<bool, String>;
+    ) -> Result<bool>;
 
     async fn handle_link_callback(
         &self,
         db: &mut DbPoolConnection,
         user: &User,
-    ) -> Result<Result<Redirect, Status>, String> {
+    ) -> Result<Result<Redirect, Status>> {
         let user_info = self.fetch_user_info().await?;
         self.link_to(db, user, user_info).await.map(|linked| {
             if linked {
@@ -120,7 +124,7 @@ trait CallbackHandler {
         &self,
         db: &mut DbPoolConnection,
         cookies: &CookieJar<'_>,
-    ) -> Result<Result<Redirect, Status>, String> {
+    ) -> Result<Result<Redirect, Status>> {
         let user_info = self.fetch_user_info().await?;
 
         let db_conn = &mut *db;
@@ -128,38 +132,35 @@ trait CallbackHandler {
         let user = self
             .get_user(db_conn, user_info)
             .await
-            .map_err(|e| format!("Failed to get user info from {}: {e:?}", Self::SERVICE_NAME))?;
+            .with_context(|| format!("Failed to get user info from {}", Self::SERVICE_NAME))?;
 
         if let Some(user) = user {
             user.login(db_conn, cookies)
                 .await
-                .map_err(|e| format!("Failed to login user from {}: {e:?}", Self::SERVICE_NAME))?;
+                .with_context(|| format!("Failed to login user from {}", Self::SERVICE_NAME))?;
             Ok(Ok(Redirect::to("/")))
         } else {
             Ok(Err(Status::Unauthorized))
         }
     }
 
-    async fn fetch_user_info(&self) -> Result<Self::IntermediateUserInfo, String> {
+    async fn fetch_user_info(&self) -> Result<Self::IntermediateUserInfo> {
         let resp = self
             .get_request_client()
             .send()
             .await
-            .map_err(|e| format!("Failed to send request to {}: {e:?}", Self::SERVICE_NAME))?;
+            .with_context(|| format!("Failed to send request to {}", Self::SERVICE_NAME))?;
 
         if resp.status().is_success() {
             let user_info = resp
                 .json::<Self::IntermediateUserInfo>()
                 .await
-                .map_err(|e| {
-                    format!(
-                        "Failed to parse user info from {}: {e:?}",
-                        Self::SERVICE_NAME
-                    )
+                .with_context(|| {
+                    format!("Failed to parse user info from {}", Self::SERVICE_NAME)
                 })?;
             Ok(user_info)
         } else {
-            Err(format!(
+            Err(anyhow!(
                 "Failed to get user info from {}: {}",
                 Self::SERVICE_NAME,
                 resp.status()

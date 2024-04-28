@@ -1,4 +1,4 @@
-use rocket::{catch, catchers, get, http::Status, launch, routes, Request};
+use rocket::{get, launch, routes};
 use rocket_dyn_templates::Template;
 
 #[macro_use]
@@ -15,6 +15,7 @@ mod auth;
 mod contests;
 mod csp;
 mod db;
+mod error;
 mod leaderboard;
 mod problems;
 mod profile;
@@ -26,6 +27,7 @@ mod template;
 mod times;
 
 use crate::auth::users::User;
+use crate::error::prelude::*;
 
 #[get("/")]
 async fn index(user: Option<&User>) -> Template {
@@ -37,16 +39,6 @@ async fn index(user: Option<&User>) -> Template {
 async fn md_help(user: Option<&User>) -> Template {
     let ctx = context_with_base!(user,);
     Template::render("md_help", ctx)
-}
-
-#[catch(default)]
-fn error(status: Status, _request: &Request) -> Template {
-    let message = status.to_string();
-    let code = status.code;
-    Template::render(
-        "error",
-        context! { message, code, version: env!("CARGO_PKG_VERSION") },
-    )
 }
 
 #[launch]
@@ -63,7 +55,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![index, md_help])
-        .register("/", catchers![error])
+        .attach(error::stage())
         .attach(csp::stage())
         .attach(db::stage())
         .attach(times::stage())

@@ -9,15 +9,13 @@ use crate::{
     },
     context_with_base_authed,
     db::DbConnection,
+    error::prelude::*,
     leaderboard::LeaderboardManagerHandle,
 };
 
 #[get("/users")]
-pub async fn users(mut db: DbConnection, user: &User, _admin: &Admin) -> Result<Template, Status> {
-    let users = User::list(&mut db).await.map_err(|e| {
-        error!("Failed to list users: {:?}", e);
-        Status::InternalServerError
-    })?;
+pub async fn users(mut db: DbConnection, user: &User, _admin: &Admin) -> ResultResponse<Template> {
+    let users = User::list(&mut db).await?;
     let ctx = context_with_base_authed!(user, users);
     Ok(Template::render("admin/users", ctx))
 }
@@ -29,8 +27,8 @@ pub async fn delete_user_get(
     user: &User,
     _admin: &Admin,
     _token: &CsrfToken,
-) -> Result<Template, Status> {
-    let target_user = User::get(&mut db, id).await.ok_or(Status::NotFound)?;
+) -> ResultResponse<Template> {
+    let target_user = User::get_or_404(&mut db, id).await?;
     let ctx = context_with_base_authed!(user, target_user);
     Ok(Template::render("admin/delete_user", ctx))
 }
@@ -42,8 +40,8 @@ pub async fn delete_user_post(
     leaderboards: &State<LeaderboardManagerHandle>,
     _admin: &Admin,
     _token: &VerifyCsrfToken,
-) -> Result<Redirect, Status> {
-    let target_user = User::get(&mut db, id).await.ok_or(Status::NotFound)?;
+) -> ResultResponse<Redirect> {
+    let target_user = User::get_or_404(&mut db, id).await?;
     target_user.delete(&mut db).await.map_err(|e| {
         error!("Failed to delete user: {:?}", e);
         Status::InternalServerError

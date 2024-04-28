@@ -1,10 +1,10 @@
-use log::error;
 use rocket::{get, http::Status, serde::json::Json};
 
 use crate::{
     auth::users::{Admin, User},
     contests::Participant,
     db::DbConnection,
+    error::prelude::*,
     problems::Problem,
 };
 
@@ -17,22 +17,18 @@ pub async fn problem_export(
     admin: Option<&Admin>,
     user: &User,
     problem_slug: &str,
-) -> Result<Json<ProblemData>, Status> {
-    if let Some(problem) = Problem::get(&mut db, contest_id, problem_slug).await {
-        let participant = Participant::get(&mut db, contest_id, user.id).await;
-        let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-        if allowed {
-            let data = ProblemData::get_for_problem(&mut db, &problem)
-                .await
-                .map_err(|e| {
-                    error!("Couldn't export: {:?}", e);
-                    Status::InternalServerError
-                })?;
-            Ok(Json(data))
-        } else {
-            Err(Status::Forbidden)
-        }
+) -> ResultResponse<Json<ProblemData>> {
+    let problem = Problem::get_or_404(&mut db, contest_id, problem_slug).await?;
+    let participant = Participant::get(&mut db, contest_id, user.id).await?;
+    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
+    if allowed {
+        let data = ProblemData::get_for_problem(&mut db, &problem)
+            .await
+            .with_context(|| {
+                format!("Couldn't export problem {problem_slug} from contest {contest_id}")
+            })?;
+        Ok(Json(data))
     } else {
-        Err(Status::NotFound)
+        Err(Status::Forbidden.into())
     }
 }

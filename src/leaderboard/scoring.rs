@@ -5,6 +5,7 @@ use chrono::NaiveDateTime;
 use crate::{
     contests::{Contest, Participant},
     db::DbPoolConnection,
+    error::prelude::*,
     problems::ProblemCompletion,
 };
 
@@ -51,10 +52,12 @@ impl ParticipantScores {
         contest_penalty_minutes: i64,
         contest_end: NaiveDateTime,
         contest_freeze: i64,
-    ) -> HashMap<i64, ScoreEntry> {
-        let completions = ProblemCompletion::get_for_participant(db, id).await;
+    ) -> Result<HashMap<i64, ScoreEntry>> {
+        let completions = ProblemCompletion::get_for_participant(db, id)
+            .await
+            .with_context(|| format!("Couldn't score for participant {id}"))?;
         let now = chrono::Utc::now().naive_utc();
-        completions
+        let c = completions
             .into_iter()
             .filter_map(|c| {
                 c.completed_at
@@ -72,15 +75,16 @@ impl ParticipantScores {
                         )
                     })
             })
-            .collect::<HashMap<_, _>>()
+            .collect::<HashMap<_, _>>();
+        Ok(c)
     }
 
     pub async fn new(
         db: &mut DbPoolConnection,
         participant: &Participant,
         contest: &Contest,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        Ok(Self {
             contest_start: contest.start_time,
             contest_penalty_minutes: contest.penalty,
             contest_end: contest.end_time,
@@ -95,11 +99,11 @@ impl ParticipantScores {
                 contest.end_time,
                 contest.freeze_time,
             )
-            .await,
-        }
+            .await?,
+        })
     }
 
-    pub async fn refresh(&mut self, db: &mut DbPoolConnection) {
+    pub async fn refresh(&mut self, db: &mut DbPoolConnection) -> Result {
         self.scores = Self::get_scores(
             db,
             self.participant_id,
@@ -108,7 +112,8 @@ impl ParticipantScores {
             self.contest_end,
             self.contest_freeze,
         )
-        .await;
+        .await?;
+        Ok(())
     }
 
     pub fn process_completion(&mut self, completion: &ProblemCompletion) {
@@ -136,12 +141,13 @@ impl ParticipantScores {
         }
     }
 
-    pub async fn update_contest(&mut self, db: &mut DbPoolConnection, contest: &Contest) {
+    pub async fn update_contest(&mut self, db: &mut DbPoolConnection, contest: &Contest) -> Result {
         self.contest_start = contest.start_time;
         self.contest_penalty_minutes = contest.penalty;
         self.contest_end = contest.end_time;
         self.contest_freeze = contest.freeze_time;
-        self.refresh(db).await;
+        self.refresh(db).await?;
+        Ok(())
     }
 }
 

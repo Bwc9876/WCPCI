@@ -1,4 +1,3 @@
-use log::error;
 use rocket::{
     fairing::AdHoc,
     get,
@@ -8,7 +7,10 @@ use rocket::{
 };
 use rocket_oauth2::{OAuth2, TokenResponse};
 
-use crate::db::{DbConnection, DbPoolConnection};
+use crate::{
+    db::{DbConnection, DbPoolConnection},
+    error::prelude::*,
+};
 
 use super::{users::User, CallbackHandler};
 
@@ -25,15 +27,15 @@ pub struct UserInfo {
 }
 
 #[get("/login")]
-fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
+fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
     let mut cookie = Cookie::new("state-oauth-type", "login");
     cookie.set_secure(false);
     cookie.set_same_site(SameSite::Lax);
     cookies.add(cookie);
-    oauth2.get_redirect(cookies, &SCOPES).map_err(|e| {
-        error!("Error getting Google redirect: {}", e);
-        Status::InternalServerError
-    })
+    let redirect = oauth2
+        .get_redirect(cookies, &SCOPES)
+        .context("Error getting Google redirect")?;
+    Ok(redirect)
 }
 
 #[get("/link")]
@@ -41,15 +43,15 @@ fn google_link(
     oauth2: OAuth2<GoogleLogin>,
     _user: &User,
     cookies: &CookieJar<'_>,
-) -> Result<Redirect, Status> {
+) -> ResultResponse<Redirect> {
     let mut cookie = Cookie::new("state-oauth-type", "link");
     cookie.set_secure(false);
     cookie.set_same_site(SameSite::Lax);
     cookies.add(cookie);
-    oauth2.get_redirect(cookies, &SCOPES).map_err(|e| {
-        error!("Error getting Google redirect: {}", e);
-        Status::InternalServerError
-    })
+    let redirect = oauth2
+        .get_redirect(cookies, &SCOPES)
+        .context("Error getting Google redirect")?;
+    Ok(redirect)
 }
 
 #[get("/callback")]
@@ -58,7 +60,7 @@ async fn google_callback(
     token: TokenResponse<GoogleLogin>,
     user: Option<&User>,
     cookies: &CookieJar<'_>,
-) -> Result<Redirect, Status> {
+) -> ResultResponse<Redirect> {
     let handler = GoogleLogin(token.access_token().to_string());
     let state = cookies
         .get("state-oauth-type")
@@ -70,31 +72,25 @@ async fn google_callback(
     } else if state == "link" && user.is_some() {
         handler.handle_link_callback(&mut db, user.unwrap()).await
     } else {
-        return Err(Status::BadRequest);
+        return Err(Status::BadRequest.into());
     }
-    .map_err(|e| {
-        error!("Error handling Google callback: {}", e);
-        Status::InternalServerError
-    })?;
+    .context("Error handling Google callback")??;
 
     cookies.remove(Cookie::from("state-oauth-type"));
 
-    res
+    Ok(res)
 }
 
 #[get("/unlink")]
-async fn google_unlink(mut db: DbConnection, user: &User) -> Result<Redirect, Status> {
+async fn google_unlink(mut db: DbConnection, user: &User) -> ResultResponse<Redirect> {
     let res = sqlx::query!("UPDATE user SET google_id = NULL WHERE id = ?", user.id)
         .execute(&mut **db)
         .await
-        .map_err(|e| {
-            error!("Error unlinking Google account: {}", e);
-            Status::InternalServerError
-        })?;
+        .context("Error unlinking Google account")?;
     if res.rows_affected() == 1 {
         Ok(Redirect::to("/settings/account"))
     } else {
-        Err(Status::InternalServerError)
+        Err(Status::InternalServerError.into())
     }
 }
 
@@ -119,11 +115,11 @@ impl CallbackHandler for GoogleLogin {
         &self,
         db: &mut DbPoolConnection,
         user: Self::IntermediateUserInfo,
-    ) -> Result<Option<User>, String> {
-        sqlx::query_as!(User, "SELECT * FROM user WHERE google_id = ?", user.user_id)
+    ) -> Result<Option<User>> {
+        let res = sqlx::query_as!(User, "SELECT * FROM user WHERE google_id = ?", user.user_id)
             .fetch_optional(&mut **db)
-            .await
-            .map_err(|e| e.to_string())
+            .await?;
+        Ok(res)
     }
 
     async fn link_to(
@@ -131,30 +127,29 @@ impl CallbackHandler for GoogleLogin {
         db: &mut DbPoolConnection,
         user: &User,
         user_info: Self::IntermediateUserInfo,
-    ) -> Result<bool, String> {
+    ) -> Result<bool> {
         let other_exists = sqlx::query!(
             "SELECT * FROM user WHERE google_id = ? AND id != ?",
             user_info.user_id,
             user.id
         )
         .fetch_optional(&mut **db)
-        .await
-        .map_err(|e| e.to_string())?
+        .await?
         .is_some();
 
         if other_exists {
             return Ok(false);
         }
 
-        sqlx::query!(
+        let res = sqlx::query!(
             "UPDATE user SET google_id = ? WHERE id = ?",
             user_info.user_id,
             user.id
         )
         .execute(&mut **db)
         .await
-        .map(|r| r.rows_affected() == 1)
-        .map_err(|e| e.to_string())
+        .map(|r| r.rows_affected() == 1)?;
+        Ok(res)
     }
 }
 

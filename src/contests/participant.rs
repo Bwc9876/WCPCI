@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 
-use crate::{auth::users::User, db::DbPoolConnection};
+use crate::{auth::users::User, db::DbPoolConnection, error::prelude::*};
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Participant {
@@ -12,8 +12,12 @@ pub struct Participant {
 }
 
 impl Participant {
-    pub async fn get(db: &mut DbPoolConnection, contest_id: i64, user_id: i64) -> Option<Self> {
-        sqlx::query_as!(
+    pub async fn get(
+        db: &mut DbPoolConnection,
+        contest_id: i64,
+        user_id: i64,
+    ) -> Result<Option<Self>> {
+        let participant = sqlx::query_as!(
             Participant,
             "SELECT * FROM participant WHERE contest_id = ? AND user_id = ?",
             contest_id,
@@ -21,28 +25,33 @@ impl Participant {
         )
         .fetch_optional(&mut **db)
         .await
-        .ok()
-        .flatten()
+        .with_context(|| {
+            format!(
+                "Failed to get participant with contest_id {} and user_id {}",
+                contest_id, user_id
+            )
+        })?;
+        Ok(participant)
     }
 
-    pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Option<Self> {
-        sqlx::query_as!(
+    pub async fn by_id(db: &mut DbPoolConnection, p_id: i64) -> Result<Option<Self>> {
+        let participant = sqlx::query_as!(
             Participant,
             "SELECT * FROM participant WHERE p_id = ?",
             p_id
         )
         .fetch_optional(&mut **db)
         .await
-        .ok()
-        .flatten()
+        .with_context(|| format!("Failed to get participant with id {}", p_id))?;
+        Ok(participant)
     }
 
-    pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Vec<(Self, User)> {
+    pub async fn list(db: &mut DbPoolConnection, contest_id: i64) -> Result<Vec<(Self, User)>> {
         let res = sqlx::query!("SELECT participant.*, user.* FROM participant JOIN user ON participant.user_id = user.id WHERE contest_id = ?", contest_id)
             .fetch_all(&mut **db)
-            .await
-            .unwrap();
-        res.into_iter()
+            .await.with_context(|| format!("Failed to get all participants for {contest_id}"))?;
+        let v = res
+            .into_iter()
             .map(|row| {
                 let participant = Participant {
                     p_id: row.p_id,
@@ -67,10 +76,11 @@ impl Participant {
                 };
                 (participant, user)
             })
-            .collect()
+            .collect();
+        Ok(v)
     }
 
-    pub async fn delete(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+    pub async fn delete(&self, db: &mut DbPoolConnection) -> Result {
         sqlx::query!(
             "DELETE FROM participant WHERE contest_id = ? AND user_id = ?",
             self.contest_id,
@@ -79,20 +89,25 @@ impl Participant {
         .execute(&mut **db)
         .await
         .map(|_| ())
+        .with_context(|| {
+            format!(
+                "Failed to delete participant with contest_id {} and user_id {}",
+                self.contest_id, self.user_id
+            )
+        })
     }
 
-    pub async fn list_judge(db: &mut DbPoolConnection, contest_id: i64) -> Vec<User> {
+    pub async fn list_judge(db: &mut DbPoolConnection, contest_id: i64) -> Result<Vec<User>> {
         sqlx::query_as!(
             User,
             "SELECT user.* FROM participant JOIN user ON participant.user_id = user.id WHERE contest_id = ? AND is_judge = true",
             contest_id
         )
         .fetch_all(&mut **db)
-        .await
-        .unwrap()
+        .await.context("Failed to list all judges")
     }
 
-    pub async fn list_not_judge(db: &mut DbPoolConnection, contest_id: i64) -> Vec<Self> {
+    pub async fn list_not_judge(db: &mut DbPoolConnection, contest_id: i64) -> Result<Vec<Self>> {
         sqlx::query_as!(
             Participant,
             "SELECT * FROM participant WHERE contest_id = ? AND is_judge = false",
@@ -100,10 +115,10 @@ impl Participant {
         )
         .fetch_all(&mut **db)
         .await
-        .unwrap()
+        .context("Failed to list all non-judges")
     }
 
-    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Participant, sqlx::Error> {
+    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Participant> {
         sqlx::query_as!(
             Participant,
             "INSERT INTO participant (user_id, contest_id, is_judge, registered_at) VALUES (?, ?, ?, ?) RETURNING *",
@@ -113,14 +128,10 @@ impl Participant {
             self.registered_at
         )
         .fetch_one(&mut **db)
-        .await
+        .await.context("Failed to insert new participant")
     }
 
-    pub async fn remove(
-        db: &mut DbPoolConnection,
-        contest_id: i64,
-        user_id: i64,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn remove(db: &mut DbPoolConnection, contest_id: i64, user_id: i64) -> Result {
         sqlx::query!(
             "DELETE FROM participant WHERE contest_id = ? AND user_id = ?",
             contest_id,
@@ -129,19 +140,25 @@ impl Participant {
         .execute(&mut **db)
         .await
         .map(|_| ())
+        .with_context(|| {
+            format!(
+                "Can't delete participant with contest_id {} and user_id {}",
+                contest_id, user_id
+            )
+        })
     }
 
     pub async fn create_or_make_judge(
         db: &mut DbPoolConnection,
         contest_id: i64,
         user_id: i64,
-    ) -> Result<Participant, sqlx::Error> {
+    ) -> Result<Participant> {
         sqlx::query_as!(
             Participant,
             "INSERT INTO participant (user_id, contest_id, is_judge) VALUES (?, ?, true) ON CONFLICT (user_id, contest_id) DO UPDATE SET is_judge = true RETURNING *",
             user_id,
             contest_id
-        ).fetch_one(&mut **db).await
+        ).fetch_one(&mut **db).await.context("Failed to create or make judge")
     }
 
     // pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {

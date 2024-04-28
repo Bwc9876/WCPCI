@@ -1,14 +1,12 @@
 use log::error;
 use rocket::{
     futures::{SinkExt, StreamExt},
-    get,
-    http::Status,
-    State,
+    get, State,
 };
 use rocket_ws::{stream::DuplexStream, WebSocket};
 use tokio::select;
 
-use crate::{contests::Contest, db::DbConnection};
+use crate::{contests::Contest, db::DbConnection, error::prelude::*};
 
 use super::{
     manager::{LeaderboardUpdateMessage, LeaderboardUpdateReceiver, ShutdownReceiver},
@@ -72,12 +70,10 @@ pub async fn leaderboard_ws(
     mut db: DbConnection,
     contest_id: i64,
     manager: &State<LeaderboardManagerHandle>,
-) -> Result<rocket_ws::Channel<'static>, Status> {
-    let contest = Contest::get(&mut db, contest_id)
-        .await
-        .ok_or(Status::NotFound)?;
+) -> ResultResponse<rocket_ws::Channel<'static>> {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
     let mut manager = manager.lock().await;
-    let rx = manager.subscribe_leaderboard(&mut db, &contest).await;
+    let rx = manager.subscribe_leaderboard(&mut db, &contest).await?;
     let shutdown_rx = manager.subscribe_shutdown();
     Ok(ws.channel(move |stream| {
         Box::pin(async move {

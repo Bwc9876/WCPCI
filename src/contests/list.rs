@@ -6,6 +6,7 @@ use crate::{
     auth::users::{Admin, User},
     context_with_base,
     db::DbConnection,
+    error::prelude::*,
     times::{format_datetime_human_readable, ClientTimeZone},
 };
 
@@ -17,8 +18,8 @@ pub async fn contests_list(
     admin: Option<&Admin>,
     timezone: ClientTimeZone,
     mut db: DbConnection,
-) -> Template {
-    let contests = Contest::list(&mut db).await;
+) -> ResultResponse<Template> {
+    let contests = Contest::list(&mut db).await?;
     let tz = timezone.timezone();
     let start_times = contests
         .iter()
@@ -29,5 +30,5 @@ pub async fn contests_list(
         .map(|c| format_datetime_human_readable(tz.from_utc_datetime(&c.registration_deadline)))
         .collect::<Vec<_>>();
     let ctx = context_with_base!(user, contests, start_times, registration_deadlines, is_admin: admin.is_some());
-    Template::render("contests/list", ctx)
+    Ok(Template::render("contests/list", ctx))
 }

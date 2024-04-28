@@ -3,12 +3,13 @@
 use std::collections::HashMap;
 
 use chrono::{NaiveDateTime, TimeZone};
-use rocket::{fairing::AdHoc, form, routes, FromForm};
+use rocket::{fairing::AdHoc, form, http::Status, routes, FromForm};
 use serde::Serialize;
 
 use crate::{
     auth::users::User,
     db::DbPoolConnection,
+    error::prelude::*,
     template::TemplatedForm,
     times::{datetime_to_html_time, ClientTimeZone, FormDateTime},
 };
@@ -67,29 +68,31 @@ impl Contest {
         }
     }
 
-    pub async fn list(db: &mut DbPoolConnection) -> Vec<Self> {
+    pub async fn list(db: &mut DbPoolConnection) -> Result<Vec<Self>> {
         sqlx::query_as!(Contest, "SELECT * FROM contest ORDER BY created_at DESC")
             .fetch_all(&mut **db)
             .await
-            .unwrap_or_default()
+            .context("Error fetching contests")
     }
 
-    pub async fn list_user_in(db: &mut DbPoolConnection, user_id: i64) -> Vec<Self> {
+    pub async fn list_user_in(db: &mut DbPoolConnection, user_id: i64) -> Result<Vec<Self>> {
         sqlx::query_as!(Contest, "SELECT contest.* FROM contest JOIN participant ON contest.id = participant.contest_id WHERE participant.user_id = ?", user_id)
             .fetch_all(&mut **db)
-            .await
-            .unwrap_or_default()
+            .await.context("Error fetching contests user is in")
     }
 
-    pub async fn get(db: &mut DbPoolConnection, id: i64) -> Option<Self> {
-        sqlx::query_as!(Contest, "SELECT * FROM contest WHERE id = ?", id)
+    pub async fn get(db: &mut DbPoolConnection, id: i64) -> Result<Option<Self>> {
+        let contest = sqlx::query_as!(Contest, "SELECT * FROM contest WHERE id = ?", id)
             .fetch_optional(&mut **db)
-            .await
-            .ok()
-            .flatten()
+            .await?;
+        Ok(contest)
     }
 
-    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Contest, sqlx::Error> {
+    pub async fn get_or_404(db: &mut DbPoolConnection, id: i64) -> ResultResponse<Self> {
+        Self::get(db, id).await?.ok_or(Status::NotFound.into())
+    }
+
+    pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Self> {
         sqlx::query_as!(
             Contest,
             "INSERT INTO contest (name, description, start_time, registration_deadline, end_time, freeze_time, penalty, max_participants) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",
@@ -101,10 +104,10 @@ impl Contest {
             self.freeze_time,
             self.penalty,
             self.max_participants
-        ).fetch_one(&mut **db).await
+        ).fetch_one(&mut **db).await.context("Error inserting contest")
     }
 
-    pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, db: &mut DbPoolConnection) -> Result {
         sqlx::query_as!(
             Contest,
             "UPDATE contest SET name = ?, description = ?, start_time = ?, registration_deadline = ?, end_time = ?, freeze_time = ?, penalty = ?, max_participants = ? WHERE id = ?",
@@ -117,14 +120,15 @@ impl Contest {
             self.penalty,
             self.max_participants,
             self.id
-        ).execute(&mut **db).await.map(|_| ())
+        ).execute(&mut **db).await.map(|_| ()).with_context(|| format!("Error updating contest with id: {}", self.id))
     }
 
-    pub async fn delete(self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {
+    pub async fn delete(self, db: &mut DbPoolConnection) -> Result {
         sqlx::query!("DELETE FROM contest WHERE id = ?", self.id)
             .execute(&mut **db)
             .await
             .map(|_| ())
+            .with_context(|| format!("Error deleting contest {}", self.id))
     }
 
     pub fn has_started(&self) -> bool {
