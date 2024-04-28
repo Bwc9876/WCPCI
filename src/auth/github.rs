@@ -1,4 +1,3 @@
-use log::error;
 use rocket::{
     fairing::AdHoc,
     get,
@@ -8,7 +7,10 @@ use rocket::{
 };
 use rocket_oauth2::{OAuth2, TokenResponse};
 
-use crate::db::{DbConnection, DbPoolConnection};
+use crate::{
+    db::{DbConnection, DbPoolConnection},
+    error::prelude::*,
+};
 
 use super::{users::User, CallbackHandler};
 
@@ -22,14 +24,14 @@ pub struct UserInfo {
 }
 
 #[get("/login")]
-fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
+fn github_login(oauth2: OAuth2<GitHubLogin>, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
     let mut cookie = Cookie::new("state-oauth-type", "login");
     cookie.set_same_site(SameSite::None);
     cookies.add(cookie);
-    oauth2.get_redirect(cookies, &SCOPES).map_err(|e| {
-        error!("Error getting GitHub redirect: {}", e);
-        Status::InternalServerError
-    })
+    let redirect = oauth2
+        .get_redirect(cookies, &SCOPES)
+        .context("Error getting GitHub redirect")?;
+    Ok(redirect)
 }
 
 #[get("/link")]
@@ -37,14 +39,14 @@ fn github_link(
     oauth2: OAuth2<GitHubLogin>,
     _user: &User,
     cookies: &CookieJar<'_>,
-) -> Result<Redirect, Status> {
+) -> ResultResponse<Redirect> {
     let mut cookie = Cookie::new("state-oauth-type", "link");
     cookie.set_same_site(SameSite::None);
     cookies.add(cookie);
-    oauth2.get_redirect(cookies, &SCOPES).map_err(|e| {
-        error!("Error getting GitHub redirect: {}", e);
-        Status::InternalServerError
-    })
+    let redirect = oauth2
+        .get_redirect(cookies, &SCOPES)
+        .context("Error getting GitHub redirect")?;
+    Ok(redirect)
 }
 
 #[get("/callback")]
@@ -53,7 +55,7 @@ async fn github_callback(
     token: TokenResponse<GitHubLogin>,
     user: Option<&User>,
     cookies: &CookieJar<'_>,
-) -> Result<Redirect, Status> {
+) -> ResultResponse<Redirect> {
     let handler = GitHubLogin(token.access_token().to_string());
 
     let state = cookies
@@ -66,31 +68,25 @@ async fn github_callback(
     } else if state == "link" && user.is_some() {
         handler.handle_link_callback(&mut db, user.unwrap()).await
     } else {
-        return Err(Status::BadRequest);
+        return Err(Status::BadRequest.into());
     }
-    .map_err(|e| {
-        error!("Error handling GitHub callback: {}", e);
-        Status::InternalServerError
-    })?;
+    .context("Error handling GitHub callback")??;
 
     cookies.remove(Cookie::from("state-oauth-type"));
 
-    res
+    Ok(res)
 }
 
 #[get("/unlink")]
-async fn github_unlink(mut db: DbConnection, user: &User) -> Result<Redirect, Status> {
+async fn github_unlink(mut db: DbConnection, user: &User) -> ResultResponse<Redirect> {
     let res = sqlx::query!("UPDATE user SET github_id = NULL WHERE id = ?", user.id)
         .execute(&mut **db)
         .await
-        .map_err(|e| {
-            error!("Error unlinking GitHub account: {}", e);
-            Status::InternalServerError
-        })?;
+        .context("Error unlinking GitHub account: {}")?;
     if res.rows_affected() == 1 {
         Ok(Redirect::to("/settings/account"))
     } else {
-        Err(Status::InternalServerError)
+        Err(Status::InternalServerError.into())
     }
 }
 
@@ -116,11 +112,11 @@ impl CallbackHandler for GitHubLogin {
         &self,
         db: &mut DbPoolConnection,
         user: Self::IntermediateUserInfo,
-    ) -> Result<Option<User>, String> {
-        sqlx::query_as!(User, "SELECT * FROM user WHERE github_id = ?", user.id)
+    ) -> Result<Option<User>> {
+        let res = sqlx::query_as!(User, "SELECT * FROM user WHERE github_id = ?", user.id)
             .fetch_optional(&mut **db)
-            .await
-            .map_err(|e| e.to_string())
+            .await?;
+        Ok(res)
     }
 
     async fn link_to(
@@ -128,30 +124,29 @@ impl CallbackHandler for GitHubLogin {
         db: &mut DbPoolConnection,
         user: &User,
         user_info: Self::IntermediateUserInfo,
-    ) -> Result<bool, String> {
+    ) -> Result<bool> {
         let other_exists = sqlx::query!(
             "SELECT * FROM user WHERE github_id = ? AND id != ?",
             user_info.id,
             user.id
         )
         .fetch_optional(&mut **db)
-        .await
-        .map_err(|e| e.to_string())?
+        .await?
         .is_some();
 
         if other_exists {
             return Ok(false);
         }
 
-        sqlx::query!(
+        let res = sqlx::query!(
             "UPDATE user SET github_id = ? WHERE id = ?",
             user_info.id,
             user.id
         )
         .execute(&mut **db)
         .await
-        .map(|r| r.rows_affected() == 1)
-        .map_err(|e| e.to_string())
+        .map(|r| r.rows_affected() == 1)?;
+        Ok(res)
     }
 }
 

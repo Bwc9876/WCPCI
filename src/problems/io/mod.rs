@@ -1,7 +1,7 @@
 use rocket::{fairing::AdHoc, routes};
 use serde::Deserialize;
 
-use crate::db::DbPoolConnection;
+use crate::{db::DbPoolConnection, error::prelude::*};
 
 use super::{Problem, TestCase};
 
@@ -35,13 +35,10 @@ struct ProblemData {
 }
 
 impl ProblemData {
-    pub async fn get_for_problem(
-        db: &mut DbPoolConnection,
-        problem: &Problem,
-    ) -> Result<Self, String> {
+    pub async fn get_for_problem(db: &mut DbPoolConnection, problem: &Problem) -> Result<Self> {
         let cases = TestCase::get_for_problem(db, problem.id)
             .await
-            .map_err(|e| format!("Couldn't get cases: {e:?}"))?;
+            .context("Couldn't get cases")?;
         Ok(Self {
             name: problem.name.clone(),
             description: problem.description.clone(),

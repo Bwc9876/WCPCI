@@ -1,7 +1,6 @@
 use chrono::NaiveDateTime;
 use chrono::TimeZone;
 use rocket::get;
-use rocket::http::Status;
 use rocket_dyn_templates::Template;
 
 use crate::auth::users::Admin;
@@ -10,6 +9,7 @@ use crate::contests::Contest;
 use crate::contests::Participant;
 use crate::context_with_base;
 use crate::db::{DbConnection, DbPoolConnection};
+use crate::error::prelude::*;
 use crate::run::JobState;
 use crate::times::format_datetime_human_readable;
 use crate::times::ClientTimeZone;
@@ -81,7 +81,7 @@ impl JudgeRun {
         user_id: i64,
         problem_id: i64,
         limit: i64,
-    ) -> Result<Vec<Self>, sqlx::Error> {
+    ) -> Result<Vec<Self>> {
         sqlx::query_as!(
             JudgeRun,
             "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT ?",
@@ -91,13 +91,14 @@ impl JudgeRun {
         )
         .fetch_all(&mut **db)
         .await
+        .with_context(|| format!("Failed to get runs for user {} and problem {}", user_id, problem_id))
     }
 
     pub async fn get_latest(
         db: &mut DbPoolConnection,
         user_id: i64,
         problem_id: i64,
-    ) -> Result<Option<Self>, sqlx::Error> {
+    ) -> Result<Option<Self>> {
         sqlx::query_as!(
             JudgeRun,
             "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? ORDER BY ran_at DESC LIMIT 1",
@@ -106,11 +107,12 @@ impl JudgeRun {
         )
             .fetch_optional(&mut **db)
             .await
+            .with_context(|| format!("Failed to get latest run for user {} and problem {}", user_id, problem_id))
     }
 
     pub const MAX_RUNS_PER_USER: i64 = 25;
 
-    pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<Self, sqlx::Error> {
+    pub async fn write_to_db(self, db: &mut DbPoolConnection) -> Result<Self> {
         let new = sqlx::query_as!(
             JudgeRun,
             "INSERT INTO judge_run (problem_id, user_id, amount_run, program, language, total_cases, error, ran_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",
@@ -124,7 +126,7 @@ impl JudgeRun {
             self.ran_at
         )
             .fetch_one(&mut **db)
-            .await;
+            .await.context("Failed to insert new run")?;
 
         let run_count = sqlx::query!(
             "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ?",
@@ -132,7 +134,8 @@ impl JudgeRun {
             self.problem_id
         )
         .fetch_all(&mut **db)
-        .await?
+        .await
+        .context("Failed to count runs for user")?
         .len() as i64;
 
         if run_count > Self::MAX_RUNS_PER_USER {
@@ -142,21 +145,16 @@ impl JudgeRun {
                 self.problem_id
             )
                 .execute(&mut **db)
-                .await?;
+                .await
+                .context("Failed to delete oldest run")?;
         }
 
-        new
+        Ok(new)
     }
 
     pub fn success(&self) -> bool {
         self.amount_run == self.total_cases && self.error.is_none()
     }
-}
-
-#[derive(Responder)]
-pub enum RunsResponse {
-    NotFound(Status),
-    Ok(Template),
 }
 
 #[get("/<contest_id>/problems/<slug>/runs")]
@@ -167,33 +165,28 @@ pub async fn runs(
     admin: Option<&Admin>,
     user: Option<&User>,
     mut db: DbConnection,
-) -> RunsResponse {
-    if let Some(problem) = Problem::get(&mut db, contest_id, slug).await {
-        let contest = Contest::get(&mut db, contest_id).await.unwrap();
-        let runs = if let Some(user) = user {
-            JudgeRun::list(&mut db, user.id, problem.id, JudgeRun::MAX_RUNS_PER_USER)
-                .await
-                .unwrap_or_default()
-        } else {
-            vec![]
-        };
-        let participant = if let Some(user) = user {
-            Participant::get(&mut db, contest_id, user.id).await
-        } else {
-            None
-        };
-        let can_edit = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-        let tz = tz.timezone();
-        let formatted_times = runs
-            .iter()
-            .map(|r| tz.from_utc_datetime(&r.ran_at))
-            .map(format_datetime_human_readable)
-            .collect::<Vec<_>>();
-        RunsResponse::Ok(Template::render(
-            "problems/runs",
-            context_with_base!(user, runs, contest, problem, can_edit, formatted_times, max_runs: JudgeRun::MAX_RUNS_PER_USER),
-        ))
+) -> ResultResponse<Template> {
+    let problem = Problem::get_or_404(&mut db, contest_id, slug).await?;
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let runs = if let Some(user) = user {
+        JudgeRun::list(&mut db, user.id, problem.id, JudgeRun::MAX_RUNS_PER_USER).await?
     } else {
-        RunsResponse::NotFound(Status::NotFound)
-    }
+        vec![]
+    };
+    let participant = if let Some(user) = user {
+        Participant::get(&mut db, contest_id, user.id).await?
+    } else {
+        None
+    };
+    let can_edit = admin.is_some() || participant.map_or(false, |p| p.is_judge);
+    let tz = tz.timezone();
+    let formatted_times = runs
+        .iter()
+        .map(|r| tz.from_utc_datetime(&r.ran_at))
+        .map(format_datetime_human_readable)
+        .collect::<Vec<_>>();
+    Ok(Template::render(
+        "problems/runs",
+        context_with_base!(user, runs, contest, problem, can_edit, formatted_times, max_runs: JudgeRun::MAX_RUNS_PER_USER),
+    ))
 }

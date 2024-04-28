@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use anyhow::Context;
 use log::error;
 use rocket::{
     form::{Contextual, Form},
@@ -22,6 +23,7 @@ use crate::{
     leaderboard::LeaderboardManagerHandle,
     problems::{Problem, ProblemCompletion},
     template::{FormTemplateObject, TemplatedForm},
+    FormResponse, ResultResponse,
 };
 
 struct CompletionTemplateForm<'r> {
@@ -65,26 +67,23 @@ pub async fn edit_completion(
     _token: &CsrfToken,
     user: &User,
     admin: Option<&Admin>,
-) -> Result<Template, Status> {
-    let contest = Contest::get(&mut db, contest_id)
-        .await
-        .ok_or(Status::NotFound)?;
-    let problem = Problem::get(&mut db, contest_id, problem_slug)
-        .await
-        .ok_or(Status::NotFound)?;
+) -> ResultResponse<Template> {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let problem = Problem::get_or_404(&mut db, contest_id, problem_slug).await?;
     let target_participant = Participant::by_id(&mut db, participant_id)
         .await
+        .context("Failed to get participant")?
         .ok_or(Status::NotFound)?;
     let target_user = User::get(&mut db, target_participant.user_id)
-        .await
+        .await?
         .ok_or(Status::NotFound)?;
 
-    let participant = Participant::get(&mut db, contest_id, user.id).await;
+    let participant = Participant::get(&mut db, contest_id, user.id).await?;
     let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
     if allowed {
         let completion =
             ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant_id)
-                .await;
+                .await?;
         let form = CompletionTemplateForm {
             completion: completion.as_ref(),
             contest: &contest,
@@ -100,7 +99,7 @@ pub async fn edit_completion(
         );
         Ok(Template::render("contests/admin/runs_completion", ctx))
     } else {
-        Err(Status::Forbidden)
+        Err(Status::Forbidden.into())
     }
 }
 
@@ -148,26 +147,21 @@ pub async fn edit_completion_post(
     form: Form<Contextual<'_, ProblemCompletionForm>>,
     user: &User,
     admin: Option<&Admin>,
-) -> Result<EditCompletionResponse, Status> {
-    let contest = Contest::get(&mut db, contest_id)
-        .await
-        .ok_or(Status::NotFound)?;
-    let problem = Problem::get(&mut db, contest_id, problem_slug)
-        .await
-        .ok_or(Status::NotFound)?;
+) -> FormResponse {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let problem = Problem::get_or_404(&mut db, contest_id, problem_slug).await?;
     let target_participant = Participant::by_id(&mut db, participant_id)
         .await
+        .context("Failed to get participant")?
         .ok_or(Status::NotFound)?;
-    let target_user = User::get(&mut db, target_participant.user_id)
-        .await
-        .ok_or(Status::NotFound)?;
+    let target_user = User::get_or_404(&mut db, target_participant.user_id).await?;
 
-    let participant = Participant::get(&mut db, contest_id, user.id).await;
+    let participant = Participant::get(&mut db, contest_id, user.id).await?;
     let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
     if allowed {
         let completion =
             ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant_id)
-                .await;
+                .await?;
         if let Some(ref value) = form.value {
             let completed_at = value
                 .completed_in
@@ -187,10 +181,10 @@ pub async fn edit_completion_post(
             leaderboard_manager
                 .process_completion(&completion, &contest)
                 .await;
-            return Ok(EditCompletionResponse::Redirect(Redirect::to(format!(
+            return Ok(Redirect::to(format!(
                 "/contests/{}/admin/runs/problems/{}",
                 contest_id, problem_slug
-            ))));
+            )));
         }
         let form_template = CompletionTemplateForm {
             completion: completion.as_ref(),
@@ -205,11 +199,8 @@ pub async fn edit_completion_post(
             problem,
             form
         );
-        Ok(EditCompletionResponse::Template(Template::render(
-            "contests/admin/runs_completion",
-            ctx,
-        )))
+        Err(Template::render("contests/admin/runs_completion", ctx).into())
     } else {
-        Err(Status::Forbidden)
+        Err(Status::Forbidden.into())
     }
 }

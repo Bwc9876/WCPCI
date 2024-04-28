@@ -5,6 +5,7 @@ use crate::{
     auth::users::{Admin, User},
     context_with_base_authed,
     db::DbConnection,
+    error::prelude::*,
 };
 
 use super::{Contest, Participant};
@@ -19,18 +20,15 @@ async fn contest_admin(
     contest_id: i64,
     user: &User,
     admin: Option<&Admin>,
-) -> Result<Template, Status> {
-    if let Some(contest) = Contest::get(&mut db, contest_id).await {
-        let participant = Participant::get(&mut db, contest_id, user.id).await;
-        let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-        if allowed {
-            let ctx = context_with_base_authed!(user, contest);
-            Ok(Template::render("contests/admin", ctx))
-        } else {
-            Err(Status::Forbidden)
-        }
+) -> ResultResponse<Template> {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let participant = Participant::get(&mut db, contest_id, user.id).await?;
+    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
+    if allowed {
+        let ctx = context_with_base_authed!(user, contest);
+        Ok(Template::render("contests/admin", ctx))
     } else {
-        Err(Status::NotFound)
+        Err(Status::Forbidden.into())
     }
 }
 

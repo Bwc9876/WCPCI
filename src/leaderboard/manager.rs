@@ -9,6 +9,7 @@ use crate::{
     auth::users::User,
     contests::{Contest, Participant},
     db::DbPoolConnection,
+    error::prelude::*,
     problems::ProblemCompletion,
 };
 
@@ -32,10 +33,10 @@ impl Leaderboard {
     pub async fn new(
         db: &mut DbPoolConnection,
         contest: Contest,
-    ) -> (Self, LeaderboardUpdateReceiver) {
-        let scores = Self::get_scores(db, &contest).await;
+    ) -> Result<(Self, LeaderboardUpdateReceiver)> {
+        let scores = Self::get_scores(db, &contest).await?;
         let (tx, rx) = tokio::sync::broadcast::channel(16);
-        (
+        Ok((
             Self {
                 contest,
                 scores,
@@ -43,7 +44,7 @@ impl Leaderboard {
                 tx,
             },
             rx,
-        )
+        ))
     }
 
     fn is_frozen(&self) -> bool {
@@ -56,14 +57,19 @@ impl Leaderboard {
         now < self.contest.end_time && minutes_to_end <= self.contest.freeze_time
     }
 
-    async fn get_scores(db: &mut DbPoolConnection, contest: &Contest) -> Vec<ParticipantScores> {
-        let participants = Participant::list_not_judge(db, contest.id).await;
+    async fn get_scores(
+        db: &mut DbPoolConnection,
+        contest: &Contest,
+    ) -> Result<Vec<ParticipantScores>> {
+        let participants = Participant::list_not_judge(db, contest.id)
+            .await
+            .context("Failed to get participants for leaderboard")?;
         let mut scores = Vec::new();
         for p in participants {
-            scores.push(ParticipantScores::new(db, &p, contest).await);
+            scores.push(ParticipantScores::new(db, &p, contest).await?);
         }
         scores.sort();
-        scores
+        Ok(scores)
     }
 
     fn send_msg(&self, msg: LeaderboardUpdateMessage) {
@@ -206,15 +212,20 @@ impl Leaderboard {
         })
     }
 
-    pub async fn full_refresh(&mut self, db: &mut DbPoolConnection, contest: Option<&Contest>) {
+    pub async fn full_refresh(
+        &mut self,
+        db: &mut DbPoolConnection,
+        contest: Option<&Contest>,
+    ) -> Result {
         if let Some(c) = contest {
             self.contest = c.clone();
             for s in &mut self.scores {
                 s.update_contest(db, c).await;
             }
         }
-        self.scores = Self::get_scores(db, &self.contest).await;
+        self.scores = Self::get_scores(db, &self.contest).await?;
         self.send_msg(LeaderboardUpdateMessage::FullRefresh);
+        Ok(())
     }
 }
 
@@ -260,15 +271,17 @@ impl LeaderboardManager {
         &mut self,
         db: &mut DbPoolConnection,
         contest: &Contest,
-    ) -> Arc<Mutex<Leaderboard>> {
+    ) -> Result<Arc<Mutex<Leaderboard>>> {
         if let Some((leaderboard, _)) = self.leaderboards.get(&contest.id) {
-            leaderboard.clone()
+            Ok(leaderboard.clone())
         } else {
-            let (leaderboard, rx) = Leaderboard::new(db, contest.clone()).await;
+            let (leaderboard, rx) = Leaderboard::new(db, contest.clone())
+                .await
+                .context("Can't create new leaderboard")?;
             let leaderboard = Arc::new(Mutex::new(leaderboard));
             self.leaderboards
                 .insert(contest.id, (leaderboard.clone(), rx));
-            leaderboard
+            Ok(leaderboard)
         }
     }
 
@@ -280,10 +293,10 @@ impl LeaderboardManager {
         &mut self,
         db: &mut DbPoolConnection,
         contest: &Contest,
-    ) -> LeaderboardUpdateReceiver {
-        let leaderboard = self.get_leaderboard(db, contest).await;
+    ) -> Result<LeaderboardUpdateReceiver> {
+        let leaderboard = self.get_leaderboard(db, contest).await?;
         let leaderboard = leaderboard.lock().await;
-        leaderboard.tx.subscribe()
+        Ok(leaderboard.tx.subscribe())
     }
 
     pub async fn delete_user(&mut self, user_id: i64) {

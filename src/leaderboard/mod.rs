@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::TimeZone;
-use rocket::{fairing::AdHoc, get, http::Status, routes, State};
+use rocket::{fairing::AdHoc, get, routes, State};
 
 mod manager;
 mod scoring;
@@ -16,16 +16,11 @@ use crate::{
     contests::{Contest, Participant},
     context_with_base,
     db::DbConnection,
+    error::prelude::*,
     times::{datetime_to_html_time, ClientTimeZone},
 };
 
 use self::ws::leaderboard_ws;
-
-#[derive(Responder)]
-enum LeaderboardResponse {
-    Template(Template),
-    Error(Status),
-}
 
 #[derive(Serialize)]
 struct ProblemIdTemp {
@@ -42,48 +37,45 @@ async fn leaderboard_get(
     tz: ClientTimeZone,
     user: Option<&User>,
     admin: Option<&Admin>,
-) -> LeaderboardResponse {
-    if let Some(contest) = Contest::get(&mut db, contest_id).await {
-        let mut leaderboard_manager = leaderboard_manager.lock().await;
-        let leaderboard = leaderboard_manager
-            .get_leaderboard(&mut db, &contest)
-            .await
-            .clone();
-        drop(leaderboard_manager);
-        let mut leaderboard = leaderboard.lock().await;
+) -> ResultResponse<Template> {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let mut leaderboard_manager = leaderboard_manager.lock().await;
+    let leaderboard = leaderboard_manager
+        .get_leaderboard(&mut db, &contest)
+        .await?
+        .clone();
+    drop(leaderboard_manager);
+    let mut leaderboard = leaderboard.lock().await;
 
-        let problems = sqlx::query_as!(
-            ProblemIdTemp,
-            "SELECT id, slug, name from problem WHERE contest_id = ?",
-            contest.id
-        )
-        .fetch_all(&mut **db)
-        .await
-        .unwrap_or_default();
+    let problems = sqlx::query_as!(
+        ProblemIdTemp,
+        "SELECT id, slug, name from problem WHERE contest_id = ?",
+        contest.id
+    )
+    .fetch_all(&mut **db)
+    .await
+    .context("Failed to fetch problems")?;
 
-        let is_judge = if let Some(user) = user {
-            Participant::get(&mut db, contest_id, user.id)
-                .await
-                .map(|p| p.is_judge)
-                .unwrap_or(false)
-        } else {
-            false
-        };
-
-        let entries = leaderboard.full(&mut db).await;
-
-        let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
-        let start_local_html = datetime_to_html_time(&start_local);
-        let end_local = tz.timezone().from_utc_datetime(&contest.end_time);
-        let end_local_html = datetime_to_html_time(&end_local);
-
-        LeaderboardResponse::Template(Template::render(
-            "contests/leaderboard",
-            context_with_base!(user, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
-        ))
+    let is_judge = if let Some(user) = user {
+        Participant::get(&mut db, contest_id, user.id)
+            .await?
+            .map(|p| p.is_judge)
+            .unwrap_or(false)
     } else {
-        LeaderboardResponse::Error(Status::NotFound)
-    }
+        false
+    };
+
+    let entries = leaderboard.full(&mut db).await;
+
+    let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
+    let start_local_html = datetime_to_html_time(&start_local);
+    let end_local = tz.timezone().from_utc_datetime(&contest.end_time);
+    let end_local_html = datetime_to_html_time(&end_local);
+
+    Ok(Template::render(
+        "contests/leaderboard",
+        context_with_base!(user, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
+    ))
 }
 
 pub fn stage() -> AdHoc {

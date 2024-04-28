@@ -9,7 +9,10 @@ use rocket::{
 use serde::Serialize;
 use sqlx::{encode::IsNull, prelude::FromRow, Decode, Encode, Type};
 
-use crate::db::{DbConnection, DbPoolConnection};
+use crate::{
+    db::{DbConnection, DbPoolConnection},
+    error::prelude::*,
+};
 
 use super::sessions::Session;
 
@@ -62,7 +65,7 @@ impl Encode<'_, sqlx::Sqlite> for ColorScheme {
 impl Decode<'_, sqlx::Sqlite> for ColorScheme {
     fn decode(
         value: <sqlx::Sqlite as sqlx::database::HasValueRef<'_>>::ValueRef,
-    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let s = <String as Decode<sqlx::Sqlite>>::decode(value)?;
         Ok(s.into())
     }
@@ -113,11 +116,7 @@ impl User {
         }
     }
 
-    pub async fn login(
-        &self,
-        db: &mut DbPoolConnection,
-        cookies: &CookieJar<'_>,
-    ) -> Result<(), String> {
+    pub async fn login(&self, db: &mut DbPoolConnection, cookies: &CookieJar<'_>) -> Result {
         let session = Session::create(db, self.id).await?;
 
         let expires =
@@ -137,8 +136,8 @@ impl User {
         self,
         db: &mut DbPoolConnection,
         cookies: &'a CookieJar<'a>,
-    ) -> Result<User, String> {
-        let user = self.insert(db).await.map_err(|e| e.to_string())?;
+    ) -> Result<User> {
+        let user = self.insert(db).await?;
         user.login(db, cookies).await?;
         Ok(user)
     }
@@ -147,11 +146,13 @@ impl User {
         self,
         db: &mut DbPoolConnection,
         cookies: &'a CookieJar<'a>,
-    ) -> Result<(User, bool), String> {
+    ) -> Result<(User, bool)> {
         let existing = sqlx::query_as!(User, "SELECT * FROM user WHERE sso_id = ?", self.sso_id)
             .fetch_optional(&mut **db)
             .await
-            .map_err(|e| e.to_string())?;
+            .with_context(|| {
+                format!("Failed to fetch user from db with sso_id = {}", self.sso_id)
+            })?;
 
         if let Some(user) = existing {
             // Update the user's display name and email if they have changed
@@ -165,7 +166,7 @@ impl User {
                 .execute(&mut **db)
                 .await;
 
-                res.map_err(|e| format!("Failed to update user data: {e}"))?;
+                res.context("Failed to update user info from SSO")?;
             }
             user.login(db, cookies).await?;
             Ok((user, false))
@@ -175,7 +176,7 @@ impl User {
         }
     }
 
-    pub async fn insert(self, db: &mut DbPoolConnection) -> Result<User, String> {
+    pub async fn insert(self, db: &mut DbPoolConnection) -> Result<Self> {
         let new = sqlx::query_as!(
             User,
             "INSERT INTO user (sso_id, email, default_display_name, color_scheme, default_language) VALUES (?, ?, ?, ?, ?) RETURNING *",
@@ -187,34 +188,37 @@ impl User {
         )
         .fetch_one(&mut **db)
         .await
-        .map_err(|e| e.to_string())?;
+        .with_context(|| format!("Failed to insert new user: {self:?}"))?;
 
         Ok(new)
     }
 
-    pub async fn delete(&self, db: &mut DbPoolConnection) -> Result<(), String> {
+    pub async fn delete(&self, db: &mut DbPoolConnection) -> Result {
         let res = sqlx::query!("DELETE FROM user WHERE id = ?", self.id)
             .execute(&mut **db)
             .await;
 
-        res.map_err(|e| e.to_string())?;
+        res.with_context(|| format!("Failed to delete user with id: {}", self.id))?;
 
         Ok(())
     }
 
-    pub async fn get(db: &mut DbPoolConnection, id: i64) -> Option<User> {
+    pub async fn get(db: &mut DbPoolConnection, id: i64) -> Result<Option<Self>> {
         sqlx::query_as!(User, "SELECT * FROM user WHERE id = ?", id)
             .fetch_optional(&mut **db)
             .await
-            .ok()
-            .flatten()
+            .with_context(|| format!("Couldn't fetch user with id {}", id))
     }
 
-    pub async fn list(db: &mut DbPoolConnection) -> Result<Vec<User>, String> {
+    pub async fn get_or_404(db: &mut DbPoolConnection, id: i64) -> ResultResponse<Self> {
+        Self::get(db, id).await?.ok_or(Status::NotFound.into())
+    }
+
+    pub async fn list(db: &mut DbPoolConnection) -> Result<Vec<Self>> {
         let users: Vec<User> = sqlx::query_as!(User, "SELECT * FROM user")
             .fetch_all(&mut **db)
             .await
-            .map_err(|e| e.to_string())?;
+            .context("Failed to list all users")?;
 
         Ok(users)
     }

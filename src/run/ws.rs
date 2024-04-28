@@ -15,15 +15,10 @@ use crate::{
     db::DbConnection,
     problems::{Problem, TestCase},
     run::job::{JobOperation, JobRequest},
+    error::prelude::*,
 };
 
 use super::{JobState, JobStateReceiver, ManagerHandle};
-
-#[derive(Responder)]
-pub enum WsHttpResponse {
-    Accept(rocket_ws::Channel<'static>),
-    Reject(Status),
-}
 
 // Keep in sync with TypeScript type
 #[derive(Deserialize)]
@@ -241,35 +236,28 @@ pub async fn ws_channel(
     admin: Option<&Admin>,
     manager: &State<ManagerHandle>,
     mut db: DbConnection,
-) -> WsHttpResponse {
-    if let Some(problem) = Problem::by_id(&mut db, contest_id, problem_id).await {
-        if let Some(contest) = Contest::get(&mut db, contest_id).await {
-            let participant = Participant::get(&mut db, contest_id, user.id).await;
-            let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
-            let is_admin = admin.is_some();
-            if !is_admin && !is_judge && !contest.has_started() {
-                return WsHttpResponse::Reject(Status::Forbidden);
-            }
+) -> ResultResponse<rocket_ws::Channel<'static>> {
+    let problem = Problem::by_id(&mut db, contest_id, problem_id).await?.ok_or(Status::NotFound)?;
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let participant = Participant::get(&mut db, contest_id, user.id).await?;
+    let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
+    let is_admin = admin.is_some();
+    if !is_admin && !is_judge && !contest.has_started() {
+        return Err(Status::Forbidden.into());
+    }
 
-            let handle = (*manager).clone();
-            let cases = TestCase::get_for_problem(&mut db, problem_id)
-                .await
-                .unwrap_or_default();
-            if !cases.is_empty() {
-                let user_id = user.id;
-                WsHttpResponse::Accept(ws.channel(move |stream| {
-                    Box::pin(async move {
-                        websocket_loop(stream, handle, problem, cases, user_id).await;
-                        Ok(())
-                    })
-                }))
-            } else {
-                WsHttpResponse::Reject(Status::NotFound)
-            }
-        } else {
-            WsHttpResponse::Reject(Status::NotFound)
-        }
+    let handle = (*manager).clone();
+    let cases = TestCase::get_for_problem(&mut db, problem_id)
+        .await?;
+    if !cases.is_empty() {
+        let user_id = user.id;
+        Ok(ws.channel(move |stream| {
+            Box::pin(async move {
+                websocket_loop(stream, handle, problem, cases, user_id).await;
+                Ok(())
+            })
+        }))
     } else {
-        WsHttpResponse::Reject(Status::NotFound)
+        Err(Status::NotFound.into())
     }
 }

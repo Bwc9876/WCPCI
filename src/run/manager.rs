@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use chrono::NaiveDateTime;
 use log::error;
 use rocket_db_pools::Pool;
 use tokio::sync::Mutex;
 
 use crate::contests::{Contest, Participant};
-use crate::db::DbPool;
+use crate::db::{DbPool, DbPoolConnection};
+use crate::error::prelude::*;
 use crate::leaderboard::LeaderboardManagerHandle;
 use crate::problems::{JudgeRun, ProblemCompletion};
 
@@ -142,55 +144,20 @@ impl RunManager {
             }
             match pool.get().await {
                 Ok(mut conn) => {
-                    if let Some(contest) = Contest::get(&mut conn, contest_id).await {
-                        let judge_run = JudgeRun::from_job_state(
-                            problem_id, user_id, program, language, &state, ran_at,
-                        );
-
-                        let success = judge_run.success();
-                        if let Err(why) = judge_run.write_to_db(&mut conn).await {
-                            error!("Couldn't write judge run to db: {:?}", why);
-                        }
-
-                        if let Some(participant) =
-                            Participant::get(&mut conn, contest_id, user_id).await
-                        {
-                            if participant.is_judge || !contest.is_running() {
-                                return;
-                            }
-
-                            let mut completion =
-                                ProblemCompletion::get_for_problem_and_participant(
-                                    &mut conn,
-                                    problem_id,
-                                    participant.p_id,
-                                )
-                                .await
-                                .unwrap_or_else(|| {
-                                    ProblemCompletion::temp(
-                                        participant.p_id,
-                                        problem_id,
-                                        Some(ran_at).filter(|_| success),
-                                    )
-                                });
-
-                            if success && completion.completed_at.is_none() {
-                                completion.completed_at = Some(ran_at);
-                            } else if state.last_error().1 && completion.completed_at.is_none() {
-                                completion.number_wrong += 1;
-                            }
-
-                            if let Err(why) = completion.upsert(&mut conn).await {
-                                error!("Couldn't write problem completion to db: {:?}", why);
-                            }
-
-                            if completion.completed_at.is_some() {
-                                let mut leaderboard_manager = leaderboard_handle.lock().await;
-                                leaderboard_manager
-                                    .process_completion(&completion, &contest)
-                                    .await;
-                            }
-                        }
+                    let run = JudgeRun::from_job_state(problem_id, user_id, program, language, &state, ran_at);
+                    if let Err(why) = Self::save_run(
+                        &mut conn,
+                        contest_id,
+                        problem_id,
+                        user_id,
+                        run,
+                        ran_at,
+                        state.last_error().1,
+                        leaderboard_handle,
+                    )
+                    .await
+                    {
+                        error!("Couldn't save run: {:?}", why);
                     }
                 }
                 Err(e) => {
@@ -203,6 +170,74 @@ impl RunManager {
             .0
             .send((user_id, problem_id, state_rx))
             .ok();
+
+        Ok(())
+    }
+
+    async fn save_run(
+        conn: &mut DbPoolConnection,
+        contest_id: i64,
+        problem_id: i64,
+        user_id: i64,
+        judge_run: JudgeRun,
+        ran_at: NaiveDateTime,
+        penalty_applies: bool,
+        leaderboard_handle: LeaderboardManagerHandle,
+    ) -> Result {
+        let contest = Contest::get(conn, contest_id)
+            .await?
+            .ok_or_else(|| anyhow!("Couldn't find contest with id {}", contest_id))?;
+
+        let success = judge_run.success();
+        if let Err(why) = judge_run.write_to_db(conn).await {
+            error!("Couldn't write judge run to db: {:?}", why);
+        }
+
+        let participant = Participant::get(conn, contest_id, user_id)
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "Couldn't find participant for user {} in contest {}",
+                    user_id,
+                    contest_id
+                )
+            })?;
+
+        if participant.is_judge || !contest.is_running() {
+            return Ok(());
+        }
+
+        let mut completion = ProblemCompletion::get_for_problem_and_participant(
+            conn,
+            problem_id,
+            participant.p_id,
+        )
+        .await
+        .context("While getting problem completion")?
+        .unwrap_or_else(|| {
+            ProblemCompletion::temp(
+                participant.p_id,
+                problem_id,
+                Some(ran_at).filter(|_| success),
+            )
+        });
+
+        if success && completion.completed_at.is_none() {
+            completion.completed_at = Some(ran_at);
+        } else if penalty_applies && completion.completed_at.is_none() {
+            completion.number_wrong += 1;
+        }
+
+        if let Err(why) = completion.upsert(conn).await {
+            error!("Couldn't write problem completion to db: {:?}", why);
+        }
+
+        if completion.completed_at.is_some() {
+            let mut leaderboard_manager = leaderboard_handle.lock().await;
+            leaderboard_manager
+                .process_completion(&completion, &contest)
+                .await;
+        }
 
         Ok(())
     }

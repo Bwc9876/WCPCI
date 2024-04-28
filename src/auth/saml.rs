@@ -11,7 +11,7 @@ use samael::{
 };
 use serde::Deserialize;
 
-use crate::{db::DbConnection, run::CodeInfo};
+use crate::{db::DbConnection, error::prelude::*, run::CodeInfo};
 
 use super::users::User;
 
@@ -58,10 +58,7 @@ pub const PREFERRED_SSO_BINDING: &str = "urn:oasis:names:tc:SAML:2.0:bindings:HT
 const NAME_ID_FORMAT: &str = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent";
 
 impl SamlOptions {
-    pub async fn create_service_provider(
-        &self,
-        url_prefix: &str,
-    ) -> Result<ServiceProvider, String> {
+    pub async fn create_service_provider(&self, url_prefix: &str) -> Result<ServiceProvider> {
         let mut sp = ServiceProviderBuilder::default();
         sp.entity_id(self.entity_id.clone())
             .allow_idp_initiated(true)
@@ -81,37 +78,34 @@ impl SamlOptions {
             info!("SAML App is fetching IDP metadata from {idp_meta_url}...");
             let resp = reqwest::get(idp_meta_url)
                 .await
-                .map_err(|e| format!("Couldn't fetch IDP metadata: {e}"))?;
-            let text = resp
-                .text()
-                .await
-                .map_err(|e| format!("Couldn't read IDP metadata: {e}"))?;
+                .context("Couldn't fetch IDP metadata")?;
+            let text = resp.text().await.context("Couldn't read IDP metadata")?;
             info!("SAML App fetched IDP metadata successfully");
-            let idp_meta: EntityDescriptor = samael::metadata::de::from_str(&text)
-                .map_err(|e| format!("Couldn't parse IDP metadata: {e}"))?;
+            let idp_meta: EntityDescriptor =
+                samael::metadata::de::from_str(&text).context("Couldn't parse IDP metadata")?;
             sp.idp_metadata(idp_meta);
         }
 
         if let Some(cert_path) = &self.certificate {
-            let cert_raw = std::fs::read_to_string(cert_path)
-                .map_err(|e| format!("Couldn't read certificate: {e}"))?;
+            let cert_raw =
+                std::fs::read_to_string(cert_path).context("Couldn't read certificate")?;
             let cert = openssl::x509::X509::from_pem(cert_raw.as_bytes())
-                .map_err(|e| format!("Couldn't parse certificate: {e}"))?;
+                .context("Couldn't parse certificate")?;
             sp.certificate(cert);
         }
 
         if let Some(private_key_path) = &self.private_key {
-            let private_key = std::fs::read_to_string(private_key_path)
-                .map_err(|e| format!("Couldn't read private key: {e}"))?;
+            let private_key =
+                std::fs::read_to_string(private_key_path).context("Couldn't read private key")?;
             let key = openssl::rsa::Rsa::private_key_from_pem(private_key.as_bytes())
-                .map_err(|e| format!("Couldn't parse private key: {e}"))?;
+                .context("Couldn't parse private key")?;
             sp.key(key);
         }
 
-        let sp = sp.build().map_err(|e| e.to_string())?;
+        let sp = sp.build().context("Couldn't build ServiceProvider")?;
 
         if sp.sso_binding_location(PREFERRED_SSO_BINDING).is_none() {
-            Err(format!(
+            Err(anyhow!(
                 "IDP doesn't support the preferred SSO binding: {PREFERRED_SSO_BINDING}"
             ))
         } else {
@@ -124,41 +118,47 @@ impl SamlOptions {
 async fn login(
     sp: &State<ServiceProvider>,
     relay_url: &State<UrlPrefixGuard>,
-) -> Result<Redirect, String> {
+) -> ResultResponse<Redirect> {
     let base = sp
         .sso_binding_location(PREFERRED_SSO_BINDING)
         .ok_or_else(|| {
-            format!(
+            anyhow!(
                 "SAML IDP Doesn't Support Preferred SSO Binding ({}). Did the IDP change metadata?",
                 PREFERRED_SSO_BINDING
             )
         })?;
     let req = sp
         .make_authentication_request(&base)
-        .map_err(|e| format!("Couldn't Create Authn Request: {e}"))?;
+        .map_err(|e| anyhow!("{e:?}"))
+        .context("Couldn't Create Authn Request")?;
     let relay = relay_url.0.clone();
     let url = if let Some(key) = sp.key.as_ref() {
         let key_der = key
             .private_key_to_der()
-            .map_err(|e| format!("Couldn't convert private key to DER: {e}"))?;
+            .context("Couldn't Convert Private Key to DER")?;
         req.signed_redirect(&relay, &key_der)
     } else {
         req.redirect(&relay)
     }
-    .map_err(|e| format!("Couldn't Generate Redirect: {e}"))?
-    .ok_or_else(|| "Couldn't Generate Redirect".to_string())?;
+    .map_err(|e| anyhow!("{e:?}"))
+    .context("Couldn't Generate Redirect")?
+    .ok_or_else(|| anyhow!("Couldn't Generate Redirect"))?;
 
     Ok(Redirect::to(url.to_string()))
 }
 
 #[get("/metadata")]
-async fn metadata(sp: &State<ServiceProvider>) -> Result<String, String> {
-    sp.metadata()
-        .map_err(|e| format!("Couldn't generate metadata: {e}"))
+async fn metadata(sp: &State<ServiceProvider>) -> ResultResponse<String> {
+    let res = sp
+        .metadata()
+        .map_err(|e| anyhow!("{e:?}"))
+        .context("Couldn't generate metadata")
         .and_then(|x| {
             x.to_xml()
-                .map_err(|e| format!("Couldn't serialize metadata: {e}"))
-        })
+                .map_err(|e| anyhow!("{e:?}"))
+                .context("Couldn't convert metadata to XML")
+        })?;
+    Ok(res)
 }
 
 #[derive(FromForm, Debug)]
@@ -175,7 +175,7 @@ async fn acs(
     form: Form<SamlAcsForm>,
     code_info: &State<CodeInfo>,
     cookies: &CookieJar<'_>,
-) -> Result<Redirect, Status> {
+) -> ResultResponse<Redirect> {
     let raw = form.into_inner().saml_response;
 
     let assertion = sp.parse_base64_response(&raw, None).map_err(|e| {
@@ -215,25 +215,21 @@ async fn acs(
                 display_name.clone(),
                 &code_info.run_config.default_language,
             );
-            match user.login_or_register(&mut db, cookies).await {
-                Err(why) => {
-                    warn!("Couldn't log / register in user: {why}");
-                    Err(Status::InternalServerError)
-                }
-                Ok((_user, is_new)) => {
-                    Ok(Redirect::to(if is_new { "/settings/profile" } else { "/" }))
-                }
-            }
+            let (_, is_new) = user
+                .login_or_register(&mut db, cookies)
+                .await
+                .context("Couldn't log-in / register user")?;
+            Ok(Redirect::to(if is_new { "/settings/profile" } else { "/" }))
         } else {
             warn!(
                 "No display name or email found in SAML response, looked for {} and {}",
                 so.attrs.display_name, so.attrs.email
             );
-            Err(Status::BadRequest)
+            Err(Status::BadRequest.into())
         }
     } else {
         warn!("No attributes found in SAML response");
-        Err(Status::BadRequest)
+        Err(Status::BadRequest.into())
     }
 }
 
