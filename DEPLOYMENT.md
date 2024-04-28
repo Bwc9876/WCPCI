@@ -19,6 +19,8 @@ Table of contents:
   - [Database](#database)
   - [OAuth](#oauth)
   - [SAML](#saml)
+  - [Staging VM](#staging-vm)
+    - [Running the VM](#running-the-vm)
 
 ## Prerequisites
 
@@ -45,17 +47,17 @@ The exact paths to these folders can be changed in the config (covered in a bit)
 
 This section will cover all aspects of configuration, some of which are required and some of which are optional.
 
-Configuration is done via the `Rocket.toml` file that needs to either.
+Configuration is done via the `Rocket.toml` file that needs to be either:
 
-A. Be in the same directory as the binary
-B. Be in a parent directory of the binary
-C. Be directly specified in the `ROCKET_CONFIG` environment variable
+1. Be in the same directory as the binary
+2. Be in a parent directory of the binary
+3. Be directly specified in the `ROCKET_CONFIG` environment variable
 
 In addition, any __top-level__ (described in the "Base" section) settings can be specified as an environment variable. Just prepend `ROCKET_` and put the name in all caps (e.g `url` becomes `ROCKET_URL`).
 
 ### Profile
 
-Rocket uses profiles to make configuration different between what stage of development you're in. Most of the time (and by default), Rocket is always in production mode. We'd recommend setting the `ROCKET_ENV` environment variable to `development` when developing and `prod` when deploying, or `stage` if you're deploying to a staging environment.
+Rocket uses profiles to make configuration different between what stage of development you're in. Most of the time (and by default), Rocket is always in production mode. We'd recommend setting the `ROCKET_ENV` environment variable to `development` when developing and `release` when deploying, or `stage` if you're deploying to a staging environment.
 
 ### Base
 
@@ -89,14 +91,13 @@ For TLS configuration use the `tls` object. This object has the following fields
 
 - `oauth.github` - This is the OAuth configuration for GitHub. See the [OAuth section](#oauth) for more information.
   - `provider` - Set this to `GitHub`
-  - `redirect_uri` - Set to your URL and then `/auth/github/callback`
   - `client_id` - The client ID for the GitHub OAuth application.
   - `client_secret` - The client secret for the GitHub OAuth application.
 - `oauth.google` - This is the OAuth configuration for Google. See the [OAuth section](#oauth) for more information.
   - `provider` - Set this to `Google`
-  - `redirect_uri` - Set to your URL and then `/auth/google/callback`
   - `client_id` - The client ID for the Google OAuth application.
   - `client_secret` - The client secret for the Google OAuth application.
+  - `redirect_uri` - The redirect URI for the Google OAuth application. This should be set to `http(s)://your-url/auth/google/callback`.
 
 ### SAML Configuration
 
@@ -141,7 +142,7 @@ On any updates to the application it should be able to migrate the database auto
 
 For Oauth, see the [section in configuration](#oauth-configuration) for what keys and values to use.
 
-You'll need to create GitHub and Google OAuth apps in order to use them as providers.
+You'll need to create GitHub and Google OAuth apps in order to use them as providers, the redirect URIs should be set to `http(s)://your-url/auth/github/callback` and `http(s)://your-url/auth/google/callback` respectively.
 
 See the [GitHub OAuth docs](https://docs.github.com/en/developers/apps/building-oauth-apps) and the [Google OAuth docs](https://developers.google.com/identity/protocols/oauth2) for more information.
 
@@ -150,3 +151,21 @@ See the [GitHub OAuth docs](https://docs.github.com/en/developers/apps/building-
 For SAML you'll need to configure your identity provider to trust the application. The application will need to know the entity ID and the metadata URL of the identity provider, as well as a certificate and private key to sign assertions with.
 
 This application supports HTTP-Post bindings, and at the moment only support SP-initiated SSO. More bindings and features may be added in the future.
+
+## Staging VM
+
+The staging VM (available under the nix flake) is a nixos config that contains a VM that can be used to test the application. You'll need to configure URL and OAuth settings yourself in an environment variable but the rest of the configuration is done for you. 
+
+### Running the VM
+
+First, build `nix build .#nixosConfigurations.wcpc-staging.config.system.build.vm`. This will take a bit to create a QEMU image.
+Then, to make things look nicer set `QEMU_KERNEL_PARAMS` to `console=tty50`.
+
+For networking you need to configure a port forward from the host to the VM. This can be done with the `QEMU_NET_OPTS` environment variable.
+Set this in the format of `hostfwd=tcp::8080-:80`. You may change 8080 to any port you want to use on the host.
+
+Finally, run the VM by running `./result/bin/run-nixos-vm -nographic`
+
+Now you can login as `wcpc` with the password `wcpcpass`. Copy relevant secret config into .env, and run the server with `wcpc`.
+
+The HTTP basic auth when connecting is `tester` for the username and `WCPC_T3ST1NG!` for the password

@@ -29,7 +29,8 @@ pub struct UserInfo {
 #[get("/login")]
 fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
     let mut cookie = Cookie::new("state-oauth-type", "login");
-    cookie.set_same_site(SameSite::None);
+    cookie.set_secure(false);
+    cookie.set_same_site(SameSite::Lax);
     cookies.add(cookie);
     let redirect = oauth2
         .get_redirect(cookies, &SCOPES)
@@ -44,7 +45,8 @@ fn google_link(
     cookies: &CookieJar<'_>,
 ) -> ResultResponse<Redirect> {
     let mut cookie = Cookie::new("state-oauth-type", "link");
-    cookie.set_same_site(SameSite::None);
+    cookie.set_secure(false);
+    cookie.set_same_site(SameSite::Lax);
     cookies.add(cookie);
     let redirect = oauth2
         .get_redirect(cookies, &SCOPES)
