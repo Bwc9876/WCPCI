@@ -4,7 +4,10 @@ use rocket::{
     get, State,
 };
 use rocket_ws::{stream::DuplexStream, WebSocket};
-use tokio::select;
+use tokio::{
+    select,
+    time::{self, Duration, Instant},
+};
 
 use crate::{contests::Contest, db::DbConnection, error::prelude::*};
 
@@ -16,6 +19,8 @@ use super::{
 enum LoopRes {
     NoOp,
     Break,
+    Ping,
+    Pong(Vec<u8>),
     Msg(LeaderboardUpdateMessage),
 }
 
@@ -24,12 +29,20 @@ async fn websocket_loop(
     mut rx: LeaderboardUpdateReceiver,
     mut shutdown_rx: ShutdownReceiver,
 ) {
+    let sleep = time::sleep(Duration::from_secs(10));
+    tokio::pin!(sleep);
+
     loop {
         let res = select! {
+            () = &mut sleep => {
+                sleep.as_mut().reset(Instant::now() + Duration::from_secs(10));
+                LoopRes::Ping
+            },
             client_message = stream.next() => {
                 if let Some(client_message) = client_message {
                     match client_message {
                         Ok(rocket_ws::Message::Close(_)) => LoopRes::Break,
+                        Ok(rocket_ws::Message::Ping(data)) => LoopRes::Pong(data),
                         _ => LoopRes::NoOp
                     }
                 } else {
@@ -57,6 +70,20 @@ async fn websocket_loop(
                 let res = stream.send(rocket_ws::Message::Text(json_string)).await;
                 if let Err(e) = res {
                     error!("Error sending message: {:?}", e);
+                }
+            }
+            LoopRes::Ping => {
+                let res = stream
+                    .send(rocket_ws::Message::Ping(vec![5, 4, 2, 6, 7, 3, 2, 5, 3]))
+                    .await;
+                if let Err(e) = res {
+                    error!("Error sending ping: {:?}", e);
+                }
+            }
+            LoopRes::Pong(data) => {
+                let res = stream.send(rocket_ws::Message::Pong(data)).await;
+                if let Err(e) = res {
+                    error!("Error sending pong: {:?}", e);
                 }
             }
             _ => {}

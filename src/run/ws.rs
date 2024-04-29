@@ -7,7 +7,10 @@ use rocket::{
 };
 use rocket_ws::{stream::DuplexStream, WebSocket};
 use serde::Deserialize;
-use tokio::select;
+use tokio::{
+    select,
+    time::{self, Duration, Instant},
+};
 
 use crate::{
     auth::users::{Admin, User},
@@ -66,6 +69,7 @@ enum LoopRes {
     ChangeJobRx(JobStateReceiver),
     JobStart(JobRequest),
     Pong(Vec<u8>),
+    Ping,
     Break,
     NoOp,
 }
@@ -107,8 +111,15 @@ async fn websocket_loop(
         }
     }
 
+    let sleep = time::sleep(Duration::from_secs(10));
+    tokio::pin!(sleep);
+
     loop {
         let res = select! {
+            () = &mut sleep => {
+                sleep.as_mut().reset(Instant::now() + Duration::from_secs(10));
+                LoopRes::Ping
+            },
             Ok((user_id_incoming, problem_id, rx)) = started_rx.recv() => {
                 if user_id_incoming == user_id && problem_id == problem.id {
                     LoopRes::ChangeJobRx(rx)
@@ -194,6 +205,14 @@ async fn websocket_loop(
                 let res = stream.send(rocket_ws::Message::Text(msg)).await;
                 if let Err(e) = res {
                     error!("Error sending message: {:?}", e);
+                }
+            }
+            LoopRes::Ping => {
+                let res = stream
+                    .send(rocket_ws::Message::Ping(vec![5, 4, 2, 6, 7, 3, 2, 5, 3]))
+                    .await;
+                if let Err(e) = res {
+                    error!("Error sending ping: {:?}", e);
                 }
             }
             LoopRes::Pong(e) => {
