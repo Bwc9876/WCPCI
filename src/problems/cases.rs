@@ -110,7 +110,7 @@ impl TestCase {
             let re = builder
                 .build()
                 .map_err(|e| format!("Couldn't build regex: {e:?}"))?;
-            Ok(re.is_match(output))
+            Ok(re.is_match(output.trim()))
         } else {
             let (output, expected) = (output.trim(), expected.trim());
             if self.case_insensitive {

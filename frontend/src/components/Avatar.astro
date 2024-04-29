@@ -23,7 +23,7 @@ const src =
         ? `https://gravatar.com/avatar/5aec02087368de589b8d33275c370ca7e876c956006aebc96d1bbc6c90e5e340?size=${size}&d=identicon&r=pg`
         : teraIf(
               `${userVar}.profile_picture_source == 'github' and ${userVar}.github_id`,
-              `https://avatars.githubusercontent.com/u/${variable("user.github_id")}?s=${size}&v=4`,
+              `https://avatars.githubusercontent.com/u/${variable(`${userVar}.github_id`)}?s=${size}&v=4`,
               variable(`gravatar(email=${userVar}.email, size=${size})`)
           );
 ---
