@@ -233,7 +233,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 window.location.href = `${window.location.href}?ended=true&msg=${contestEndedMessage}&msg_type=success`;
             };
             makeCountdown(endTime, onTick, onEnd);
-        } else if (window.location.search.includes("ended=true")) {
+        }
+        if (window.location.search.includes("ended=true")) {
             history.replaceState({}, document.title, window.location.pathname);
             const options = {
                 particleCount: 2,
