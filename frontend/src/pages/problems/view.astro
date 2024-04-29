@@ -429,7 +429,10 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         testSectionHeader.dataset.expanded = "true";
                     }
                 },
-                testButtonTemplate
+                testButtonTemplate,
+                (input) => {
+                    testInput.value = input.trim();
+                }
             );
         });
 

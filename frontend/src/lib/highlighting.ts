@@ -41,7 +41,8 @@ const makePreCode = (text: string): HTMLPreElement => {
 export default (
     selectorPrefix?: string,
     onRunExample?: (input: string) => void,
-    exampleButtonTemplate?: HTMLButtonElement
+    exampleButtonTemplate?: HTMLButtonElement,
+    onFirstExample?: (input: string) => void
 ) => {
     document
         .querySelectorAll(
@@ -52,6 +53,8 @@ export default (
         });
 
     if (exampleButtonTemplate) {
+        let first = false;
+
         document
             .querySelectorAll(
                 `${selectorPrefix !== undefined ? selectorPrefix + " " : ""}pre code.language-example`
@@ -70,6 +73,10 @@ export default (
                 wrapperElem.appendChild(newBlock);
                 block.parentElement!.replaceWith(wrapperElem);
                 hljs.highlightElement(newBlock.childNodes[0] as HTMLElement);
+                if (!first) {
+                    first = true;
+                    onFirstExample?.(block.textContent ?? "");
+                }
             });
     }
 };
