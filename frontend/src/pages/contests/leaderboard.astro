@@ -65,6 +65,16 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
 
     <If expression="is_running">
         <div class="my-4 flex flex-row gap-4">
+            <If expression="contest.freeze_time != 0">
+                <div
+                    id="frozen-msg"
+                    data-frozen={variable("is_frozen")}
+                    class="hidden flex-row gap-2 text-blue-500 data-[frozen='true']:flex"
+                >
+                    <Icon size={24} name="tabler:snowflake" class="my-auto" />
+                    <span class="my-auto font-bold">Leaderboard Frozen!</span>
+                </div>
+            </If>
             <div class="relative grow">
                 <If expression="contest.freeze_time != 0">
                     <span
@@ -79,13 +89,15 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 </If>
                 <Progress
                     id="countdown-progress"
-                    class="h-full w-full"
+                    data-frozen={variable("is_frozen")}
+                    data-frozen-time={variable("contest.freeze_time")}
+                    class="h-full w-full data-[frozen='true']:border-2 data-[frozen='true']:border-solid data-[frozen='true']:border-blue-400"
                     aria-label="Time Left"
                     value={variable("progress")}
                     max="100"
                 />
             </div>
-            <span id="countdown">Ends In --h --m --s</span>
+            <span class="font-bold" id="countdown">Ends In --h --m --s</span>
         </div>
     </If>
 
@@ -196,13 +208,24 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
         ) as HTMLProgressElement | null;
 
         if (countdown && countdownProgress) {
+            const frozenMessage = document.getElementById("frozen-msg") as HTMLElement;
             const totalSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+            const freezeTime = countdownProgress.dataset.frozenTime;
+            let frozen = countdownProgress.dataset.frozen === "true";
             const onTick = (time: string, seconds: number) => {
                 if (countdown) {
                     countdown.textContent = `Ends in ${time}`;
                 }
                 if (countdownProgress) {
                     countdownProgress.value = ((totalSeconds - seconds) / totalSeconds) * 100;
+                }
+                const minutesLeft = seconds / 60;
+                if (!frozen && minutesLeft < parseInt(freezeTime!)) {
+                    frozen = true;
+                    countdownProgress.dataset.frozen = "true";
+                    if (frozenMessage) {
+                        frozenMessage.dataset.frozen = "true";
+                    }
                 }
             };
             const onEnd = () => {

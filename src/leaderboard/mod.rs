@@ -66,6 +66,7 @@ async fn leaderboard_get(
     };
 
     let entries = leaderboard.full(&mut db).await?;
+    let is_frozen = leaderboard.is_frozen();
 
     let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
     let start_local_html = datetime_to_html_time(&start_local);
@@ -74,7 +75,7 @@ async fn leaderboard_get(
 
     Ok(Template::render(
         "contests/leaderboard",
-        context_with_base!(user, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
+        context_with_base!(user, is_frozen, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
     ))
 }
 

@@ -1,4 +1,5 @@
 use chrono::TimeZone;
+use log::info;
 use rocket::{
     form::{Contextual, Form},
     get, post, State,
@@ -59,6 +60,8 @@ pub async fn edit_contest_post(
         let tz = client_time_zone.timezone();
         let original_start_time = contest.start_time;
         let original_penalty = contest.penalty;
+        let original_freeze_time = contest.freeze_time;
+        let original_end_time = contest.end_time;
         contest.name = value.name.to_string();
         contest.description = value.description.map(|s| s.to_string());
         contest.start_time = tz
@@ -98,13 +101,18 @@ pub async fn edit_contest_post(
             Participant::create_or_make_judge(&mut db, contest.id, *judge).await?;
         }
 
-        if contest.start_time != original_start_time || contest.penalty != original_penalty {
+        if contest.start_time != original_start_time
+            || contest.penalty != original_penalty
+            || contest.freeze_time != original_freeze_time
+            || contest.end_time != original_end_time
+        {
             let mut leaderboard_manager = leaderboard_handle.lock().await;
             let leaderboard = leaderboard_manager
                 .get_leaderboard(&mut db, &contest)
                 .await?;
             drop(leaderboard_manager);
             let mut leaderboard = leaderboard.lock().await;
+            info!("Refreshing leaderboard for contest {}", contest.id);
             leaderboard.full_refresh(&mut db, Some(&contest)).await?;
         }
 

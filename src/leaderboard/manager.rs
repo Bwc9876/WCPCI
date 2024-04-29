@@ -47,14 +47,14 @@ impl Leaderboard {
         ))
     }
 
-    fn is_frozen(&self) -> bool {
+    pub fn is_frozen(&self) -> bool {
         if self.contest.freeze_time == 0 {
             return false;
         }
 
         let now = chrono::Utc::now().naive_utc();
         let minutes_to_end = (self.contest.end_time - now).num_minutes();
-        now < self.contest.end_time && minutes_to_end <= self.contest.freeze_time
+        now < self.contest.end_time && minutes_to_end < self.contest.freeze_time
     }
 
     async fn get_scores(
@@ -226,7 +226,7 @@ impl Leaderboard {
             }
         }
         self.scores = Self::get_scores(db, &self.contest).await?;
-        self.send_msg(LeaderboardUpdateMessage::FullRefresh);
+        self.tx.send(LeaderboardUpdateMessage::FullRefresh)?;
         Ok(())
     }
 }
