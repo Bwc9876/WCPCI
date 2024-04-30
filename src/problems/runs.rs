@@ -16,7 +16,7 @@ use crate::times::ClientTimeZone;
 
 use super::Problem;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct JudgeRun {
     pub id: i64,
     pub problem_id: i64,
@@ -108,6 +108,22 @@ impl JudgeRun {
             .fetch_optional(&mut **db)
             .await
             .with_context(|| format!("Failed to get latest run for user {} and problem {}", user_id, problem_id))
+    }
+
+    pub async fn get_latest_success(
+        db: &mut DbPoolConnection,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<Option<Self>> {
+        sqlx::query_as!(
+            JudgeRun,
+            "SELECT * FROM judge_run WHERE user_id = ? AND problem_id = ? AND amount_run = total_cases AND error IS NULL ORDER BY ran_at DESC LIMIT 1",
+            user_id,
+            problem_id
+        )
+            .fetch_optional(&mut **db)
+            .await
+            .with_context(|| format!("Failed to get latest successful run for user {} and problem {}", user_id, problem_id))
     }
 
     pub const MAX_RUNS_PER_USER: i64 = 25;

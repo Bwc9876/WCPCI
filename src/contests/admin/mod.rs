@@ -45,6 +45,7 @@ pub fn stage() -> AdHoc {
                 runs::cancel,
                 runs::cancel_post,
                 runs::problem,
+                runs::view_user_run,
                 completions::edit_completion,
                 completions::edit_completion_post,
             ],

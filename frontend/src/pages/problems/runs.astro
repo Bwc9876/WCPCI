@@ -56,13 +56,12 @@ const defaultCode = 'def main():\n\tprint("Hello World!")\n\nmain()';
                         class="copy-button w-fit"
                         color="secondary"
                         data-program={variable("run.program | json_encode()", defaultCode)}
-                        data-run={variable("run.id", "1")}
                         icon="tabler:clipboard">Copy to clipboard</Button
                     >
                 </div>
             </Collapse>
 
-            <Else>
+            <Else slot="else">
                 <p class="p-4 text-center">You haven't attempted this problem yet.</p>
             </Else>
         </For>
@@ -81,7 +80,6 @@ const defaultCode = 'def main():\n\tprint("Hello World!")\n\nmain()';
                 const target = e.target! as HTMLElement;
                 const button = target.closest(".copy-button")! as HTMLButtonElement;
                 const code = JSON.parse(button.dataset.program!);
-                console.debug("Copying code to clipboard", code);
                 navigator.clipboard.writeText(code);
             });
         });

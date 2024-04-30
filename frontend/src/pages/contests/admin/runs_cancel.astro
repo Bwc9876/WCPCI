@@ -9,7 +9,7 @@ import DeleteForm from "@/components/forms/DeleteForm.astro";
     noIndex
     makeTile
     title="Cancel Run"
-    path=`/contests/${variable("contest.id")}/admin/runs/${variable("target_user.id")}/${variable("problem_id")}/cancel`
+    path=`/contests/${variable("contest.id")}/admin/runs/${variable("target_user.id")}/${variable("problem.id")}/cancel`
 >
     <DeleteForm
         title="Cancel Run"
@@ -18,6 +18,10 @@ import DeleteForm from "@/components/forms/DeleteForm.astro";
             [variable("contest.name"), `/contests/${variable("contest.id")}`],
             ["Admin", `/contests/${variable("contest.id")}/admin`],
             ["Runs", `/contests/${variable("contest.id")}/admin/runs`],
+            [
+                variable("problem.name"),
+                `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}`
+            ],
             [
                 "Cancel",
                 `/contests/${variable("contest.id")}/admin/runs/${variable("target_user.id")}/${variable("problem_id")}/cancel`

@@ -58,6 +58,12 @@ import { variable } from "@/lib/tera";
                 icon: "tabler:pencil",
                 action: (id) =>
                     `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}/edit/${id}`
+            },
+            {
+                name: "View Code",
+                icon: "tabler:code",
+                action: (id) =>
+                    `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}/view/${id}`
             }
         ]}
     />

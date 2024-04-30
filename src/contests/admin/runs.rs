@@ -10,7 +10,7 @@ use crate::{
     db::DbConnection,
     error::prelude::*,
     messages::Message,
-    problems::{Problem, ProblemCompletion},
+    problems::{JudgeRun, Problem, ProblemCompletion},
     run::ManagerHandle,
     times::{format_datetime_human_readable, ClientTimeZone},
 };
@@ -92,6 +92,9 @@ pub async fn cancel(
     manager_handle: &State<ManagerHandle>,
 ) -> ResultResponse<Template> {
     let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let problem = Problem::by_id(&mut db, contest_id, problem_id)
+        .await?
+        .ok_or(Status::NotFound)?;
     let participant = Participant::get(&mut db, contest_id, user.id).await?;
     let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
     if allowed {
@@ -107,7 +110,7 @@ pub async fn cancel(
             .ok_or(Status::NotFound)?;
         Ok(Template::render(
             "contests/admin/runs_cancel",
-            context_with_base_authed!(user, target_user, contest, problem_id),
+            context_with_base_authed!(user, target_user, contest, problem),
         ))
     } else {
         Err(Status::Forbidden.into())
@@ -125,6 +128,9 @@ pub async fn cancel_post(
     manager_handle: &State<ManagerHandle>,
 ) -> ResultResponse<Redirect> {
     Contest::get_or_404(&mut db, contest_id).await?;
+    Problem::by_id(&mut db, contest_id, problem_id)
+        .await?
+        .ok_or(Status::NotFound)?;
     let participant = Participant::get(&mut db, contest_id, user.id).await?;
     let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
     if allowed {
@@ -200,6 +206,46 @@ pub async fn problem(
 
         let ctx = context_with_base_authed!(user, rows, formatted_times, contest, problem);
         Ok(Template::render("contests/admin/runs_problem", ctx))
+    } else {
+        Err(Status::Forbidden.into())
+    }
+}
+
+#[get("/contests/<contest_id>/admin/runs/problems/<problem_slug>/view/<participant_id>")]
+pub async fn view_user_run(
+    mut db: DbConnection,
+    user: &User,
+    contest_id: i64,
+    participant_id: i64,
+    problem_slug: &str,
+    admin: Option<&Admin>,
+) -> ResultResponse<Template> {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let participant = Participant::get(&mut db, contest_id, user.id).await?;
+    let problem = Problem::get_or_404(&mut db, contest_id, problem_slug).await?;
+    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
+    if allowed {
+        let target_participant = Participant::by_id(&mut db, participant_id)
+            .await?
+            .ok_or(Status::NotFound)?;
+        let target_user = User::get(&mut db, target_participant.user_id)
+            .await?
+            .ok_or(Status::NotFound)?;
+        let most_recent =
+            JudgeRun::get_latest(&mut db, target_participant.user_id, problem.id).await?;
+        let success_recent =
+            JudgeRun::get_latest_success(&mut db, target_participant.user_id, problem.id).await?;
+        Ok(Template::render(
+            "contests/admin/runs_view",
+            context_with_base_authed!(
+                user,
+                target_user,
+                contest,
+                problem,
+                most_recent,
+                success_recent
+            ),
+        ))
     } else {
         Err(Status::Forbidden.into())
     }
