@@ -234,7 +234,9 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
         >
             <slot />
         </main>
-        <Tile as="footer" class="my-4 flex justify-center">
+        <Tile as="footer" class="my-4 flex flex-row flex-wrap justify-center gap-8 text-center">
+            <span> Sponsored by the West Chester University Computer Science Club </span>
+            <span> Logo from Competitive Programming Club </span>
             <Link
                 isExternal
                 class="flex flex-row gap-1"
@@ -242,7 +244,7 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                 color="accent"
             >
                 <Icon name="tabler:brand-github" size={25} />
-                <span class="my-auto">GitHub</span>
+                <span class="my-auto">GitHub Repo</span>
             </Link>
         </Tile>
         <style is:global>
