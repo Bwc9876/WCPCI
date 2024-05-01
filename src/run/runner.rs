@@ -88,10 +88,13 @@ impl Runner {
         if self.compile_cmd.is_empty() {
             Ok(())
         } else {
+            let env = std::env::var("PATH").unwrap_or_else(|_| "".to_string());
             let mut cmd = tokio::process::Command::new("bash");
             cmd.arg("-c")
                 .arg(&self.compile_cmd)
                 .current_dir(&self.temp_path)
+                .env_clear()
+                .env("PATH", env)
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -110,11 +113,14 @@ impl Runner {
     }
 
     pub async fn run_cmd(&self, input: &str) -> CaseResult<String> {
+        let env_path = std::env::var("PATH").unwrap_or_else(|_| "".to_string());
         let mut cmd = tokio::process::Command::new("bash");
 
         cmd.arg("-c")
             .arg(&self.run_cmd)
             .current_dir(&self.temp_path)
+            .env_clear()
+            .env("PATH", env_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

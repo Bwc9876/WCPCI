@@ -100,4 +100,19 @@ file_name = "main.hs"
 compile_cmd = "ghc main.hs"
 run_cmd = "./main"
 
-
+[debug.run.languages.csharp]
+name = "C#"
+default_code = """
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        System.Console.WriteLine("Hello, World!");
+    }
+}
+"""
+tabler_icon = "brand-c-sharp"
+monaco_contribution = "csharp"
+file_name = "Program.cs"
+compile_cmd = "mcs Program.cs"
+run_cmd = "mono Program.exe"
