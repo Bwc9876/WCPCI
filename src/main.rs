@@ -50,7 +50,9 @@ fn rocket() -> _ {
     }
 
     println!("Loading .env...");
-    dotenvy::dotenv().ok();
+    if let Err(why) = dotenvy::dotenv() {
+        eprintln!("Failed to load .env: {}", why);
+    }
 
     println!("Start of WCPC v{}", env!("CARGO_PKG_VERSION"));
 

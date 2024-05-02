@@ -48,6 +48,7 @@ pub async fn edit_contest_get(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 #[post("/<id>/edit", data = "<form>")]
 pub async fn edit_contest_post(
     id: i64,

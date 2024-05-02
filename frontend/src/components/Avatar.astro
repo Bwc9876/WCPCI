@@ -39,6 +39,7 @@ const src = noTemplate ? "" : getSrc(userVar, size);
     crossorigin="anonymous"
     width={size}
     height={size}
+    loading="lazy"
     src={src}
     alt={`${name ?? variable("name")}'s Avatar'`}
     {...rest}
