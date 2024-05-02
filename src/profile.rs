@@ -3,8 +3,13 @@ use rocket::{fairing::AdHoc, get, routes, State};
 use rocket_dyn_templates::Template;
 
 use crate::{
-    auth::users::User, contests::Contest, context_with_base, db::DbConnection,
-    leaderboard::LeaderboardManagerHandle, problems::Problem, times::ClientTimeZone,
+    auth::users::User,
+    contests::{Contest, Participant},
+    context_with_base,
+    db::DbConnection,
+    leaderboard::LeaderboardManagerHandle,
+    problems::Problem,
+    times::ClientTimeZone,
     ResultResponse,
 };
 
@@ -14,6 +19,7 @@ struct ProfileContestEntry {
     name: String,
     solved: usize,
     total: usize,
+    role: String,
     rank: usize,
 }
 
@@ -45,11 +51,16 @@ async fn profile(
         let stats = leaderboard.stats_of(user_id);
         let problems_total = Problem::list(&mut db, contest.id).await?.len();
         if let Some((solved, rank)) = stats {
+            let role = Participant::get(&mut db, contest.id, user_id)
+                .await?
+                .map(|p| if p.is_judge { "Judge" } else { "Participant" })
+                .unwrap_or("Participant");
             contest_entries.push(ProfileContestEntry {
                 id: contest.id,
                 name: contest.name,
                 solved,
                 total: problems_total,
+                role: role.to_string(),
                 rank,
             });
         }

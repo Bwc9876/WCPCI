@@ -82,10 +82,10 @@ impl Contest {
     }
 
     pub async fn get(db: &mut DbPoolConnection, id: i64) -> Result<Option<Self>> {
-        let contest = sqlx::query_as!(Contest, "SELECT * FROM contest WHERE id = ?", id)
+        sqlx::query_as!(Contest, "SELECT * FROM contest WHERE id = ?", id)
             .fetch_optional(&mut **db)
-            .await?;
-        Ok(contest)
+            .await
+            .context("Error fetching contest")
     }
 
     pub async fn get_or_404(db: &mut DbPoolConnection, id: i64) -> ResultResponse<Self> {
