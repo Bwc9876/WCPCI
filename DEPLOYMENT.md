@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide is for deploying an instance of WCPC on a server. This serve __must__ be using a Linux distribution. This guide is written in a way that should be distro-agnostic but certain steps may require slight modifications depending on the distribution.
+This guide is for deploying an instance of WCPC on a server. This server __must__ be using a Linux distribution. This guide is written in a way that should be distro-agnostic but certain steps may require slight modifications depending on the distribution.
 
 Table of contents:
 
@@ -110,7 +110,7 @@ See the [SAML section](#saml) for more information.
 - `saml.contact_name` - The name of the contact person for the SAML service provider.
 - `saml.contact_email` - The email of the contact person for the SAML service provider.
 - `saml.contact_telephone` - The telephone number of the contact person for the SAML service provider.
-- `saml.organization` - The organization name for the SAML service provider.
+- `saml.organization` - The organization name (SP, not IDP) for the SAML service provider.
 - `saml.attrs` - Defines how to map attribute assertions to user data. By default these are the OpenID Connect attributes but can be changed to match the identity provider's attributes.
   - `display_name` - The attribute name to use for the display name.
   - `email` - The attribute name to use for the email.
@@ -125,8 +125,8 @@ See the [SAML section](#saml) for more information.
 `run.languages` is a map of language keys to language objects. These objects contain the following fields:
 
 - `name` - The name of the language for display
-- `default_code` - The default code to use for the language (hint: you can use `"""` in toml to make multiline strings)
-- `tabler_icon` The icon (from [tabler icons](https://tabler.io/icons)) to use for this language, not this must be the full name of the icon (e.g. `brand-python`)
+- `default_code` - The default code to use for the language (hint: you can use `"""` in toml (or `''` in Nix) to make multiline strings)
+- `tabler_icon` The icon (from [tabler icons](https://tabler.io/icons)) to use for this language, note this must be the full name of the icon (e.g. `brand-python`)
 - `monaco_contribution` - The monaco editor contribution to use for this language, this is the language ID for monaco (e.g. `python`)
 - `file_name` - The name of the file to save the user's code to when running a submission.
 - `compile_cmd` - The command to use to compile the code, this can be left blank if the language doesn't need to be compiled, but we'd recommend setting it to do static analysis of an interpreted language to be fair to all users. The source file is named as whatever is in `file_name`.
@@ -152,13 +152,15 @@ For SAML you'll need to configure your identity provider to trust the applicatio
 
 This application supports HTTP-Post bindings, and at the moment only support SP-initiated SSO. More bindings and features may be added in the future.
 
+<!-- TODO(Spoon): Rework these two following sections -->
+
 ## Staging VM
 
 The staging VM (available under the nix flake) is a nixos config that contains a VM that can be used to test the application. You'll need to configure URL and OAuth settings yourself in an environment variable but the rest of the configuration is done for you. 
 
 ### Running the VM
 
-First, build `nix build .#nixosConfigurations.wcpc-staging.config.system.build.vm`. This will take a bit to create a QEMU image.
+First, build `nix build .#nixos-vm`. This will take a bit to create a QEMU image.
 Then, to make things look nicer set `QEMU_KERNEL_PARAMS` to `console=tty50`.
 
 For networking you need to configure a port forward from the host to the VM. This can be done with the `QEMU_NET_OPTS` environment variable.
