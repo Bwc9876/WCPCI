@@ -9,7 +9,7 @@
 }:
 dockerTools.${if stream then "streamLayeredImage" else "buildLayeredImage"} {
   name = "wcpc";
-  tag = "latest";
+  tag = "latest"; # TODO(Spoon): Should this be the version?
   contents = [wrapper dockerTools.caCertificates pkgs.coreutils pkgs.bashInteractive pkgs.nano];
   config = {
     Cmd = ["wcpc"];

@@ -14,7 +14,8 @@
       };
 
     gitRev = self.shortRev or self.dirtyShortRev or "";
-    version = "0.1" + gitRev;
+    rawVersion = (builtins.importTOML ./Cargo.toml).version;
+    version = rawVersion + "-" + gitRev;
     packages = pkgs: rec {
       backend = pkgs.callPackage ./nix/backend.nix {inherit version gitRev;};
       frontend = pkgs.callPackage ./nix/frontend.nix {inherit version;};
@@ -50,4 +51,3 @@ docs:
 
 `nix run .#container-stream | docker load
 */
-

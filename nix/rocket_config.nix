@@ -17,7 +17,6 @@ writers.writeTOML "rocket.toml" {
     # ip_header = "X-Forwarded-For";
     address = "0.0.0.0";
     url = "https://codingcomp.cs.wcupa.edu";
-    admin = ["PUTEMAILHERE@example.com"];
 
     # TODO(Spoon): Do the data things
     saml = {
