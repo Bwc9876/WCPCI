@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use log::info;
 
 use crate::{auth::users::User, db::DbPoolConnection, error::prelude::*};
 

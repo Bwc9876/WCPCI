@@ -27,7 +27,14 @@ const description = `View ${name}'s profile on WCPC. Participated in ${variable(
     <Tile class="flex flex-col justify-center gap-6 !p-6 text-center md:flex-row md:text-left">
         <Avatar class="mx-auto my-auto" userVar="profile" name={name} size={150} />
         <div class="my-auto flex flex-col gap-1">
-            <Title class="my-auto">{name}</Title>
+            <div class="my-auto flex flex-row gap-2">
+                <Title class="my-auto">{name}</Title>
+                <If expression="is_admin(user=profile)">
+                    <span class="my-auto rounded-full bg-secondary-200 px-2 py-1 text-text-900"
+                        >Admin</span
+                    >
+                </If>
+            </div>
             <p class="my-auto text-xl">
                 Joined on <Variable expression="joined" debugEval="February 9th, 2024" />
             </p>
@@ -68,6 +75,7 @@ const description = `View ${name}'s profile on WCPC. Participated in ${variable(
                 { name: "name", label: "Contest" },
                 { name: "solved", label: "Problems Solved" },
                 { name: "total", label: "Total Problems" },
+                { name: "role" },
                 { name: "rank", label: "Place", placeIndicator: "", centerHeader: true }
             ]}
         />

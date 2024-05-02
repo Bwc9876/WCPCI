@@ -3,7 +3,7 @@ import Form from "@/components/Form.astro";
 import Field from "@/components/Field.astro";
 import For from "../tera/For.astro";
 import { variable } from "@/lib/tera";
-import Avatar from "../Avatar.astro";
+import Avatar, { getSrc } from "../Avatar.astro";
 import Variable from "../tera/Variable.astro";
 import Button from "../Button.astro";
 ---
@@ -82,10 +82,7 @@ import Button from "../Button.astro";
                         data-name={variable(
                             "the_user.display_name | default(value=the_user.default_display_name)"
                         )}
-                        data-gravatar={variable(
-                            `gravatar(email=the_user.email, size=35)`,
-                            "https://gravatar.com/avatar/5aec02087368de589b8d33275c370ca7e876c956006aebc96d1bbc6c90e5e340?size=35&d=identicon&r=pg"
-                        )}
+                        data-avatar-url={getSrc("the_user", 35)}
                         value={variable("the_user.id")}
                     >
                         <Variable
@@ -97,7 +94,7 @@ import Button from "../Button.astro";
             </Field>
             <li id="judge-template" class="hidden flex-row gap-2">
                 <input type="hidden" name="JUDGE_ID" value="true" />
-                <Avatar noTemplate size={35} class="my-auto" name="NAME" emailVar="EMAIL" />
+                <Avatar noTemplate size={35} class="my-auto" name="NAME" />
                 <span class="my-auto grow">NAME</span>
                 <Button
                     class="remove-judge-button"
@@ -122,7 +119,7 @@ import Button from "../Button.astro";
                             size={35}
                             class="my-auto"
                             name={variable("participant.display_name")}
-                            emailVar="participant.email"
+                            userVar="participant"
                         />
                         <span class="my-auto grow"
                             ><Variable
@@ -148,7 +145,6 @@ import Button from "../Button.astro";
 
 <script>
     document.addEventListener("astro:page-load", () => {
-        const field = document.getElementById("judges-field") as HTMLInputElement;
         const addJudgeSelect = document.getElementById("new-judge-input") as HTMLSelectElement;
         const judgeList = document.getElementById("judge-list") as HTMLUListElement;
 
@@ -180,7 +176,7 @@ import Button from "../Button.astro";
             const avatarImg = newJudge.querySelector("img") as HTMLImageElement;
 
             newJudge.id = `judge-li-${selectedOption.value}`;
-            avatarImg.src = selectedOption.dataset.gravatar!;
+            avatarImg.src = selectedOption.dataset.avatarUrl!;
             avatarImg.alt = selectedOption.dataset.name!;
             newJudge.querySelector("span")!.textContent = selectedOption.dataset.name!;
             newJudge.querySelector("button")!.addEventListener("click", removeJudgeCallback);
