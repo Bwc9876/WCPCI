@@ -9,7 +9,7 @@ This is a work in progress thing for the WCPC. It's a thing. It's a work in prog
 2. `just setup`
 3. Fill `.dev.env` file with the correct values for your setup
 
-Now run `just-dev` to build the frontend and start the backend.
+Now run `just dev` to build the frontend and start the backend.
 
 If you need to auto-rebuild the frontend on changes too, run `just dev-watch`.
 
@@ -24,3 +24,4 @@ so CORS will kick in and block state cookie access.
 ## Production Setup
 
 --TODO
+<!-- TODO(Spoon): link Nix deployment thing here when finished -->

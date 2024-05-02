@@ -1,25 +1,21 @@
 {
   buildNpmPackage,
   lib,
-  ...
+  version ? null,
 }:
 buildNpmPackage {
   name = "wcpc-frontend";
+  inherit version;
   src = ../frontend;
   packageJSON = ../frontend/package.json;
 
   npmDepsHash = "sha256-HdqEKDbbnUnfpLiYkXQZ4oRBnBzR8v1ozeb+NDaQnqA=";
 
-  distPhase = "true";
-  dontInstall = true;
-  installInPlace = true;
-  distDir = "../frontend/dist";
-
-  postBuild = ''
+  installPhase = ''
     cp -r dist/ $out
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Frontend to WCPC";
   };
 }

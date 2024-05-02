@@ -1,20 +1,21 @@
 _default:
     @just --list --unsorted --justfile {{justfile()}}
 
-# Sets up frontend, database, and environment variables
-setup:
-    cd frontend && pnpm i
-    cargo sqlx database setup
-    -cp -n .dev.env.template .dev.env
 
-# Starts a development server
+# Set up frontend, database, and environment variables
+setup:
+    cd frontend && npm i
+    cargo sqlx database setup
+    -cp -n .env.template .dev.env
+
+# Start a development server
 dev:
     cd frontend && npm run build
     cargo run
 
 # Run the backend and recompile the frontend when the frontend changes
 dev-watch:
-    mprocs "cargo run" "cd frontend && pnpm watch"
+    mprocs "cargo run" "cd frontend && npm run watch"
 
 # Format backend & frontend
 format:
@@ -30,4 +31,4 @@ lint:
 update:
     cargo update
     cd frontend && npm update --latest
-
+    nix flake update
