@@ -28,7 +28,7 @@ export const getSrc = (userVar: string, size: number) => {
           );
 };
 
-const src = noTemplate || getSrc(userVar, size);
+const src = noTemplate ? "" : getSrc(userVar, size);
 ---
 
 <img

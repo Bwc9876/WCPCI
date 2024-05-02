@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use log::info;
 
 use crate::{auth::users::User, db::DbPoolConnection, error::prelude::*};
 
@@ -158,7 +159,10 @@ impl Participant {
             "INSERT INTO participant (user_id, contest_id, is_judge) VALUES (?, ?, true) ON CONFLICT (user_id, contest_id) DO UPDATE SET is_judge = true RETURNING *",
             user_id,
             contest_id
-        ).fetch_one(&mut **db).await.context("Failed to create or make judge")
+        ).fetch_one(&mut **db).await.map(|q| {
+            info!("Created or made judge {:?}", q);
+            q
+        }).context("Failed to create or make judge")
     }
 
     // pub async fn update(&self, db: &mut DbPoolConnection) -> Result<(), sqlx::Error> {

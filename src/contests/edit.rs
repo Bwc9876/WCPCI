@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use chrono::TimeZone;
 use log::info;
 use rocket::{
@@ -9,7 +11,7 @@ use rocket_dyn_templates::Template;
 use crate::{
     auth::{
         csrf::{CsrfToken, VerifyCsrfToken},
-        users::User,
+        users::{Admin, User},
     },
     context_with_base_authed,
     db::DbConnection,
@@ -29,6 +31,7 @@ pub async fn edit_contest_get(
     id: i64,
     tz: ClientTimeZone,
     _token: &CsrfToken,
+    _admin: &Admin,
 ) -> ResultResponse<Template> {
     let contest = Contest::get_or_404(&mut db, id).await?;
     let all_users = User::list(&mut db).await?;
@@ -53,15 +56,12 @@ pub async fn edit_contest_post(
     leaderboard_handle: &State<LeaderboardManagerHandle>,
     client_time_zone: ClientTimeZone,
     _token: &VerifyCsrfToken,
+    _admin: &Admin,
     mut db: DbConnection,
 ) -> FormResponse {
     let mut contest = Contest::get_or_404(&mut db, id).await?;
     if let Some(ref value) = form.value {
         let tz = client_time_zone.timezone();
-        let original_start_time = contest.start_time;
-        let original_penalty = contest.penalty;
-        let original_freeze_time = contest.freeze_time;
-        let original_end_time = contest.end_time;
         contest.name = value.name.to_string();
         contest.description = value.description.map(|s| s.to_string());
         contest.start_time = tz
@@ -83,9 +83,8 @@ pub async fn edit_contest_post(
         contest.update(&mut db).await?;
 
         let participants = Participant::list(&mut db, contest.id).await?;
-        let mut visited: Vec<i64> = vec![];
+        let mut visited: HashSet<i64> = HashSet::new();
         for (participant, _) in participants {
-            visited.push(participant.user_id);
             // if participant is a judge and is not in the list of new judges, delete them
             if participant.is_judge
                 && !(value
@@ -94,27 +93,23 @@ pub async fn edit_contest_post(
                     .copied()
                     .unwrap_or(false))
             {
+                visited.insert(participant.user_id);
                 Participant::remove(&mut db, contest.id, participant.user_id).await?;
             }
         }
+
         for judge in value.judges.keys().filter(|k| !visited.contains(k)) {
             Participant::create_or_make_judge(&mut db, contest.id, *judge).await?;
         }
 
-        if contest.start_time != original_start_time
-            || contest.penalty != original_penalty
-            || contest.freeze_time != original_freeze_time
-            || contest.end_time != original_end_time
-        {
-            let mut leaderboard_manager = leaderboard_handle.lock().await;
-            let leaderboard = leaderboard_manager
-                .get_leaderboard(&mut db, &contest)
-                .await?;
-            drop(leaderboard_manager);
-            let mut leaderboard = leaderboard.lock().await;
-            info!("Refreshing leaderboard for contest {}", contest.id);
-            leaderboard.full_refresh(&mut db, Some(&contest)).await?;
-        }
+        let mut leaderboard_manager = leaderboard_handle.lock().await;
+        let leaderboard = leaderboard_manager
+            .get_leaderboard(&mut db, &contest)
+            .await?;
+        drop(leaderboard_manager);
+        let mut leaderboard = leaderboard.lock().await;
+        info!("Refreshing leaderboard for contest {}", contest.id);
+        leaderboard.full_refresh(&mut db, Some(&contest)).await?;
 
         Ok(Message::success("Contest Updated").to(&format!("/contests/{id}")))
     } else {
