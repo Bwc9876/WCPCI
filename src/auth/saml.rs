@@ -229,6 +229,7 @@ async fn acs(
                 "No display name or email found in SAML response, looked for {} and {}",
                 so.attrs.display_name, so.attrs.email
             );
+            warn!("Attributes found in SAML response: {attrs_map:?}");
             Err(Status::BadRequest.into())
         }
     } else {
