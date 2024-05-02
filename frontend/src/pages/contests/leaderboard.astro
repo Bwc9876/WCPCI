@@ -372,6 +372,10 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
         });
     });
 
+    document.addEventListener("astro:before-swap", () => {
+        confetti.reset();
+    });
+
     document.addEventListener("astro:after-swap", () => {
         if (ws) {
             ws.close();

@@ -298,6 +298,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 <script>
     import type { CodeInfo } from "@/lib/editor";
     import type { WebSocketRequest } from "@/lib/problem_ws";
+    import confetti from "canvas-confetti";
     import type * as monaco from "monaco-editor";
 
     let ws: WebSocket | null = null;
@@ -467,6 +468,10 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 toggleButtons(true);
             }
         };
+    });
+
+    document.addEventListener("astro:before-swap", () => {
+        confetti.reset();
     });
 
     document.addEventListener("astro:after-swap", () => {
