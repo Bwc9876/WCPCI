@@ -7,7 +7,11 @@ import Title from "@/components/Title.astro";
 // TODO: Configurable SSO login message
 ---
 
-<Layout path="/auth/login" class="flex h-full flex-col items-center justify-center" title="Login">
+<Layout
+    path="/auth/login"
+    class="flex h-full flex-col items-center justify-center gap-4"
+    title="Login / Register"
+>
     <Tile class="max-w-1/2 flex flex-col justify-center gap-3">
         <Title class="text-center">Login</Title>
         <p class="wrap text-center">Choose a service to login or sign up with to continue</p>
@@ -17,7 +21,7 @@ import Title from "@/components/Title.astro";
             icon="tabler:key"
             size="xl"
             color="primary"
-            class="flex w-full justify-center align-middle">SSO Register or Login</Button
+            class="flex w-full justify-center align-middle">SSO Login</Button
         >
         <Button
             as="a"
@@ -39,5 +43,17 @@ import Title from "@/components/Title.astro";
         >
             Login with Google
         </Button>
+    </Tile>
+    <Tile class="max-w-1/2 flex flex-col justify-center gap-3">
+        <h2 class="text-center text-2xl">...Or Register</h2>
+        <p class="wrap text-center">Sign in with your WCU credentials to get started</p>
+        <Button
+            as="a"
+            href="/auth/saml/login"
+            icon="tabler:key"
+            size="xl"
+            color="secondary"
+            class="flex w-full justify-center align-middle">SSO Register</Button
+        >
     </Tile>
 </Layout>
