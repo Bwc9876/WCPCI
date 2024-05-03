@@ -20,14 +20,12 @@ pub async fn list_problems_get(
     mut db: DbConnection,
 ) -> ResultResponse<Template> {
     let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let is_judge = if let Some(user) = user {
-        Participant::get(&mut db, contest_id, user.id)
-            .await?
-            .map(|p| p.is_judge)
-            .unwrap_or(false)
+    let participant = if let Some(user) = user {
+        Participant::get(&mut db, contest_id, user.id).await?
     } else {
-        false
+        None
     };
+    let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
     let is_admin = admin.is_some();
     let can_see = is_admin || is_judge || contest.has_started();
     let problems = if can_see {
@@ -37,7 +35,7 @@ pub async fn list_problems_get(
     };
     Ok(Template::render(
         "problems",
-        context_with_base!(user, problems, is_admin, started: can_see, contest, can_edit: is_judge || is_admin),
+        context_with_base!(user, problems, is_admin, participant, started: can_see, contest, can_edit: is_judge || is_admin),
     ))
 }
 

@@ -42,15 +42,26 @@ const { overrideEmptyText, class: className } = Astro.props;
     columns={[{ name: "name" }, { name: "cpu_time", label: "CPU Time (seconds)" }]}
     emptyText={overrideEmptyText ?? "No Problems Have Been Made Yet."}
 />
-<If debugEval={true} expression="can_edit">
-    <div class="flex flex-row gap-2">
-        <span class="grow"></span>
+<div class="flex flex-row gap-2">
+    <span class="grow"></span>
+    <If debugEval={true} expression="can_edit">
         <Button
             class="w-fit self-end"
             as="a"
             icon="tabler:plus"
             href={`/contests/${variable("contest.id")}/problems/new`}>Create New Problem</Button
         >
+    </If>
+    <If debugEval={true} expression="logged_in and participant or can_edit">
+        <Button
+            color="secondary"
+            class="w-fit self-end"
+            as="a"
+            icon="tabler:package-export"
+            href={`/contests/${variable("contest.id")}/export`}>Export Solutions</Button
+        >
+    </If>
+    <If debugEval={true} expression="can_edit">
         <Button
             class="w-fit self-end"
             as="a"
@@ -58,5 +69,5 @@ const { overrideEmptyText, class: className } = Astro.props;
             color="secondary"
             href={`/contests/${variable("contest.id")}/problems/import`}>Import Problem</Button
         >
-    </div>
-</If>
+    </If>
+</div>
