@@ -19,7 +19,7 @@ Table of contents:
   - [Database](#database)
   - [OAuth](#oauth)
   - [SAML](#saml)
-  - [Staging VM](#staging-vm)
+  - [Testing VM](#testing-vm)
     - [Running the VM](#running-the-vm)
 
 ## Prerequisites
@@ -154,9 +154,9 @@ This application supports HTTP-Post bindings, and at the moment only support SP-
 
 <!-- TODO(Spoon): Rework these two following sections -->
 
-## Staging VM
+## Testing VM
 
-The staging VM (available under the nix flake) is a nixos config that contains a VM that can be used to test the application. You'll need to configure URL and OAuth settings yourself in an environment variable but the rest of the configuration is done for you. 
+The testing VM (available under the nix flake) is a NixOS config that contains a VM that can be used to test the application. You'll need to configure URL and OAuth settings yourself in an environment variable but the rest of the configuration is done for you. 
 
 ### Running the VM
 

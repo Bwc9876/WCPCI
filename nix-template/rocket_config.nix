@@ -10,13 +10,12 @@
 }:
 writers.writeTOML "rocket.toml" {
   release = {
-    # TODO(Spoon): rework this
     cli_colors = false;
     timezone = "America/New_York";
     port = 443;
     # ip_header = "X-Forwarded-For";
     address = "0.0.0.0";
-    url = "https://codingcomp.cs.wcupa.edu";
+    url = "https://codingcomp.cs.wcupa.edu"; # This should *not* have a trailing slash
 
     # TODO(Spoon): Do the data things
     saml = {
@@ -33,7 +32,10 @@ writers.writeTOML "rocket.toml" {
       };
     };
 
-    databases.sqlite_db.url = "database.sqlite"; # When running in a container, this will be overridden
+    # When running in a container, this will be overridden.
+    # Only change if you are running without the container
+    # This can be an absolute path
+    databases.sqlite_db.url = "database.sqlite";
 
     oauth = {
       github.provider = "GitHub";

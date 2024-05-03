@@ -6,7 +6,7 @@ _default:
 setup:
     cd frontend && npm i
     cargo sqlx database setup
-    -cp -n .env.template .dev.env
+    -cp -n nix-template/secrets/.env .dev.env
 
 # Start a development server
 dev:
