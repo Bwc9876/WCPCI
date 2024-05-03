@@ -8,37 +8,32 @@
   libxml2,
   libxslt,
   llvmPackages,
-  buildNpmPackage,
   openssl,
-  callPackage,
-  makeWrapper,
   sqlx-cli,
   pkg-config,
   xmlsec,
-  ...
+  version ? null,
+  gitRev ? "",
 }:
 rustPlatform.buildRustPackage rec {
   name = "wcpc";
-  version = "0.0.1";
+  inherit version;
+  GIT_COMMIT_HASH = gitRev;
+
   src = with lib.fileset;
     toSource {
       root = ../.;
       fileset = unions [
-        ../.cargo
-        ../.env
         ../src
-        ../frontend
-        ../public
         ../Cargo.toml
         ../migrations
         ../Cargo.lock
-        ../Rocket.toml
       ];
     };
 
-  cargoLock = {
-    lockFile = ../Cargo.lock;
-  };
+  cargoLock.lockFile = ../Cargo.lock;
+
+  # TODO(Spoon): clean this up, no ifd?
 
   LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
   BINDGEN_EXTRA_CLANG_ARGS = "${builtins.readFile "${stdenv.cc}/nix-support/libc-crt1-cflags"} \
@@ -50,44 +45,31 @@ rustPlatform.buildRustPackage rec {
       ${lib.optionalString stdenv.cc.isGNU "-isystem ${stdenv.cc.cc}/include/c++/${lib.getVersion stdenv.cc.cc} -isystem ${stdenv.cc.cc}/include/c++/${lib.getVersion stdenv.cc.cc}/${stdenv.hostPlatform.config} -idirafter ${stdenv.cc.cc}/lib/gcc/${stdenv.hostPlatform.config}/${lib.getVersion stdenv.cc.cc}/include"} \
   ";
 
+  # TODO(Spoon): clean up deps
   nativeBuildInputs = [
-    libiconv
-    libtool
-    libxml2
-    libxslt
-    llvmPackages.libclang
-    openssl
     pkg-config
     xmlsec
-    makeWrapper
     sqlx-cli
   ];
 
-  doCheck = false; # TODO: Remove if when we get tests
+  doCheck = false; # TODO: Remove if/when we get tests
 
   buildInputs = [
     libiconv
     libtool
     libxml2
     libxslt
-    llvmPackages.libclang
+    # llvmPackages.libclang
     openssl
-    pkg-config
     xmlsec
   ];
 
-  preBuild = ''
-    sqlx database setup
-  '';
+  # SQLx needs a database to check against
+  preBuild = "sqlx database setup";
+  DATABASE_URL = "sqlite://database.sqlite";
 
-  postInstall = let
-    frontend = import ./frontend.nix {inherit lib buildNpmPackage;};
-  in ''
-    wrapProgram $out/bin/${meta.mainProgram} --set ROCKET_TEMPLATE_DIR ${frontend} --set ROCKET_PUBLIC_DIR ${../public}
-  '';
-
-  meta = with lib; {
-    description = "An OJ system";
+  meta = {
+    description = "WCPC Backend";
     mainProgram = "wcpc";
   };
 }
