@@ -17,6 +17,7 @@ use crate::{
 mod admin;
 mod delete;
 mod edit;
+mod git;
 mod join;
 mod list;
 mod new;
@@ -296,7 +297,7 @@ struct ContestForm<'r> {
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Contests App", |rocket| async {
-        rocket.attach(admin::stage()).mount(
+        rocket.attach(admin::stage()).attach(git::stage()).mount(
             "/contests",
             routes![
                 list::contests_list,

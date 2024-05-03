@@ -25,9 +25,9 @@ use self::cases::TestCaseForm;
 pub struct Problem {
     pub id: i64,
     pub contest_id: i64,
-    name: String,
-    slug: String,
-    description: String,
+    pub name: String,
+    pub slug: String,
+    pub description: String,
     pub cpu_time: i64,
 }
 

@@ -794,6 +794,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f54427cfd1c7829e2a139fcefea601bf088ebca651d2bf53ebc600eac295dae"
 dependencies = [
  "crc32fast",
+ "libz-sys",
  "miniz_oxide",
 ]
 
@@ -1413,6 +1414,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fe73cdec2bcb36d25a9fe3f607ffcd44bb8907ca0100c4098d1aa342d1e7bec"
 dependencies = [
  "libc",
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d97137b25e321a73eef1418d1d5d2eda4d77e12813f8e6dead84bc52c5870a7b"
+dependencies = [
+ "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -3639,6 +3651,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "dotenvy",
+ "flate2",
  "log",
  "markdown",
  "openssl",
@@ -3655,6 +3668,7 @@ dependencies = [
  "samael",
  "serde",
  "serde_json",
+ "sha1",
  "sha256",
  "slug",
  "sqlx",

@@ -65,7 +65,7 @@ impl Runner {
 
         let temp_path = std::env::temp_dir().join(dir_name);
 
-        tokio::fs::create_dir(&temp_path)
+        tokio::fs::create_dir_all(&temp_path)
             .await
             .map_err(|e| CaseError::Judge(format!("Couldn't create temp dir: {e:?}")))?;
 
