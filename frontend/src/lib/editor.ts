@@ -161,6 +161,18 @@ export default (
         oldLang = currentLanguage!;
     });
 
+    document.addEventListener("astro:before-preparation", () => {
+        if (editor && saveIndicator && saveIndicator.dataset.saveState === "saving") {
+            saveChanges();
+        }
+    });
+
+    window.onbeforeunload = (e) => {
+        if (editor && saveIndicator && saveIndicator.dataset.saveState === "saving") {
+            saveChanges();
+        }
+    };
+
     document.onkeydown = (e) => {
         if (e.ctrlKey && e.key === "s") {
             e.preventDefault();

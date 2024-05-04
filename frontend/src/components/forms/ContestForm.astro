@@ -148,6 +148,8 @@ import Button from "../Button.astro";
         const addJudgeSelect = document.getElementById("new-judge-input") as HTMLSelectElement;
         const judgeList = document.getElementById("judge-list") as HTMLUListElement;
 
+        if (!addJudgeSelect || !judgeList) return;
+
         const removeJudgeCallback = (e: Event) => {
             const target = e.target as HTMLButtonElement;
             const judgeLi = target.closest("li") as HTMLLIElement;

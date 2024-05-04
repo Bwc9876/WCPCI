@@ -198,11 +198,14 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
 
     document.addEventListener("astro:page-load", () => {
         const dataElem = document.getElementById("dataElem")! as HTMLElement;
+        if (!dataElem) {
+            return;
+        }
         const contestId = dataElem.getAttribute("data-contest-id")!;
         const contestPenalty = parseInt(dataElem.getAttribute("data-contest-penalty")!);
         const startTime = new Date(dataElem.getAttribute("data-contest-start-time")!);
         const endTime = new Date(dataElem.getAttribute("data-contest-end-time")!);
-        const liveIndicator = document.getElementById("live-indicator")!;
+        const liveIndicator = document.getElementById("live-indicator");
         const countdown = document.getElementById("countdown");
         const countdownProgress = document.getElementById(
             "countdown-progress"
