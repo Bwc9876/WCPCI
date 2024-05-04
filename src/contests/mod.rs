@@ -137,6 +137,11 @@ impl Contest {
         self.start_time < now
     }
 
+    pub fn has_ended(&self) -> bool {
+        let now = chrono::offset::Utc::now().naive_utc();
+        self.end_time < now
+    }
+
     pub fn is_running(&self) -> bool {
         let now = chrono::offset::Utc::now().naive_utc();
         self.start_time < now && self.end_time > now

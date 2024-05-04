@@ -56,7 +56,8 @@ pub async fn view_contest(
         end_formatted,
         is_admin: admin.is_some(),
         judges,
-        started: contest.is_running(),
+        started: contest.has_started(),
+        ended: contest.has_ended(),
         contest,
         participant
     );

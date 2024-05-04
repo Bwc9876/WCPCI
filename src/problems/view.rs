@@ -62,7 +62,7 @@ pub async fn view_problem_get(
         return Err(Status::NotFound.into());
     }
 
-    let completion = if let Some(participant) = participant {
+    let completion = if let Some(ref participant) = participant {
         ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant.p_id)
             .await?
     } else {
@@ -107,11 +107,13 @@ pub async fn view_problem_get(
             last_run,
             case_count,
             most_recent_code,
+            ended: contest.has_ended(),
             contest,
             code_info,
             languages,
             default_language,
-            can_edit: is_judge || is_admin
+            can_edit: is_judge || is_admin,
+            participating: participant.map(|p| !p.is_judge).unwrap_or(false),
         ),
     ))
 }

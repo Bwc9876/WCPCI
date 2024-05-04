@@ -52,6 +52,19 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             <Title class="my-auto"><Variable expression="problem.name" /></Title>
             <span class="grow"></span>
             <div class="flex flex-row gap-1">
+                <If expression="not participating">
+                    <span class="my-auto me-1 flex flex-row gap-1 text-accent">
+                        <Icon name="tabler:info-circle" size={24} />
+                        You're not participating in this contest, solutions won't count towards your
+                        score.
+                    </span>
+                </If>
+                <If expression="participating and ended">
+                    <span class="my-auto me-1 flex flex-row gap-1 text-accent">
+                        <Icon name="tabler:info-circle" size={24} />
+                        This contest is over, solutions won't count towards your score.
+                    </span>
+                </If>
                 <If expression="can_edit">
                     <Button
                         size="lg"
