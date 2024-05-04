@@ -121,7 +121,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 name: "user.display_name | default(value=entry.user.default_display_name)",
                 avatarVar: "entry.user",
                 label: "User",
-                makeLink: `/profile/${variable("entry.user.id")}`
+                makeLink: `/profile/${variable("entry.user.id")}`,
+                youIndicatorUserVar: "entry.user"
             }
         ]}
     >
