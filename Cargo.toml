@@ -10,7 +10,7 @@ anyhow = "1.0.82"
 chrono = { version = "0.4.35", features = ["serde"] }
 chrono-tz = { version = "0.8.6", features = ["serde"] }
 dotenvy = "0.15.7"
-flate2 = { version = "1.0.30", features = ["zlib"] }
+flate2 = { version = "1.0.30" }
 log = "0.4.21"
 markdown = "1.0.0-alpha.16"
 openssl = "0.10.64"
