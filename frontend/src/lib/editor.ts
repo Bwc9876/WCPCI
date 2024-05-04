@@ -133,8 +133,10 @@ export default (
     let oldLang = currentLanguage;
 
     const saveChanges = () => {
+        if (!editor) return;
         const text = editor.getValue();
         const language = editor.getModel()?.getLanguageId();
+        if (!language) return;
         window.localStorage.setItem(
             `contest-${contestId}-problem-${problemId}-code`,
             JSON.stringify([text, language])
@@ -174,7 +176,7 @@ export default (
     };
 
     document.onkeydown = (e) => {
-        if (e.ctrlKey && e.key === "s") {
+        if (e.ctrlKey && e.key === "s" && editor && saveIndicator) {
             e.preventDefault();
             saveChanges();
             if (currentTimeout) {
@@ -196,6 +198,14 @@ export default (
             }
         }
     };
+
+    document.addEventListener(
+        "astro:after-swap",
+        () => {
+            editor = null;
+        },
+        { once: true }
+    );
 
     return [editor, () => currentLanguage];
 };

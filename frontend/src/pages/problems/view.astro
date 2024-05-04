@@ -315,27 +315,29 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         }
 
         const submitButton = document.querySelector("#submit") as HTMLButtonElement;
-        const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
-        const editorElem = (document.querySelector("#editor") as HTMLElement)!;
-        const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
-        const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
-        const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
-        const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
-        const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
-        const languageDropdown = (document.querySelector(
-            "#language-dropdown"
-        ) as HTMLSelectElement)!;
-        const languageIcon = (document.querySelector("#language-icon") as HTMLImageElement)!;
-        const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
-        const testButtonTemplate = (document.querySelector(
+        const codeInfoElem = document.querySelector("#code-info") as HTMLTextAreaElement;
+        const editorElem = document.querySelector("#editor") as HTMLElement;
+        const runDebugButton = document.querySelector("#run-debug") as HTMLButtonElement;
+        const testInput = document.querySelector("#debug-input") as HTMLTextAreaElement;
+        const testOutput = document.querySelector("#debug-output") as HTMLTextAreaElement;
+        const debugCaseIndicator = document.querySelector("#test-indicator") as HTMLElement;
+        const runMessage = document.querySelector("#runs-msg") as HTMLElement;
+        const languageDropdown = document.querySelector("#language-dropdown") as HTMLSelectElement;
+        const languageIcon = document.querySelector("#language-icon") as HTMLImageElement;
+        const runMessageWrapper = document.querySelector("#runs-msg-wrapper") as HTMLElement;
+        const testButtonTemplate = document.querySelector(
             "#test-debug-template"
-        ) as HTMLButtonElement)!;
-        const saveIndicator = (document.querySelector("#save-indicator") as HTMLElement)!;
-        const resetButton = (document.querySelector("#reset-button") as HTMLButtonElement)!;
-        const testSectionHeader = (document.querySelector("#test-section-heading") as HTMLElement)!;
-        const descriptionSectionChevron = (document.querySelector(
+        ) as HTMLButtonElement;
+        const saveIndicator = document.querySelector("#save-indicator") as HTMLElement;
+        const resetButton = document.querySelector("#reset-button") as HTMLButtonElement;
+        const testSectionHeader = document.querySelector("#test-section-heading") as HTMLElement;
+        const descriptionSectionChevron = document.querySelector(
             "#description-section-chevron"
-        ) as HTMLElement)!;
+        ) as HTMLElement;
+
+        if (!submitButton || !codeInfoElem || !editorElem || !runDebugButton) {
+            return;
+        }
 
         const toggleButtons = (disabled: boolean) => {
             submitButton.disabled = disabled;
