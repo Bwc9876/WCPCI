@@ -16,7 +16,7 @@
   gitRev ? "",
 }:
 rustPlatform.buildRustPackage rec {
-  name = "wcpc";
+  name = "wcpc-backend";
   inherit version;
   GIT_COMMIT_HASH = gitRev;
 

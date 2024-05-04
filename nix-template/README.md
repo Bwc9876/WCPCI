@@ -23,15 +23,10 @@ Don't put secrets in Nix code! They will be world-readable! Deploy secrets throu
 
 ## Step 3. Build and load the docker image
 
-You can either build the container image, save it to disk, then import it into Docker, or stream it into Docker as it's generated. Streaming saves on disk space
+You can either build the container image, save it to disk, then import it into Docker, or stream it into Docker as it's generated. Streaming saves on disk space.
 
 ```sh
-# Local
 nix run .#container-stream | sudo docker load
-
-# Remote
-nix build --no-link .#container-stream # We don't want build errors in the next step
-nix run .#container-stream 2>/dev/null | ssh <whatever> sudo docker load
 
 # OR
 
@@ -65,3 +60,4 @@ sudo docker run --rm -d -v /path/to/secrets:/secrets:ro -v wcpc_database:/databa
      docker run --rm -v wcpc_database:/database -v $(pwd):/backup busybox cp  database/database.sqlite /backup/database-backup-$(date -I).sqlite
      ```
 4. Restart the container
+5. (Optional) Run `docker image prune -a` to remove unused images. Don't run if you don't want to remove unused images.

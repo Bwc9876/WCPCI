@@ -3,6 +3,7 @@
 
   inputs.wcpc.url = "github:Bwc9876/WCPCI";
 
+  # If you make changes to this, be very careful that you don't inadvertently copy `secrets/` to the Nix store
   outputs = {wcpc, ...}: let
     nixpkgs = wcpc.inputs.nixpkgs;
     forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;

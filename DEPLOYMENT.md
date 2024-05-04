@@ -24,7 +24,7 @@ Table of contents:
 
 ## Prerequisites
 
-The server you're running on will need a few dependencies:
+The server you're running on will need a few dependencies (this is handled by Nix if you're using it):
 
 - libxml2
 - libxslt
@@ -36,7 +36,7 @@ The server you're running on will need a few dependencies:
 ## Distribution
 
 To distribute this as a package you'll need to ensure that the above dependencies are installed on the target machine.
-In addition the following folder need to go along with the package:
+In addition the following folders need to go along with the package (this is also handled by Nix):
 
 - `frontend/dist/`
 - `public/`

@@ -32,3 +32,7 @@ update:
     cargo update
     cd frontend && npm update --latest
     nix flake update
+
+# Run quick checks
+check:
+    nix flake check

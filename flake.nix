@@ -45,7 +45,7 @@
 
         - Edit `rocket_config.nix`
 
-        - Build and load the image: `nix run .#container-stream | sudo docker load`
+        - Build and load the image: `nix run .#container-stream 2>/dev/null | sudo docker load`
 
         - Run the container: `sudo docker run --rm -d -v ./secrets:/secrets:ro -v wcpc_database:/database -p 443:443/tcp wcpc`
       '';
@@ -53,17 +53,12 @@
   };
 }
 /*
-Put .env in volume, cd into volume
+TODO(Spoon):
+Considerations for deployment:
+- How will the certs (TLS, SAML) be renewed?
+  - Outside container?
+- Container healthcheck?
+- port 80? - redirect (& acme challenge?)
 
-
-Considerations for container:
-How will the certs (TLS, SAML) be renewed?
-
-
-
-
-docs:
-
-`nix run .#container-stream | docker load
 */
 
