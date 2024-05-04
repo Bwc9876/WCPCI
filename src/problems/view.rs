@@ -77,9 +77,20 @@ pub async fn view_problem_get(
         JudgeRun::get_latest(&mut db, user.id, problem.id).await?
     } else {
         None
-    }
-    .filter(|r| r.total_cases == case_count) // Don't show runs when test cases have changed
-    .filter(|r| r.error.is_some() || completion.map(|c| c.completed_at.is_some()).unwrap_or(true)); // Don't show run if judge overrode completion
+    };
+
+    let most_recent_code = serde_json::to_string(
+        &last_run
+            .as_ref()
+            .map(|lr| (lr.program.as_str(), lr.language.as_str())),
+    )
+    .context("Failed to serialize most recent code")?;
+
+    let last_run = last_run
+        .filter(|r| r.total_cases == case_count) // Don't show runs when test cases have changed
+        .filter(|r| {
+            r.error.is_some() || completion.map(|c| c.completed_at.is_some()).unwrap_or(true)
+        }); // Don't show run if judge overrode completion
 
     let languages = info.run_config.get_languages_for_dropdown();
     let code_info = &info.languages_json;
@@ -95,6 +106,7 @@ pub async fn view_problem_get(
             problem,
             last_run,
             case_count,
+            most_recent_code,
             contest,
             code_info,
             languages,

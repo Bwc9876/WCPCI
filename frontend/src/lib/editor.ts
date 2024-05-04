@@ -60,7 +60,8 @@ export default (
     editorElem: HTMLElement,
     languageIcon: HTMLImageElement,
     saveIndicator: HTMLElement,
-    resetButton: HTMLButtonElement
+    resetButton: HTMLButtonElement,
+    mostRecentCode: [string, string] | null
 ) => {
     let editor: monaco.editor.IStandaloneCodeEditor | null = null;
     let currentLanguage = defaultLanguage;
@@ -94,7 +95,9 @@ export default (
 
     currentLanguage = Object.keys(codeInfo).includes(storedLang ?? "")
         ? storedLang
-        : defaultLanguage;
+        : mostRecentCode && Object.keys(codeInfo).includes(mostRecentCode[1])
+          ? mostRecentCode[1]
+          : defaultLanguage;
 
     const langInfo = codeInfo[currentLanguage];
 
@@ -115,7 +118,7 @@ export default (
     }
 
     editor = monaco.editor.create(editorElem as HTMLElement, {
-        value: storedCode ?? langInfo.defaultCode,
+        value: storedCode ?? mostRecentCode?.[0] ?? langInfo.defaultCode,
         theme: `wcpc-${themeVariant}`,
         language: langInfo.monacoContribution,
         automaticLayout: true,

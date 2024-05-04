@@ -26,6 +26,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
     description={description}
 >
     <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea>
+    <textarea class="hidden" id="most-recent-code">{variable("most_recent_code | safe")}</textarea>
     <Button
         class="example-button absolute right-2 top-4 mx-auto mb-1 hidden w-fit"
         disabled
@@ -316,6 +317,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
 
         const submitButton = document.querySelector("#submit") as HTMLButtonElement;
         const codeInfoElem = document.querySelector("#code-info") as HTMLTextAreaElement;
+        const mostRecentCodeElem = document.querySelector(
+            "#most-recent-code"
+        ) as HTMLTextAreaElement;
         const editorElem = document.querySelector("#editor") as HTMLElement;
         const runDebugButton = document.querySelector("#run-debug") as HTMLButtonElement;
         const testInput = document.querySelector("#debug-input") as HTMLTextAreaElement;
@@ -386,6 +390,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         }
 
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
+        const mostRecentCode = JSON.parse(mostRecentCodeElem.value ?? "null") as
+            | [string, string]
+            | null;
 
         if (loggedIn) {
             import("@/lib/problem_ws").then((c) => {
@@ -414,7 +421,8 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 editorElem,
                 languageIcon,
                 saveIndicator,
-                resetButton
+                resetButton,
+                mostRecentCode
             );
             editor = newEditor as monaco.editor.IStandaloneCodeEditor;
             getLang = _getLang as () => string;
