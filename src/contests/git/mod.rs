@@ -63,6 +63,10 @@ pub async fn export_solutions(
     let participant = Participant::get(&mut db, user.id, contest_id)
         .await?
         .ok_or(Status::NotFound)?;
+    if admin.is_none() && !participant.is_judge && !contest.has_started() {
+        return Err(Status::Forbidden.into());
+    }
+
     let now = chrono::Utc::now().naive_utc();
     let can_edit = admin.is_some() || participant.is_judge;
     let repos = repos_handle.lock().await;

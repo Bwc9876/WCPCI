@@ -11,7 +11,7 @@ pub struct Leaf {
 
 impl Leaf {
     pub fn new(mode: String, hash: Vec<u8>, name: String) -> Self {
-        Leaf { mode, hash, name }
+        Self { mode, hash, name }
     }
 }
 
@@ -21,7 +21,7 @@ pub struct Tree {
 
 impl Tree {
     pub fn new() -> Self {
-        Tree {
+        Self {
             entries: Vec::new(),
         }
     }
