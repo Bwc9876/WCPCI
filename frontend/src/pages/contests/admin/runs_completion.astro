@@ -1,5 +1,6 @@
 ---
 import BreadCrumb from "@/components/BreadCrumb.astro";
+import Button from "@/components/Button.astro";
 import Field from "@/components/Field.astro";
 import Form from "@/components/Form.astro";
 import Title from "@/components/Title.astro";
@@ -37,10 +38,22 @@ import { variable } from "@/lib/tera";
         <Field
             type="number"
             name="completed_in"
+            id="completed_in"
             label="Completed In (Minutes)"
             min="0"
             help="Time it took for the user to complete the problem in minutes, leave as nothing to mark it as unsolved"
         />
+        <Button
+            class="w-fit"
+            data-contest-start={variable("start_time_local")}
+            id="now-button"
+            color="secondary"
+            type="button"
+            icon="tabler:clock-plus"
+            as="button"
+        >
+            Set to now
+        </Button>
         <Field
             type="number"
             name="number_wrong"
@@ -51,3 +64,22 @@ import { variable } from "@/lib/tera";
         />
     </Form>
 </ContestLayout>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        const nowButton = document.getElementById("now-button");
+        const completedInField = document.getElementById("completed_in") as HTMLInputElement | null;
+
+        if (!nowButton || !completedInField) {
+            return;
+        }
+
+        nowButton.addEventListener("click", () => {
+            const startTime = new Date(nowButton.dataset.contestStart!);
+            const now = new Date();
+            const diff = now.getTime() - startTime.getTime();
+            const diffMinutes = Math.floor(diff / 60000);
+            completedInField.value = diffMinutes.toString();
+        });
+    });
+</script>
