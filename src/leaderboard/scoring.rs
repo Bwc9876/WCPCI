@@ -11,9 +11,10 @@ use crate::{
 
 #[derive(Serialize, Clone, Copy, Debug)]
 pub struct ScoreEntry {
-    pub id: i64,
-    pub score: i64,
-    pub time_taken: i64, // (In Minutes)
+    pub id: i64,         // Problem ID
+    pub score: i64,      // In Seconds
+    pub time_taken: i64, // In Minutes
+    pub secs_taken: i64,
     pub num_wrong: i64,
 }
 
@@ -23,11 +24,12 @@ impl ScoreEntry {
         contest_start: NaiveDateTime,
         contest_penalty_minutes: i64,
     ) -> Self {
+        let delta = completion.completed_at.unwrap() - contest_start;
         Self {
             id: completion.problem_id,
-            score: (completion.completed_at.unwrap() - contest_start).num_seconds()
-                + (completion.number_wrong * contest_penalty_minutes * 60),
-            time_taken: (completion.completed_at.unwrap() - contest_start).num_minutes(),
+            score: delta.num_seconds() + (completion.number_wrong * contest_penalty_minutes * 60),
+            time_taken: delta.num_minutes(),
+            secs_taken: delta.num_seconds(),
             num_wrong: completion.number_wrong,
         }
     }
@@ -103,19 +105,6 @@ impl ParticipantScores {
         })
     }
 
-    pub async fn refresh(&mut self, db: &mut DbPoolConnection) -> Result {
-        self.scores = Self::get_scores(
-            db,
-            self.participant_id,
-            self.contest_start,
-            self.contest_penalty_minutes,
-            self.contest_end,
-            self.contest_freeze,
-        )
-        .await?;
-        Ok(())
-    }
-
     pub fn process_completion(&mut self, completion: &ProblemCompletion) {
         if completion.participant_id == self.participant_id {
             if let Some(entry) = self.scores.get_mut(&completion.problem_id) {
@@ -139,15 +128,6 @@ impl ParticipantScores {
                 );
             }
         }
-    }
-
-    pub async fn update_contest(&mut self, db: &mut DbPoolConnection, contest: &Contest) -> Result {
-        self.contest_start = contest.start_time;
-        self.contest_penalty_minutes = contest.penalty;
-        self.contest_end = contest.end_time;
-        self.contest_freeze = contest.freeze_time;
-        self.refresh(db).await?;
-        Ok(())
     }
 }
 
