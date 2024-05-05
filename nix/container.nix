@@ -15,7 +15,7 @@ dockerTools
   name = "wcpc";
   tag = "latest";
   maxLayers = 125;
-  contents = [wrapper dockerTools.caCertificates /*pkgs.coreutils pkgs.bashInteractive pkgs.nano*/];
+  contents = [wrapper dockerTools.caCertificates];
   config = {
     Cmd = ["wcpc"];
     ExposedPorts."443/tcp" = {};

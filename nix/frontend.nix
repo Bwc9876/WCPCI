@@ -11,9 +11,7 @@ buildNpmPackage {
 
   npmDepsHash = "sha256-kPMiIHR4TFJ3vWa0wHVSFrjCuKfRvDfVUMptALmMNds=";
 
-  installPhase = ''
-    cp -r dist/ $out
-  '';
+  installPhase = "cp -r dist/ $out";
 
   meta = {
     description = "Frontend to WCPC";

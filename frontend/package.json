@@ -6,6 +6,7 @@
         "dev": "astro dev",
         "start": "astro dev",
         "check": "astro check",
+        "format-check": "prettier --check .",
         "build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\" && node cspOutputer.mjs",
         "csp": "node cspOutputer.mjs",
         "preview": "astro preview",
