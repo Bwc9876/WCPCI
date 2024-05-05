@@ -2,7 +2,7 @@ use rocket::{
     form::{Contextual, Error, Form},
     get,
     http::Status,
-    post,
+    post, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -15,6 +15,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    leaderboard::LeaderboardManagerHandle,
     messages::Message,
     template::FormTemplateObject,
 };
@@ -57,6 +58,7 @@ pub async fn new_problem_post(
     contest_id: i64,
     mut form: Form<Contextual<'_, ProblemForm<'_>>>,
     _token: &VerifyCsrfToken,
+    leaderboard_handle: &State<LeaderboardManagerHandle>,
     mut db: DbConnection,
 ) -> FormResponse {
     let contest = Contest::get_or_404(&mut db, contest_id).await?;
@@ -82,6 +84,10 @@ pub async fn new_problem_post(
             let problem = problem.insert(&mut db).await?;
             let test_cases = TestCase::from_vec(problem.id, &value.test_cases);
             TestCase::save_for_problem(&mut db, problem.id, test_cases).await?;
+            let mut leaderboard_handle = leaderboard_handle.lock().await;
+            leaderboard_handle
+                .refresh_leaderboard(&mut db, &contest)
+                .await?;
             return Ok(Message::success("Problem Created")
                 .to(&format!("/contests/{contest_id}/problems/{}", problem.slug)));
         }

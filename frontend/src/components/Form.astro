@@ -82,3 +82,51 @@ const alertClass =
         </div>
     </slot>
 </form>
+
+<script>
+    const formDataToString = (formData: FormData) => {
+        const hash: Record<string, string> = {};
+        for (const [key, value] of formData.entries()) {
+            hash[key] = value.toString();
+        }
+        return JSON.stringify(hash);
+    };
+
+    document.addEventListener("astro:page-load", () => {
+        const form = document.querySelector("form");
+        if (form === null) {
+            return;
+        }
+
+        const initialFormData = new FormData(form);
+        const initialHash = formDataToString(initialFormData);
+
+        let formSubmitting = false;
+
+        document.addEventListener("astro:before-preparation", (e) => {
+            if (form === null || !document.contains(form) || formSubmitting) {
+                return;
+            }
+            const currentFormData = new FormData(form);
+            const currentHash = formDataToString(currentFormData);
+            if (initialHash !== currentHash) {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener("beforeunload", (e) => {
+            if (form === null || !document.contains(form) || formSubmitting) {
+                return;
+            }
+            const currentFormData = new FormData(form);
+            const currentHash = formDataToString(currentFormData);
+            if (initialHash !== currentHash) {
+                e.preventDefault();
+            }
+        });
+
+        form.addEventListener("submit", () => {
+            formSubmitting = true;
+        });
+    });
+</script>

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::TimeZone;
 use rocket::{fairing::AdHoc, get, routes, State};
@@ -73,9 +73,15 @@ async fn leaderboard_get(
     let end_local = tz.timezone().from_utc_datetime(&contest.end_time);
     let end_local_html = datetime_to_html_time(&end_local);
 
+    let first_map = leaderboard
+        .first_map
+        .iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect::<HashMap<_, _>>();
+
     Ok(Template::render(
         "contests/leaderboard",
-        context_with_base!(user, is_frozen, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
+        context_with_base!(user, is_frozen, first_map, freeze_percent: contest.freeze_percent(), progress: contest.progress(), has_started: contest.has_started(), start_local_html, end_local_html, is_running: contest.is_running(), contest, entries, problems, is_admin: admin.is_some(), is_judge),
     ))
 }
 

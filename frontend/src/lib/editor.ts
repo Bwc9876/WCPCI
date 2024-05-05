@@ -60,7 +60,8 @@ export default (
     editorElem: HTMLElement,
     languageIcon: HTMLImageElement,
     saveIndicator: HTMLElement,
-    resetButton: HTMLButtonElement
+    resetButton: HTMLButtonElement,
+    mostRecentCode: [string, string] | null
 ) => {
     let editor: monaco.editor.IStandaloneCodeEditor | null = null;
     let currentLanguage = defaultLanguage;
@@ -94,7 +95,9 @@ export default (
 
     currentLanguage = Object.keys(codeInfo).includes(storedLang ?? "")
         ? storedLang
-        : defaultLanguage;
+        : mostRecentCode && Object.keys(codeInfo).includes(mostRecentCode[1])
+          ? mostRecentCode[1]
+          : defaultLanguage;
 
     const langInfo = codeInfo[currentLanguage];
 
@@ -115,7 +118,7 @@ export default (
     }
 
     editor = monaco.editor.create(editorElem as HTMLElement, {
-        value: storedCode ?? langInfo.defaultCode,
+        value: storedCode ?? mostRecentCode?.[0] ?? langInfo.defaultCode,
         theme: `wcpc-${themeVariant}`,
         language: langInfo.monacoContribution,
         automaticLayout: true,
@@ -133,8 +136,10 @@ export default (
     let oldLang = currentLanguage;
 
     const saveChanges = () => {
+        if (!editor) return;
         const text = editor.getValue();
         const language = editor.getModel()?.getLanguageId();
+        if (!language) return;
         window.localStorage.setItem(
             `contest-${contestId}-problem-${problemId}-code`,
             JSON.stringify([text, language])
@@ -161,8 +166,20 @@ export default (
         oldLang = currentLanguage!;
     });
 
+    document.addEventListener("astro:before-preparation", () => {
+        if (editor && saveIndicator && saveIndicator.dataset.saveState === "saving") {
+            saveChanges();
+        }
+    });
+
+    window.onbeforeunload = (e) => {
+        if (editor && saveIndicator && saveIndicator.dataset.saveState === "saving") {
+            saveChanges();
+        }
+    };
+
     document.onkeydown = (e) => {
-        if (e.ctrlKey && e.key === "s") {
+        if (e.ctrlKey && e.key === "s" && editor && saveIndicator) {
             e.preventDefault();
             saveChanges();
             if (currentTimeout) {
@@ -184,6 +201,14 @@ export default (
             }
         }
     };
+
+    document.addEventListener(
+        "astro:after-swap",
+        () => {
+            editor = null;
+        },
+        { once: true }
+    );
 
     return [editor, () => currentLanguage];
 };

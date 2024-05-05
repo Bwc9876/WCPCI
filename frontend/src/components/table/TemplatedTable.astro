@@ -7,12 +7,13 @@ import TableCol from "@/components/table/TableCol.astro";
 import Variable from "@/components/tera/Variable.astro";
 import For from "@/components//tera/For.astro";
 import Link from "@/components/Link.astro";
-import { tag, variable } from "@/lib/tera";
+import { tag, teraIf, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 import Else from "@/components/tera/Else.astro";
 import Tag from "../tera/Tag.astro";
 import Avatar from "../Avatar.astro";
 import PlaceIndicator from "../PlaceIndicator.astro";
+import If from "../tera/If.astro";
 
 export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
     listName: string;
@@ -29,6 +30,7 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
         overrideList?: string;
         class?: string;
         placeIndicator?: string;
+        youIndicatorUserVar?: string;
         centerHeader?: boolean;
         makeLink?: string;
     }[];
@@ -124,7 +126,18 @@ const emptyColSpan = renderAction
             {
                 columns.map((col, i) => (
                     <TableCol
-                        class={col.class ?? ""}
+                        class:list={[
+                            col.youIndicatorUserVar
+                                ? teraIf(
+                                      `${col.youIndicatorUserVar}.id == user.id | default(value=-1)`,
+                                      "font-bold",
+                                      "",
+                                      "",
+                                      true
+                                  )
+                                : "",
+                            col.class ?? ""
+                        ]}
                         scope={i === 0 ? "row" : undefined}
                         as={i === 0 ? "th" : "td"}
                     >
@@ -178,6 +191,16 @@ const emptyColSpan = renderAction
                                     }
                                 />
                             </span>
+                        )}
+                        {col.youIndicatorUserVar && (
+                            <If
+                                debugEval={true}
+                                expression={`${col.youIndicatorUserVar}.id == user.id | default(value=-1)`}
+                            >
+                                <span class="ms-2 hidden rounded-full bg-primary-500 px-2 py-1 font-bold text-white lg:inline">
+                                    You
+                                </span>
+                            </If>
                         )}
                     </TableCol>
                 ))

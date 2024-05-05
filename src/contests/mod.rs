@@ -137,6 +137,20 @@ impl Contest {
         self.start_time < now
     }
 
+    pub fn has_ended(&self) -> bool {
+        let now = chrono::offset::Utc::now().naive_utc();
+        self.end_time < now
+    }
+
+    pub fn is_frozen(&self) -> bool {
+        if self.freeze_time == 0 {
+            return false;
+        }
+        let now = chrono::offset::Utc::now().naive_utc();
+        let freeze_time_utc = self.end_time - chrono::Duration::minutes(self.freeze_time);
+        freeze_time_utc < now && self.end_time > now
+    }
+
     pub fn is_running(&self) -> bool {
         let now = chrono::offset::Utc::now().naive_utc();
         self.start_time < now && self.end_time > now

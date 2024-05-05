@@ -26,6 +26,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
     description={description}
 >
     <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea>
+    <textarea class="hidden" id="most-recent-code">{variable("most_recent_code | safe")}</textarea>
     <Button
         class="example-button absolute right-2 top-4 mx-auto mb-1 hidden w-fit"
         disabled
@@ -51,6 +52,19 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
             <Title class="my-auto"><Variable expression="problem.name" /></Title>
             <span class="grow"></span>
             <div class="flex flex-row gap-1">
+                <If expression="not participating">
+                    <span class="my-auto me-1 flex flex-row gap-1 text-accent">
+                        <Icon name="tabler:info-circle" size={24} />
+                        You're not participating in this contest, solutions won't count towards your
+                        score.
+                    </span>
+                </If>
+                <If expression="participating and ended">
+                    <span class="my-auto me-1 flex flex-row gap-1 text-accent">
+                        <Icon name="tabler:info-circle" size={24} />
+                        This contest is over, solutions won't count towards your score.
+                    </span>
+                </If>
                 <If expression="can_edit">
                     <Button
                         size="lg"
@@ -315,27 +329,32 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         }
 
         const submitButton = document.querySelector("#submit") as HTMLButtonElement;
-        const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
-        const editorElem = (document.querySelector("#editor") as HTMLElement)!;
-        const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
-        const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
-        const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
-        const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
-        const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
-        const languageDropdown = (document.querySelector(
-            "#language-dropdown"
-        ) as HTMLSelectElement)!;
-        const languageIcon = (document.querySelector("#language-icon") as HTMLImageElement)!;
-        const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
-        const testButtonTemplate = (document.querySelector(
+        const codeInfoElem = document.querySelector("#code-info") as HTMLTextAreaElement;
+        const mostRecentCodeElem = document.querySelector(
+            "#most-recent-code"
+        ) as HTMLTextAreaElement;
+        const editorElem = document.querySelector("#editor") as HTMLElement;
+        const runDebugButton = document.querySelector("#run-debug") as HTMLButtonElement;
+        const testInput = document.querySelector("#debug-input") as HTMLTextAreaElement;
+        const testOutput = document.querySelector("#debug-output") as HTMLTextAreaElement;
+        const debugCaseIndicator = document.querySelector("#test-indicator") as HTMLElement;
+        const runMessage = document.querySelector("#runs-msg") as HTMLElement;
+        const languageDropdown = document.querySelector("#language-dropdown") as HTMLSelectElement;
+        const languageIcon = document.querySelector("#language-icon") as HTMLImageElement;
+        const runMessageWrapper = document.querySelector("#runs-msg-wrapper") as HTMLElement;
+        const testButtonTemplate = document.querySelector(
             "#test-debug-template"
-        ) as HTMLButtonElement)!;
-        const saveIndicator = (document.querySelector("#save-indicator") as HTMLElement)!;
-        const resetButton = (document.querySelector("#reset-button") as HTMLButtonElement)!;
-        const testSectionHeader = (document.querySelector("#test-section-heading") as HTMLElement)!;
-        const descriptionSectionChevron = (document.querySelector(
+        ) as HTMLButtonElement;
+        const saveIndicator = document.querySelector("#save-indicator") as HTMLElement;
+        const resetButton = document.querySelector("#reset-button") as HTMLButtonElement;
+        const testSectionHeader = document.querySelector("#test-section-heading") as HTMLElement;
+        const descriptionSectionChevron = document.querySelector(
             "#description-section-chevron"
-        ) as HTMLElement)!;
+        ) as HTMLElement;
+
+        if (!submitButton || !codeInfoElem || !editorElem || !runDebugButton) {
+            return;
+        }
 
         const toggleButtons = (disabled: boolean) => {
             submitButton.disabled = disabled;
@@ -384,6 +403,9 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
         }
 
         const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
+        const mostRecentCode = JSON.parse(mostRecentCodeElem.value ?? "null") as
+            | [string, string]
+            | null;
 
         if (loggedIn) {
             import("@/lib/problem_ws").then((c) => {
@@ -412,7 +434,8 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 editorElem,
                 languageIcon,
                 saveIndicator,
-                resetButton
+                resetButton,
+                mostRecentCode
             );
             editor = newEditor as monaco.editor.IStandaloneCodeEditor;
             getLang = _getLang as () => string;

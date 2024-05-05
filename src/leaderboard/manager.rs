@@ -18,6 +18,7 @@ use super::scoring::{ParticipantScores, ScoreEntry};
 pub struct Leaderboard {
     pub contest: Contest,
     pub scores: Vec<ParticipantScores>,
+    pub first_map: HashMap<i64, Option<i64>>,
     last_update: Option<NaiveDateTime>,
     tx: LeaderboardUpdateSender,
 }
@@ -35,11 +36,13 @@ impl Leaderboard {
         contest: Contest,
     ) -> Result<(Self, LeaderboardUpdateReceiver)> {
         let scores = Self::get_scores(db, &contest).await?;
+        let first_map = Self::get_first(db, &scores, &contest).await?;
         let (tx, rx) = tokio::sync::broadcast::channel(16);
         Ok((
             Self {
                 contest,
                 scores,
+                first_map,
                 last_update: None,
                 tx,
             },
@@ -48,13 +51,29 @@ impl Leaderboard {
     }
 
     pub fn is_frozen(&self) -> bool {
-        if self.contest.freeze_time == 0 {
-            return false;
-        }
+        self.contest.is_frozen()
+    }
 
-        let now = chrono::Utc::now().naive_utc();
-        let minutes_to_end = (self.contest.end_time - now).num_minutes();
-        now < self.contest.end_time && minutes_to_end < self.contest.freeze_time
+    fn get_first_person_for_problem(scores: &[ParticipantScores], problem_id: i64) -> Option<i64> {
+        scores
+            .iter()
+            .filter_map(|s| Some((s.participant_id, s.scores.get(&problem_id)?)))
+            .min_by_key(|(_, s)| s.secs_taken)
+            .map(|(i, _)| i)
+    }
+
+    async fn get_first(
+        db: &mut DbPoolConnection,
+        scores: &[ParticipantScores],
+        contest: &Contest,
+    ) -> Result<HashMap<i64, Option<i64>>> {
+        let problems = sqlx::query!("SELECT id FROM problem WHERE contest_id = ?", contest.id)
+            .fetch_all(&mut **db)
+            .await?;
+        Ok(problems
+            .into_iter()
+            .map(|p| (p.id, Self::get_first_person_for_problem(scores, p.id)))
+            .collect())
     }
 
     async fn get_scores(
@@ -179,6 +198,30 @@ impl Leaderboard {
             }
         }
 
+        let current_first = self
+            .first_map
+            .get(&completion.problem_id)
+            .copied()
+            .flatten();
+        let new_first = Self::get_first_person_for_problem(&self.scores, completion.problem_id);
+        self.first_map.insert(completion.problem_id, new_first);
+        if new_first != current_first {
+            if let Some(new_first) = new_first {
+                self.send_msg(LeaderboardUpdateMessage::CompletedFirst {
+                    participant_id: new_first,
+                    problem_id: completion.problem_id,
+                    is_first: true,
+                });
+            }
+            if let Some(current_first) = current_first {
+                self.send_msg(LeaderboardUpdateMessage::CompletedFirst {
+                    participant_id: current_first,
+                    problem_id: completion.problem_id,
+                    is_first: false,
+                });
+            }
+        }
+
         let new_order = self
             .scores
             .iter()
@@ -221,11 +264,9 @@ impl Leaderboard {
     ) -> Result {
         if let Some(c) = contest {
             self.contest = c.clone();
-            for s in &mut self.scores {
-                s.update_contest(db, c).await?;
-            }
         }
         self.scores = Self::get_scores(db, &self.contest).await?;
+        self.first_map = Self::get_first(db, &self.scores, &self.contest).await?;
         self.tx.send(LeaderboardUpdateMessage::FullRefresh)?;
         Ok(())
     }
@@ -244,6 +285,12 @@ pub enum LeaderboardUpdateMessage {
     Completion {
         participant_id: i64,
         score: ScoreEntry,
+    },
+    #[serde(rename_all = "camelCase")]
+    CompletedFirst {
+        participant_id: i64,
+        problem_id: i64,
+        is_first: bool,
     },
     #[serde(rename_all = "camelCase")]
     ReOrder {

@@ -74,7 +74,22 @@
     devShells = let
       shellPackages = pkgs: (with pkgs; [just mprocs rustfmt cargo clippy rust-analyzer]);
     in
-      forAllSystems (system: {default = (packages system).backend.overrideAttrs (old: {nativeBuildInputs = old.nativeBuildInputs ++ shellPackages (pkgsFor system);});});
+      forAllSystems (system: {
+        default =
+          (packages (pkgsFor system)).backend.overrideAttrs
+          (
+            old: let
+              pkgs = pkgsFor system;
+            in {
+              # Needed for rust-analyzer to find openssl and libxml2
+              # Also prevents needless rebuilding of their -sys crates
+              OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
+              OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
+              LIBXML2 = "${pkgs.libxml2.out}/lib/libxml2.so";
+              nativeBuildInputs = old.nativeBuildInputs ++ shellPackages pkgs;
+            }
+          );
+      });
     templates.default = {
       path = ./nix-template;
       description = "Template for deploying WCPC (outside of WCU)";

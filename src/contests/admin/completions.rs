@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
+use chrono::TimeZone;
 use log::error;
 use rocket::{
     form::{Contextual, Form},
@@ -22,6 +23,7 @@ use crate::{
     messages::Message,
     problems::{Problem, ProblemCompletion},
     template::{FormTemplateObject, TemplatedForm},
+    times::{datetime_to_html_time, ClientTimeZone},
     FormResponse, ResultResponse,
 };
 
@@ -57,6 +59,7 @@ impl<'r> TemplatedForm for CompletionTemplateForm<'r> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[get("/contests/<contest_id>/admin/runs/problems/<problem_slug>/edit/<participant_id>")]
 pub async fn edit_completion(
     mut db: DbConnection,
@@ -64,6 +67,7 @@ pub async fn edit_completion(
     contest_id: i64,
     problem_slug: &str,
     _token: &CsrfToken,
+    tz: ClientTimeZone,
     user: &User,
     admin: Option<&Admin>,
 ) -> ResultResponse<Template> {
@@ -76,6 +80,9 @@ pub async fn edit_completion(
     let target_user = User::get(&mut db, target_participant.user_id)
         .await?
         .ok_or(Status::NotFound)?;
+
+    let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
+    let start_local_html = datetime_to_html_time(&start_local);
 
     let participant = Participant::get(&mut db, contest_id, user.id).await?;
     let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
@@ -91,6 +98,7 @@ pub async fn edit_completion(
         let ctx = context_with_base_authed!(
             user,
             contest,
+            start_time_local: start_local_html,
             target_participant,
             target_user,
             problem,
@@ -124,17 +132,18 @@ pub struct ProblemCompletionForm {
     number_wrong: i64,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[post(
     "/contests/<contest_id>/admin/runs/problems/<problem_slug>/edit/<participant_id>",
     data = "<form>"
 )]
-#[allow(clippy::too_many_arguments)]
 pub async fn edit_completion_post(
     mut db: DbConnection,
     participant_id: i64,
     contest_id: i64,
     problem_slug: &str,
     _token: &VerifyCsrfToken,
+    tz: ClientTimeZone,
     leaderboard_manager: &State<LeaderboardManagerHandle>,
     form: Form<Contextual<'_, ProblemCompletionForm>>,
     user: &User,
@@ -182,10 +191,13 @@ pub async fn edit_completion_post(
             completion: completion.as_ref(),
             contest: &contest,
         };
+        let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
+        let start_local_html = datetime_to_html_time(&start_local);
         let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
         let ctx = context_with_base_authed!(
             user,
             target_participant,
+            start_time_local: start_local_html,
             target_user,
             contest,
             problem,

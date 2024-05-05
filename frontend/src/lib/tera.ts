@@ -11,7 +11,7 @@ export const teraIf = (
 ) =>
     import.meta.env.DEV
         ? debugEval
-        : `${tag(`if ${condition}`, whitespace)}${t}${f ? `${tag("else")}${f}${tag("endif", whitespace)}` : ""}`;
+        : `${tag(`if ${condition}`, whitespace)}${t}${f ? `${tag("else")}${f}` : ""}${tag("endif", whitespace)}`;
 
 export const themeClass = (light: string, dark: string, system?: string) => {
     return import.meta.env.DEV

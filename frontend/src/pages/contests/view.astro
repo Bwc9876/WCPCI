@@ -3,6 +3,7 @@ import Avatar from "@/components/Avatar.astro";
 import BreadCrumb from "@/components/BreadCrumb.astro";
 import Button from "@/components/Button.astro";
 import Form from "@/components/Form.astro";
+import Link from "@/components/Link.astro";
 import Progress from "@/components/Progress.astro";
 import Tile from "@/components/Tile.astro";
 import Title from "@/components/Title.astro";
@@ -47,7 +48,7 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
             </div>
             <span class="grow"></span>
             <div class="flex flex-row flex-wrap justify-end gap-2 align-middle">
-                <If expression="logged_in and not participant and not can_edit">
+                <If expression="logged_in and not participant and not can_edit and not ended">
                     <Form noTemplate action={`/contests/${variable("contest.id")}/join`}>
                         <Fragment slot="hr"></Fragment>
                         <Fragment slot="submit">
@@ -154,10 +155,10 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                                 )}
                                 userVar="participant.1"
                             />
-                            <span class="my-auto"
+                            <Link href=`/profile/${variable("participant.1.id")}` class="my-auto"
                                 ><Variable
                                     expression="participant.1.display_name | default(value=participant.1.default_display_name)"
-                                /></span
+                                /></Link
                             >
                         </li>
                         <Else>
@@ -186,10 +187,10 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                                 )}
                                 userVar="participant.1"
                             />
-                            <span class="my-auto"
+                            <Link href=`/profile/${variable("participant.1.id")}` class="my-auto"
                                 ><Variable
                                     expression="participant.1.display_name | default(value=participant.1.default_display_name)"
-                                /></span
+                                /></Link
                             >
                         </li>
                         <Else>

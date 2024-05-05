@@ -20,6 +20,12 @@ export type Message =
           score: ScoreEntry;
       }
     | {
+          type: "completedFirst";
+          participantId: number;
+          problemId: number;
+          isFirst: boolean;
+      }
+    | {
           type: "reOrder";
           participantMap: Record<number, [number, number]>;
       };

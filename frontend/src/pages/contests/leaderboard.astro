@@ -121,7 +121,8 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 name: "user.display_name | default(value=entry.user.default_display_name)",
                 avatarVar: "entry.user",
                 label: "User",
-                makeLink: `/profile/${variable("entry.user.id")}`
+                makeLink: `/profile/${variable("entry.user.id")}`,
+                youIndicatorUserVar: "entry.user"
             }
         ]}
     >
@@ -146,13 +147,19 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             <Tag expression="set problem_id=problem.id | as_str" />
             <TableCol
                 data-status={variable("problem_id in entry.scores")}
+                data-first={variable("first_map[problem_id] | default(value=-1) == entry.p_id")}
                 class="group"
                 id=`problem-completion-indication-${variable("entry.p_id")}-${variable("problem.id")}`
             >
                 <div
                     class="flex h-full flex-col justify-center whitespace-nowrap align-middle font-mono"
                 >
-                    <div class="mx-auto grow">
+                    <div class="relative mx-auto grow">
+                        <Icon
+                            size={20}
+                            name="tabler:clock-check"
+                            class="absolute inset-y-0 left-[calc(-15px+-0.5rem)] my-auto hidden text-green-600 group-[[data-first=true]]:inline"
+                        />
                         <Icon
                             size={30}
                             name="tabler:circle-x"
@@ -197,11 +204,14 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
 
     document.addEventListener("astro:page-load", () => {
         const dataElem = document.getElementById("dataElem")! as HTMLElement;
+        if (!dataElem) {
+            return;
+        }
         const contestId = dataElem.getAttribute("data-contest-id")!;
         const contestPenalty = parseInt(dataElem.getAttribute("data-contest-penalty")!);
         const startTime = new Date(dataElem.getAttribute("data-contest-start-time")!);
         const endTime = new Date(dataElem.getAttribute("data-contest-end-time")!);
-        const liveIndicator = document.getElementById("live-indicator")!;
+        const liveIndicator = document.getElementById("live-indicator");
         const countdown = document.getElementById("countdown");
         const countdownProgress = document.getElementById(
             "countdown-progress"
@@ -283,6 +293,13 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
             penaltyElem.textContent = "0 (+0m)";
         };
 
+        const setFirst = (participantId: number, problemId: number, isFirst: boolean) => {
+            const elem = document.getElementById(
+                `problem-completion-indication-${participantId}-${problemId}`
+            )!;
+            elem.setAttribute("data-first", isFirst.toString());
+        };
+
         const rePlace = (participantId: number, _oldPos: number, newPos: number) => {
             const row = document.getElementById(`participant-row-${participantId}`);
             if (row) {
@@ -304,7 +321,6 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                     table.appendChild(node as Node);
                     const rowHeight = (node as Element).getBoundingClientRect().height;
                     const multiplier = (oldPos as number) - (newPos as number);
-                    console.debug("Reordering", oldPos, newPos, multiplier, rowHeight);
                     const transform = `translateY(${multiplier * rowHeight}px)`;
                     [...(node as Element).children].forEach((child) => {
                         let childElem = child as HTMLElement;
@@ -338,10 +354,12 @@ const description = `Leaderboard for ${variable("contest.name")}, WCPC`;
                 case "unComplete":
                     unComplete(msg.participantId, msg.problemId);
                     break;
+                case "completedFirst":
+                    setFirst(msg.participantId, msg.problemId, msg.isFirst);
+                    break;
                 case "reOrder":
                     Object.entries(msg.participantMap).forEach(
                         ([participantId, [oldPos, newPos]]) => {
-                            console.debug("Reordering", participantId, oldPos, newPos);
                             rePlace(parseInt(participantId), oldPos, newPos);
                         }
                     );
