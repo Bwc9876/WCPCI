@@ -19,12 +19,12 @@ Table of contents:
   - [Database](#database)
   - [OAuth](#oauth)
   - [SAML](#saml)
-  - [Staging VM](#staging-vm)
+  - [Testing VM](#testing-vm)
     - [Running the VM](#running-the-vm)
 
 ## Prerequisites
 
-The server you're running on will need a few dependencies:
+The server you're running on will need a few dependencies (this is handled by Nix if you're using it):
 
 - libxml2
 - libxslt
@@ -36,7 +36,7 @@ The server you're running on will need a few dependencies:
 ## Distribution
 
 To distribute this as a package you'll need to ensure that the above dependencies are installed on the target machine.
-In addition the following folder need to go along with the package:
+In addition the following folders need to go along with the package (this is also handled by Nix):
 
 - `frontend/dist/`
 - `public/`
@@ -154,9 +154,9 @@ This application supports HTTP-Post bindings, and at the moment only support SP-
 
 <!-- TODO(Spoon): Rework these two following sections -->
 
-## Staging VM
+## Testing VM
 
-The staging VM (available under the nix flake) is a nixos config that contains a VM that can be used to test the application. You'll need to configure URL and OAuth settings yourself in an environment variable but the rest of the configuration is done for you. 
+The testing VM (available under the nix flake) is a NixOS config that contains a VM that can be used to test the application. You'll need to configure URL and OAuth settings yourself in an environment variable but the rest of the configuration is done for you. 
 
 ### Running the VM
 

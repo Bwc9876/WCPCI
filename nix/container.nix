@@ -2,18 +2,23 @@
   dockerTools,
   wrapper,
   stream ? false,
-
   # FIXME: REMOVE THIS, only for debugging
   pkgs,
-
 }:
-dockerTools.${if stream then "streamLayeredImage" else "buildLayeredImage"} {
+dockerTools
+.${
+  if stream
+  then "streamLayeredImage"
+  else "buildLayeredImage"
+} {
+  # TODO(Spoon): optimize layers?
   name = "wcpc";
-  tag = "latest"; # TODO(Spoon): Should this be the version?
-  contents = [wrapper dockerTools.caCertificates pkgs.coreutils pkgs.bashInteractive pkgs.nano];
+  tag = "latest";
+  maxLayers = 125;
+  contents = [wrapper dockerTools.caCertificates];
   config = {
     Cmd = ["wcpc"];
-    #ExposedPorts."443/tcp" = {};
+    ExposedPorts."443/tcp" = {};
     Env = [
       "PATH=/bin"
       "ROCKET_SAML={certs=\"/secrets/saml_cert.pem\",key=\"/secrets/saml_key.pem\"}"
@@ -25,18 +30,3 @@ dockerTools.${if stream then "streamLayeredImage" else "buildLayeredImage"} {
     WorkingDir = "/secrets"; # To load .env
   };
 }
-
-/*
-TODO(Spoon):
-Healthcheck?
-
-port 80? - redirect (& acme challenge?)
-
-
-
-
-
-secrets volume needs:
-{saml,tls}_{cert,key}.pem
-.env
-*/

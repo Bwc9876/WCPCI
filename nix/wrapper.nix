@@ -6,7 +6,7 @@
   rocket_config,
   version ? null,
 }:
-runCommand "wcpc" {
+runCommand "wcpc-wrapper" {
   nativeBuildInputs = [makeWrapper];
   inherit version;
   meta.mainProgram = "wcpc";
