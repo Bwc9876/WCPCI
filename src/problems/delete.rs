@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, post};
+use rocket::{get, http::Status, post, State};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -10,6 +10,7 @@ use crate::{
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
+    leaderboard::LeaderboardManagerHandle,
     messages::Message,
 };
 
@@ -47,8 +48,10 @@ pub async fn delete_problem_post(
     contest_id: i64,
     slug: &str,
     _token: &VerifyCsrfToken,
+    leaderboard_handle: &State<LeaderboardManagerHandle>,
     mut db: DbConnection,
 ) -> FormResponse {
+    let contest = Contest::get_or_404(&mut db, contest_id).await?;
     let is_judge = Participant::get(&mut db, contest_id, user.id)
         .await?
         .map(|p| p.is_judge)
@@ -60,5 +63,10 @@ pub async fn delete_problem_post(
 
     let problem = Problem::get_or_404(&mut db, contest_id, slug).await?;
     problem.delete(&mut db).await?;
+    let mut leaderboard_handle = leaderboard_handle.lock().await;
+    leaderboard_handle
+        .refresh_leaderboard(&mut db, &contest)
+        .await?;
+
     Ok(Message::success("Problem Deleted").to(&format!("/contests/{}/problems", contest_id)))
 }
