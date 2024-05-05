@@ -90,7 +90,6 @@
             }
           );
       });
-  };
     templates.default = {
       path = ./nix-template;
       description = "Template for deploying WCPC (outside of WCU)";
