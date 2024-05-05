@@ -76,7 +76,7 @@
     in
       forAllSystems (system: {
         default =
-          (packages (pkgsFor system)).backend.overrideAttrs
+          (packages system).backend.overrideAttrs
           (
             old: let
               pkgs = pkgsFor system;
