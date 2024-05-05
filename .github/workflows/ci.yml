@@ -18,7 +18,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-              platform: [ubuntu-latest, macos-latest]
+              platform: [ubuntu-latest]
         permissions:
             contents: read
             id-token: write
