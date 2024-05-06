@@ -98,12 +98,15 @@ impl Contest {
         id: i64,
         user: &User,
         admin: Option<&Admin>,
-    ) -> ResultResponse<(Self, Participant)> {
+    ) -> ResultResponse<(Self, Option<Participant>)> {
         let contest = Self::get_or_404(db, id).await?;
         let participant = Participant::get(db, id, user.id).await?;
-        participant
-            .filter(|p| admin.is_some() || p.is_judge)
-            .map_or_else(|| Err(Status::Forbidden.into()), |p| Ok((contest, p)))
+        let is_judge = participant.as_ref().map_or(false, |p| p.is_judge);
+        if !is_judge && admin.is_none() {
+            Err(Status::Forbidden.into())
+        } else {
+            Ok((contest, participant))
+        }
     }
 
     pub async fn get_or_404_assert_started(
