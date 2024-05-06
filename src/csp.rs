@@ -44,8 +44,9 @@ fn stage_inner(path: &Path) -> AdHoc {
         ),
         // format!("style-src-elem 'self' {} {}", join_hashes(&hashes.ext_style_hashes), join_hashes(&hashes.inline_style_hashes)),
     ];
+    let value = directives.join("; ");
     AdHoc::on_response("Content-Security-Policy", move |_req, resp| {
-        let value = directives.join("; ");
+        let value = value.clone();
         Box::pin(async move {
             let header = Header::new("Content-Security-Policy", value);
             resp.adjoin_header(header)

@@ -1,3 +1,4 @@
+use chrono::{NaiveDateTime, TimeZone};
 use rocket::{fairing::AdHoc, get, routes, State};
 use rocket_dyn_templates::Template;
 use samael::service_provider::ServiceProvider;
@@ -9,6 +10,7 @@ use crate::{
     },
     context_with_base_authed,
     run::CodeInfo,
+    times::{format_datetime_human_readable, ClientTimeZone},
 };
 
 mod runs;
@@ -20,9 +22,10 @@ async fn index(
     _admin: &Admin,
     so: &State<SamlOptions>,
     sp: &State<ServiceProvider>,
+    dt: &State<StartTime>,
+    tz: ClientTimeZone,
     lang_config: &State<CodeInfo>,
 ) -> Template {
-    let commit_hash = option_env!("GIT_COMMIT_HASH");
     let saml_options = so.inner();
     let idp_id = sp
         .inner()
@@ -44,10 +47,14 @@ async fn index(
         .cloned()
         .unwrap_or_else(|| "Not Found".to_string());
     let run_config = &lang_config.run_config;
+    let tz = tz.timezone();
+    let start_time_local = tz.from_utc_datetime(&dt.get());
+    let start_time_formatted = format_datetime_human_readable(start_time_local);
+
     let ctx = context_with_base_authed!(
         user,
-        commit_hash,
         saml_options,
+        start_time: start_time_formatted,
         idp_id,
         sp_id,
         idp_sso_binding,
@@ -63,22 +70,33 @@ async fn styles(user: &User, _admin: &Admin) -> Template {
     Template::render("admin/styles", ctx)
 }
 
+struct StartTime(NaiveDateTime);
+
+impl StartTime {
+    pub fn get(&self) -> NaiveDateTime {
+        self.0
+    }
+}
+
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Admin", |rocket| async {
-        rocket.mount(
-            "/admin",
-            routes![
-                index,
-                styles,
-                users::users,
-                users::delete_user_get,
-                users::delete_user_post,
-                runs::runs,
-                runs::cancel_run,
-                runs::cancel_run_post,
-                runs::cancel_all_runs,
-                runs::cancel_all_runs_post,
-            ],
-        )
+        let now = chrono::offset::Utc::now().naive_utc();
+        rocket
+            .mount(
+                "/admin",
+                routes![
+                    index,
+                    styles,
+                    users::users,
+                    users::delete_user_get,
+                    users::delete_user_post,
+                    runs::runs,
+                    runs::cancel_run,
+                    runs::cancel_run_post,
+                    runs::cancel_all_runs,
+                    runs::cancel_all_runs_post,
+                ],
+            )
+            .manage(StartTime(now))
     })
 }
