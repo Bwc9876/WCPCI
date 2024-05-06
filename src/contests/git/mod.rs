@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use chrono::NaiveDateTime;
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 use repo::FakeRepo;
 use rocket::{fairing::AdHoc, http::Status, State};
 use rocket_dyn_templates::Template;
@@ -39,8 +41,6 @@ fn run_to_object(run: &JudgeRun) -> Result<Object> {
 }
 
 fn gen_code() -> String {
-    use rand::distributions::Alphanumeric;
-    use rand::Rng;
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(16)

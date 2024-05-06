@@ -117,13 +117,13 @@ impl User {
     }
 
     pub async fn login(&self, db: &mut DbPoolConnection, cookies: &CookieJar<'_>) -> Result {
-        let session = Session::create(db, self.id).await?;
+        let (session, token) = Session::create(db, self.id).await?;
 
         let expires =
             OffsetDateTime::from_unix_timestamp(session.expires_at.and_utc().timestamp()).unwrap();
 
         cookies.add_private(
-            Cookie::build(("token", session.token))
+            Cookie::build(("token", token))
                 .same_site(SameSite::Lax)
                 .expires(expires)
                 .build(),
@@ -236,10 +236,11 @@ impl<'r> FromRequest<'r> for &'r User {
         let user_result = req.local_cache_async(async {
             let mut db = req.guard::<DbConnection>().await.succeeded()?;
             if let Some(token) = req.cookies().get_private(Session::TOKEN_COOKIE_NAME).map(|c| c.value().to_string()) {
+                let hash = Session::hash_token(&token);
                 sqlx::query_as!(
                     User,
                     "SELECT user.* FROM user JOIN session ON user.id = session.user_id WHERE session.token = ? AND expires_at > CURRENT_TIMESTAMP",
-                    token
+                    hash
                 )
                 .fetch_one(&mut **db)
                 .await.ok()

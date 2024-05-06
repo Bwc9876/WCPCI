@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use log::info;
-use rand::{rngs::OsRng, RngCore};
+use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
 use rocket::{
     fairing::AdHoc,
     futures::lock::Mutex,
@@ -101,16 +101,13 @@ impl CsrfToken {
     pub const TOKEN_COOKIE_LIFETIME_MINUTES: i64 = 60;
 
     pub fn generate() -> Self {
-        let mut token = Vec::with_capacity(Self::TOKEN_LENGTH);
-
-        let mut rng = OsRng;
-
-        for _ in 0..Self::TOKEN_LENGTH {
-            let random_byte = (rng.next_u32() % 256) as u8;
-            token.push(format!("{:02x}", random_byte));
-        }
-
-        Self(token.join(""))
+        Self(
+            OsRng
+                .sample_iter(&Alphanumeric)
+                .take(Self::TOKEN_LENGTH)
+                .map(char::from)
+                .collect(),
+        )
     }
 }
 
