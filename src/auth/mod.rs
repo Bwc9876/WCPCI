@@ -5,11 +5,12 @@ use rocket::{
     catch, catchers,
     fairing::AdHoc,
     get,
-    http::{CookieJar, Status},
+    http::{Cookie, CookieJar, SameSite, Status},
     response::Redirect,
     routes,
 };
 use rocket_dyn_templates::Template;
+use sqlx::sqlite::SqliteQueryResult;
 
 use crate::{
     context_with_base,
@@ -86,8 +87,12 @@ pub fn stage() -> AdHoc {
     })
 }
 
+const STATE_COOKIE_NAME: &str = "state-oauth-type";
+const LOGIN_STATE: &str = "login";
+const LINK_STATE: &str = "link";
+
 #[rocket::async_trait]
-trait CallbackHandler {
+pub trait CallbackHandler {
     type IntermediateUserInfo: serde::de::DeserializeOwned + Sync + Send;
     const SERVICE_NAME: &'static str;
 
@@ -99,12 +104,58 @@ trait CallbackHandler {
         user: Self::IntermediateUserInfo,
     ) -> Result<Option<User>>;
 
+    fn put_login_cookie(cookies: &CookieJar<'_>) {
+        let mut cookie = Cookie::new(STATE_COOKIE_NAME, LOGIN_STATE);
+        cookie.set_secure(false);
+        cookie.set_same_site(SameSite::Lax);
+        cookies.add(cookie);
+    }
+
+    fn put_link_cookie(cookies: &CookieJar<'_>) {
+        let mut cookie = Cookie::new(STATE_COOKIE_NAME, LINK_STATE);
+        cookie.set_secure(false);
+        cookie.set_same_site(SameSite::Lax);
+        cookies.add(cookie);
+    }
+
     async fn link_to(
         &self,
         db: &mut DbPoolConnection,
         user: &User,
         user_info: Self::IntermediateUserInfo,
     ) -> Result<bool>;
+
+    async fn unlink(db: &mut DbPoolConnection, user: &User) -> Result<SqliteQueryResult>;
+
+    async fn handle_callback(
+        &self,
+        user: Option<&User>,
+        cookies: &CookieJar<'_>,
+        db: &mut DbPoolConnection,
+    ) -> ResultResponse<Redirect> {
+        let state = cookies
+            .get(STATE_COOKIE_NAME)
+            .map(|c| c.value())
+            .ok_or_else(|| {
+                error!(
+                    "No state-type cookie found for {} callback",
+                    Self::SERVICE_NAME
+                );
+                Status::BadRequest
+            })?;
+
+        cookies.remove(Cookie::from(STATE_COOKIE_NAME));
+
+        let redirect = if state == LOGIN_STATE {
+            self.handle_login_callback(db, cookies).await
+        } else if state == LINK_STATE && user.is_some() {
+            self.handle_link_callback(db, user.unwrap()).await
+        } else {
+            return Err(Status::BadRequest.into());
+        }
+        .with_context(|| format!("Error handling OAuth callback from {}", Self::SERVICE_NAME))??;
+        Ok(redirect)
+    }
 
     async fn handle_link_callback(
         &self,
@@ -128,7 +179,7 @@ trait CallbackHandler {
         })
     }
 
-    async fn handle_callback(
+    async fn handle_login_callback(
         &self,
         db: &mut DbPoolConnection,
         cookies: &CookieJar<'_>,
@@ -150,6 +201,15 @@ trait CallbackHandler {
         } else {
             Ok(Err(Status::Unauthorized))
         }
+    }
+
+    async fn handle_unlink(db: &mut DbPoolConnection, user: &User) -> ResultResponse<Redirect> {
+        Self::unlink(db, user).await?;
+        Ok(Message::success(&format!(
+            "Unlinked your account from {}",
+            Self::SERVICE_NAME
+        ))
+        .to("/settings/account"))
     }
 
     async fn fetch_user_info(&self) -> Result<Self::IntermediateUserInfo> {
@@ -175,4 +235,76 @@ trait CallbackHandler {
             ))
         }
     }
+}
+
+mod prelude {
+    pub use super::CallbackHandler;
+    pub use rocket::{fairing::AdHoc, get, http::CookieJar, response::Redirect, routes};
+    pub use rocket_oauth2::{OAuth2, TokenResponse};
+    pub use sqlx::sqlite::SqliteQueryResult;
+
+    pub use crate::{
+        auth::users::User,
+        db::{DbConnection, DbPoolConnection},
+        error::prelude::*,
+        oauth_fairing,
+    };
+}
+
+#[macro_export]
+macro_rules! oauth_fairing {
+    ($name: literal, $route: ident, $handler: ident, $scopes: expr) => {
+        #[get("/login")]
+        fn login(oauth2: OAuth2<$handler>, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
+            $handler::put_login_cookie(cookies);
+            let redirect = oauth2.get_redirect(cookies, &$scopes).context(concat!(
+                "Error getting ",
+                $name,
+                " redirect"
+            ))?;
+            Ok(redirect)
+        }
+
+        #[get("/link")]
+        fn link(
+            oauth2: OAuth2<$handler>,
+            _user: &User,
+            cookies: &CookieJar<'_>,
+        ) -> ResultResponse<Redirect> {
+            $handler::put_link_cookie(cookies);
+            let redirect = oauth2.get_redirect(cookies, &$scopes).context(concat!(
+                "Error getting ",
+                $name,
+                " redirect"
+            ))?;
+            Ok(redirect)
+        }
+
+        #[get("/callback")]
+        async fn callback(
+            mut db: DbConnection,
+            token: TokenResponse<$handler>,
+            user: Option<&User>,
+            cookies: &CookieJar<'_>,
+        ) -> ResultResponse<Redirect> {
+            let handler = $handler(token.access_token().to_string());
+            handler.handle_callback(user, cookies, &mut db).await
+        }
+
+        #[get("/unlink")]
+        async fn unlink(mut db: DbConnection, user: &User) -> ResultResponse<Redirect> {
+            $handler::handle_unlink(&mut db, user).await
+        }
+
+        pub fn stage() -> AdHoc {
+            AdHoc::on_ignite(concat!($name, " Auth"), |rocket| async {
+                rocket
+                    .attach(OAuth2::<$handler>::fairing(stringify!($route)))
+                    .mount(
+                        concat!("/auth/", stringify!($route)),
+                        routes![login, callback, link, unlink,],
+                    )
+            })
+        }
+    };
 }

@@ -1,19 +1,4 @@
-use rocket::{
-    fairing::AdHoc,
-    get,
-    http::{Cookie, CookieJar, SameSite, Status},
-    response::Redirect,
-    routes,
-};
-use rocket_oauth2::{OAuth2, TokenResponse};
-
-use crate::{
-    db::{DbConnection, DbPoolConnection},
-    error::prelude::*,
-    messages::Message,
-};
-
-use super::{users::User, CallbackHandler};
+use super::prelude::*;
 
 pub struct GoogleLogin(pub String);
 
@@ -25,74 +10,6 @@ const SCOPES: [&str; 2] = [
 #[derive(Debug, serde::Deserialize)]
 pub struct UserInfo {
     pub user_id: String,
-}
-
-#[get("/login")]
-fn google_login(oauth2: OAuth2<GoogleLogin>, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
-    let mut cookie = Cookie::new("state-oauth-type", "login");
-    cookie.set_secure(false);
-    cookie.set_same_site(SameSite::Lax);
-    cookies.add(cookie);
-    let redirect = oauth2
-        .get_redirect(cookies, &SCOPES)
-        .context("Error getting Google redirect")?;
-    Ok(redirect)
-}
-
-#[get("/link")]
-fn google_link(
-    oauth2: OAuth2<GoogleLogin>,
-    _user: &User,
-    cookies: &CookieJar<'_>,
-) -> ResultResponse<Redirect> {
-    let mut cookie = Cookie::new("state-oauth-type", "link");
-    cookie.set_secure(false);
-    cookie.set_same_site(SameSite::Lax);
-    cookies.add(cookie);
-    let redirect = oauth2
-        .get_redirect(cookies, &SCOPES)
-        .context("Error getting Google redirect")?;
-    Ok(redirect)
-}
-
-#[get("/callback")]
-async fn google_callback(
-    mut db: DbConnection,
-    token: TokenResponse<GoogleLogin>,
-    user: Option<&User>,
-    cookies: &CookieJar<'_>,
-) -> ResultResponse<Redirect> {
-    let handler = GoogleLogin(token.access_token().to_string());
-    let state = cookies
-        .get("state-oauth-type")
-        .map(|c| c.value())
-        .ok_or(Status::BadRequest)?;
-
-    let res = if state == "login" {
-        handler.handle_callback(&mut db, cookies).await
-    } else if state == "link" && user.is_some() {
-        handler.handle_link_callback(&mut db, user.unwrap()).await
-    } else {
-        return Err(Status::BadRequest.into());
-    }
-    .context("Error handling Google callback")??;
-
-    cookies.remove(Cookie::from("state-oauth-type"));
-
-    Ok(res)
-}
-
-#[get("/unlink")]
-async fn google_unlink(mut db: DbConnection, user: &User) -> ResultResponse<Redirect> {
-    let res = sqlx::query!("UPDATE user SET google_id = NULL WHERE id = ?", user.id)
-        .execute(&mut **db)
-        .await
-        .context("Error unlinking Google account")?;
-    if res.rows_affected() == 1 {
-        Ok(Message::success("Google account unlinked").to("/settings/account"))
-    } else {
-        Err(Status::InternalServerError.into())
-    }
 }
 
 #[rocket::async_trait]
@@ -152,15 +69,13 @@ impl CallbackHandler for GoogleLogin {
         .map(|r| r.rows_affected() == 1)?;
         Ok(res)
     }
+
+    async fn unlink(db: &mut DbPoolConnection, user: &User) -> Result<SqliteQueryResult> {
+        sqlx::query!("UPDATE user SET github_id = NULL WHERE id = ?", user.id)
+            .execute(&mut **db)
+            .await
+            .context("Error unlinking Google account")
+    }
 }
 
-pub fn stage() -> AdHoc {
-    AdHoc::on_ignite("Google Auth", |rocket| async {
-        rocket
-            .attach(OAuth2::<GoogleLogin>::fairing("google"))
-            .mount(
-                "/auth/google",
-                routes![google_login, google_callback, google_link, google_unlink,],
-            )
-    })
-}
+oauth_fairing!("Google", google, GoogleLogin, SCOPES);
