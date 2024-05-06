@@ -7,7 +7,7 @@ import ContestLayout from "@/layouts/ContestLayout.astro";
 import { variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 
-const url = `${variable("url_prefix()")}/contests/${variable("contest.id")}/export/${variable("p_id")}/${variable("code")}/solutions.git`;
+const url = `${variable("url_prefix()")}/contests/${variable("contest.id")}/export/${variable("user.id")}/${variable("code")}/solutions.git`;
 ---
 
 <ContestLayout

@@ -60,19 +60,21 @@ pub async fn export_solutions(
     repos_handle: RepoMapGuard<'_>,
 ) -> ResultResponse<Template> {
     let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, user.id, contest_id)
-        .await?
-        .ok_or(Status::NotFound)?;
-    if admin.is_none() && !participant.is_judge && !contest.has_started() {
+    let participant = Participant::get(&mut db, user.id, contest_id).await?;
+
+    let is_judge = participant.map(|p| p.is_judge).unwrap_or(false);
+
+    if admin.is_none() && !is_judge && !contest.has_started() {
         return Err(Status::Forbidden.into());
     }
 
     let now = chrono::Utc::now().naive_utc();
-    let can_edit = admin.is_some() || participant.is_judge;
+    let can_edit = admin.is_some() || is_judge;
+
     let repos = repos_handle.lock().await;
-    if let Some((code, _, generated)) = repos.get(&(contest_id, participant.p_id)) {
+    if let Some((code, _, generated)) = repos.get(&(contest_id, user.id)) {
         if now - *generated < chrono::Duration::minutes(CACHE_TIME_MINUTES as i64) {
-            let ctx = context_with_base_authed!(user, code, generated, contest, p_id: participant.p_id, can_edit);
+            let ctx = context_with_base_authed!(user, code, generated, contest, can_edit);
             return Ok(Template::render("contests/export", ctx));
         }
     }
@@ -82,8 +84,8 @@ pub async fn export_solutions(
     let mut runs = Vec::with_capacity(problems.len());
     for problem in problems.iter() {
         let latest_successful_run =
-            JudgeRun::get_latest_success(&mut db, participant.user_id, problem.id).await?;
-        let latest_run = JudgeRun::get_latest(&mut db, participant.user_id, problem.id).await?;
+            JudgeRun::get_latest_success(&mut db, user.id, problem.id).await?;
+        let latest_run = JudgeRun::get_latest(&mut db, user.id, problem.id).await?;
         runs.push((
             latest_successful_run.map(|r| {
                 let obj = run_to_object(&r)
@@ -241,23 +243,21 @@ pub async fn export_solutions(
 
     let mut repos = repos_handle.lock().await;
 
-    repos.insert((contest_id, participant.p_id), (code.clone(), repo, now));
+    repos.insert((contest_id, user.id), (code.clone(), repo, now));
 
-    let ctx = context_with_base_authed!(user, code, contest, p_id: participant.p_id, can_edit);
+    let ctx = context_with_base_authed!(user, code, contest, can_edit);
     Ok(Template::render("contests/export", ctx))
 }
 
-#[get("/contests/<contest_id>/export/<participant_id>/<code>/solutions.git/info/refs")]
+#[get("/contests/<contest_id>/export/<user_id>/<code>/solutions.git/info/refs")]
 async fn git_info_refs(
     contest_id: i64,
-    participant_id: i64,
+    user_id: i64,
     code: &str,
     repos_handle: RepoMapGuard<'_>,
 ) -> ResultResponse<String> {
     let repos = repos_handle.lock().await;
-    let (real_code, repo, generated) = repos
-        .get(&(contest_id, participant_id))
-        .ok_or(Status::NotFound)?;
+    let (real_code, repo, generated) = repos.get(&(contest_id, user_id)).ok_or(Status::NotFound)?;
     let now = chrono::Utc::now().naive_utc();
     if now - *generated > chrono::Duration::minutes(CACHE_TIME_MINUTES as i64) || code != real_code
     {
@@ -267,21 +267,17 @@ async fn git_info_refs(
     Ok(repo.dump_refs())
 }
 
-#[get(
-    "/contests/<contest_id>/export/<participant_id>/<code>/solutions.git/objects/<folder>/<rest>"
-)]
+#[get("/contests/<contest_id>/export/<user_id>/<code>/solutions.git/objects/<folder>/<rest>")]
 async fn git_objects(
     contest_id: i64,
-    participant_id: i64,
+    user_id: i64,
     code: &str,
     folder: &str,
     rest: &str,
     repos_handle: RepoMapGuard<'_>,
 ) -> ResultResponse<Vec<u8>> {
     let repos = repos_handle.lock().await;
-    let (real_code, repo, generated) = repos
-        .get(&(contest_id, participant_id))
-        .ok_or(Status::NotFound)?;
+    let (real_code, repo, generated) = repos.get(&(contest_id, user_id)).ok_or(Status::NotFound)?;
     let now = chrono::Utc::now().naive_utc();
     if now - *generated > chrono::Duration::minutes(CACHE_TIME_MINUTES as i64) || code != real_code
     {
@@ -293,17 +289,16 @@ async fn git_objects(
     Ok(obj.compressed_serialize()?)
 }
 
-#[get("/contests/<contest_id>/export/<participant_id>/<code>/solutions.git/HEAD")]
+#[get("/contests/<contest_id>/export/<user_id>/<code>/solutions.git/HEAD")]
 async fn git_head(
     contest_id: i64,
-    participant_id: i64,
+    user_id: i64,
     code: &str,
     repos_handle: RepoMapGuard<'_>,
 ) -> ResultResponse<String> {
     let repos = repos_handle.lock().await;
-    let (real_code, _repo, generated) = repos
-        .get(&(contest_id, participant_id))
-        .ok_or(Status::NotFound)?;
+    let (real_code, _repo, generated) =
+        repos.get(&(contest_id, user_id)).ok_or(Status::NotFound)?;
     let now = chrono::Utc::now().naive_utc();
     if now - *generated > chrono::Duration::minutes(CACHE_TIME_MINUTES as i64) || code != real_code
     {
