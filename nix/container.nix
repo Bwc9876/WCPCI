@@ -14,7 +14,7 @@ dockerTools
   name = "wcpc";
   tag = "latest";
   maxLayers = 125;
-#   contents = [wrapper dockerTools.caCertificates];
+  #   contents = [wrapper dockerTools.caCertificates];
   contents = [wrapper dockerTools.caCertificates pkgs.bash pkgs.coreutils];
   config = {
     Cmd = ["wcpc"];
