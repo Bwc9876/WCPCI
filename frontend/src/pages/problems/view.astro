@@ -72,6 +72,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/edit`
                         class="my-auto w-fit"
                         justIcon
+                        aria-label="Edit Problem"
                         icon="tabler:pencil"
                         color="secondary"
                     />
@@ -79,6 +80,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         class="my-auto w-fit"
                         color="secondary"
                         justIcon
+                        aria-label="View Participant Runs"
                         icon="tabler:badge-filled"
                         size="lg"
                         as="a"
@@ -125,6 +127,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`
                 class="my-auto w-fit"
                 justIcon
+                aria-label="View Past Runs"
                 icon="tabler:clock"
                 color="secondary"
             />
@@ -181,9 +184,11 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         width="32"
                         height="32"
                         id="language-icon"
+                        alt="Language Icon"
                     />
                     <Field
                         hideLabel
+                        aria-label="Select Language"
                         noTemplate
                         id="language-dropdown"
                         name="Language"
@@ -208,7 +213,13 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                             size={32}
                         />
                     </div>
-                    <Button id="reset-button" icon="tabler:restore" justIcon color="secondary" />
+                    <Button
+                        aria-label="Reset Code"
+                        id="reset-button"
+                        icon="tabler:restore"
+                        justIcon
+                        color="secondary"
+                    />
                 </div>
                 <div
                     id="editor"

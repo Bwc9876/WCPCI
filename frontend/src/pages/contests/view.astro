@@ -98,12 +98,14 @@ const description = `WCPC ${variable("contest.name")} ${variable("contest.descri
                         icon="tabler:pencil"
                         size="lg"
                         as="a"
+                        aria-label="Edit Contest"
                         href={`/contests/${variable("contest.id")}/edit`}
                     />
                     <Button
                         class="my-auto"
                         color="secondary"
                         justIcon
+                        aria-label="Contest Admin"
                         icon="tabler:badge-filled"
                         size="lg"
                         as="a"
