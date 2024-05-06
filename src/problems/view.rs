@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, State};
+use rocket::{get, State};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -25,7 +25,7 @@ pub async fn list_problems_get(
     } else {
         None
     };
-    let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
+    let is_judge = participant.as_ref().map_or(false, |p| p.is_judge);
     let is_admin = admin.is_some();
     let can_see = is_admin || is_judge || contest.has_started();
     let problems = if can_see {
@@ -48,19 +48,9 @@ pub async fn view_problem_get(
     contest_id: i64,
     slug: &str,
 ) -> ResultResponse<Template> {
+    let (contest, participant, can_edit) =
+        Contest::get_or_404_assert_started(&mut db, contest_id, user, admin).await?;
     let problem = Problem::get_or_404(&mut db, contest_id, slug).await?;
-    let participant = if let Some(user) = user {
-        Participant::get(&mut db, contest_id, user.id).await?
-    } else {
-        None
-    };
-    let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
-    let is_admin = admin.is_some();
-
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    if !contest.has_started() && !is_judge && !is_admin {
-        return Err(Status::NotFound.into());
-    }
 
     let completion = if let Some(ref participant) = participant {
         ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant.p_id)
@@ -112,8 +102,8 @@ pub async fn view_problem_get(
             code_info,
             languages,
             default_language,
-            can_edit: is_judge || is_admin,
-            participating: participant.map(|p| !p.is_judge).unwrap_or(false),
+            can_edit,
+            participating: participant.map_or(false, |p| !p.is_judge),
         ),
     ))
 }

@@ -59,8 +59,7 @@ async fn leaderboard_get(
     let is_judge = if let Some(user) = user {
         Participant::get(&mut db, contest_id, user.id)
             .await?
-            .map(|p| p.is_judge)
-            .unwrap_or(false)
+            .map_or(false, |p| p.is_judge)
     } else {
         false
     };

@@ -23,7 +23,7 @@ use self::{
     tree::Tree,
 };
 
-use super::{Contest, Participant};
+use super::Contest;
 
 mod commit;
 mod object;
@@ -59,17 +59,10 @@ pub async fn export_solutions(
     info: &State<CodeInfo>,
     repos_handle: RepoMapGuard<'_>,
 ) -> ResultResponse<Template> {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, user.id, contest_id).await?;
-
-    let is_judge = participant.map(|p| p.is_judge).unwrap_or(false);
-
-    if admin.is_none() && !is_judge && !contest.has_started() {
-        return Err(Status::Forbidden.into());
-    }
+    let (contest, _participant, can_edit) =
+        Contest::get_or_404_assert_started(&mut db, contest_id, Some(user), admin).await?;
 
     let now = chrono::Utc::now().naive_utc();
-    let can_edit = admin.is_some() || is_judge;
 
     let repos = repos_handle.lock().await;
     if let Some((code, _, generated)) = repos.get(&(contest_id, user.id)) {

@@ -7,7 +7,7 @@ use rocket::{fairing::AdHoc, form, http::Status, routes, FromForm};
 use serde::Serialize;
 
 use crate::{
-    auth::users::User,
+    auth::users::{Admin, User},
     db::DbPoolConnection,
     error::prelude::*,
     template::TemplatedForm,
@@ -91,6 +91,40 @@ impl Contest {
 
     pub async fn get_or_404(db: &mut DbPoolConnection, id: i64) -> ResultResponse<Self> {
         Self::get(db, id).await?.ok_or(Status::NotFound.into())
+    }
+
+    pub async fn get_or_404_assert_can_edit(
+        db: &mut DbPoolConnection,
+        id: i64,
+        user: &User,
+        admin: Option<&Admin>,
+    ) -> ResultResponse<(Self, Participant)> {
+        let contest = Self::get_or_404(db, id).await?;
+        let participant = Participant::get(db, id, user.id).await?;
+        participant
+            .filter(|p| admin.is_some() || p.is_judge)
+            .map_or_else(|| Err(Status::Forbidden.into()), |p| Ok((contest, p)))
+    }
+
+    pub async fn get_or_404_assert_started(
+        db: &mut DbPoolConnection,
+        id: i64,
+        user: Option<&User>,
+        admin: Option<&Admin>,
+    ) -> ResultResponse<(Self, Option<Participant>, bool)> {
+        let contest = Self::get_or_404(db, id).await?;
+        let participant = if let Some(user) = user {
+            Participant::get(db, id, user.id).await?
+        } else {
+            None
+        };
+        let can_edit = admin.is_some() || participant.as_ref().map_or(false, |p| p.is_judge);
+        let started = contest.has_started();
+        if !started && !can_edit {
+            Err(Status::Forbidden.into())
+        } else {
+            Ok((contest, participant, admin.is_some()))
+        }
     }
 
     pub async fn insert(&self, db: &mut DbPoolConnection) -> Result<Self> {

@@ -1,4 +1,4 @@
-use rocket::{fairing::AdHoc, get, http::Status, routes};
+use rocket::{fairing::AdHoc, get, routes};
 use rocket_dyn_templates::Template;
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
     error::prelude::*,
 };
 
-use super::{Contest, Participant};
+use super::Contest;
 
 mod completions;
 mod participants;
@@ -21,15 +21,10 @@ async fn contest_admin(
     user: &User,
     admin: Option<&Admin>,
 ) -> ResultResponse<Template> {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-    if allowed {
-        let ctx = context_with_base_authed!(user, contest);
-        Ok(Template::render("contests/admin", ctx))
-    } else {
-        Err(Status::Forbidden.into())
-    }
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
+    let ctx = context_with_base_authed!(user, contest);
+    Ok(Template::render("contests/admin", ctx))
 }
 
 pub fn stage() -> AdHoc {

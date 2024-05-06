@@ -71,8 +71,10 @@ pub async fn edit_completion(
     user: &User,
     admin: Option<&Admin>,
 ) -> ResultResponse<Template> {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
     let problem = Problem::get_or_404(&mut db, contest_id, problem_slug).await?;
+
     let target_participant = Participant::by_id(&mut db, participant_id)
         .await
         .context("Failed to get participant")?
@@ -84,30 +86,24 @@ pub async fn edit_completion(
     let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
     let start_local_html = datetime_to_html_time(&start_local);
 
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-    if allowed {
-        let completion =
-            ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant_id)
-                .await?;
-        let form = CompletionTemplateForm {
-            completion: completion.as_ref(),
-            contest: &contest,
-        };
-        let form = FormTemplateObject::get(form);
-        let ctx = context_with_base_authed!(
-            user,
-            contest,
-            start_time_local: start_local_html,
-            target_participant,
-            target_user,
-            problem,
-            form
-        );
-        Ok(Template::render("contests/admin/runs_completion", ctx))
-    } else {
-        Err(Status::Forbidden.into())
-    }
+    let completion =
+        ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant_id)
+            .await?;
+    let form = CompletionTemplateForm {
+        completion: completion.as_ref(),
+        contest: &contest,
+    };
+    let form = FormTemplateObject::get(form);
+    let ctx = context_with_base_authed!(
+        user,
+        contest,
+        start_time_local: start_local_html,
+        target_participant,
+        target_user,
+        problem,
+        form
+    );
+    Ok(Template::render("contests/admin/runs_completion", ctx))
 }
 
 #[inline]
@@ -149,7 +145,8 @@ pub async fn edit_completion_post(
     user: &User,
     admin: Option<&Admin>,
 ) -> FormResponse {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
     let problem = Problem::get_or_404(&mut db, contest_id, problem_slug).await?;
     let target_participant = Participant::by_id(&mut db, participant_id)
         .await
@@ -157,54 +154,48 @@ pub async fn edit_completion_post(
         .ok_or(Status::NotFound)?;
     let target_user = User::get_or_404(&mut db, target_participant.user_id).await?;
 
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-    if allowed {
-        let completion =
-            ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant_id)
-                .await?;
-        if let Some(ref value) = form.value {
-            let completed_at = value
-                .completed_in
-                .map(|c| contest.start_time + chrono::Duration::minutes(c));
-            let number_wrong = value.number_wrong;
-            let completion = ProblemCompletion {
-                participant_id,
-                problem_id: problem.id,
-                completed_at,
-                number_wrong,
-            };
-            completion.upsert(&mut db).await.map_err(|e| {
-                error!("Failed to upsert completion: {}", e);
-                Status::InternalServerError
-            })?;
-            let mut leaderboard_manager = leaderboard_manager.lock().await;
-            leaderboard_manager
-                .process_completion(&completion, &contest)
-                .await;
-            return Ok(Message::success("Completion Updated").to(&format!(
-                "/contests/{}/admin/runs/problems/{}",
-                contest_id, problem_slug
-            )));
-        }
-        let form_template = CompletionTemplateForm {
-            completion: completion.as_ref(),
-            contest: &contest,
+    let completion =
+        ProblemCompletion::get_for_problem_and_participant(&mut db, problem.id, participant_id)
+            .await?;
+    if let Some(ref value) = form.value {
+        let completed_at = value
+            .completed_in
+            .map(|c| contest.start_time + chrono::Duration::minutes(c));
+        let number_wrong = value.number_wrong;
+        let completion = ProblemCompletion {
+            participant_id,
+            problem_id: problem.id,
+            completed_at,
+            number_wrong,
         };
-        let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
-        let start_local_html = datetime_to_html_time(&start_local);
-        let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
-        let ctx = context_with_base_authed!(
-            user,
-            target_participant,
-            start_time_local: start_local_html,
-            target_user,
-            contest,
-            problem,
-            form
-        );
-        Err(Template::render("contests/admin/runs_completion", ctx).into())
-    } else {
-        Err(Status::Forbidden.into())
+        completion.upsert(&mut db).await.map_err(|e| {
+            error!("Failed to upsert completion: {}", e);
+            Status::InternalServerError
+        })?;
+        let mut leaderboard_manager = leaderboard_manager.lock().await;
+        leaderboard_manager
+            .process_completion(&completion, &contest)
+            .await;
+        return Ok(Message::success("Completion Updated").to(&format!(
+            "/contests/{}/admin/runs/problems/{}",
+            contest_id, problem_slug
+        )));
     }
+    let form_template = CompletionTemplateForm {
+        completion: completion.as_ref(),
+        contest: &contest,
+    };
+    let start_local = tz.timezone().from_utc_datetime(&contest.start_time);
+    let start_local_html = datetime_to_html_time(&start_local);
+    let form = FormTemplateObject::from_rocket_context(form_template, &form.context);
+    let ctx = context_with_base_authed!(
+        user,
+        target_participant,
+        start_time_local: start_local_html,
+        target_user,
+        contest,
+        problem,
+        form
+    );
+    Err(Template::render("contests/admin/runs_completion", ctx).into())
 }

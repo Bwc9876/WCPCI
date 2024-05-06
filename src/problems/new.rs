@@ -1,8 +1,6 @@
 use rocket::{
     form::{Contextual, Error, Form},
-    get,
-    http::Status,
-    post, State,
+    get, post, State,
 };
 use rocket_dyn_templates::Template;
 
@@ -11,7 +9,7 @@ use crate::{
         csrf::{CsrfToken, VerifyCsrfToken},
         users::{Admin, User},
     },
-    contests::{Contest, Participant},
+    contests::Contest,
     context_with_base_authed,
     db::DbConnection,
     error::prelude::*,
@@ -30,25 +28,17 @@ pub async fn new_problem_get(
     contest_id: i64,
     _token: &CsrfToken,
 ) -> ResultResponse<Template> {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let is_judge = Participant::get(&mut db, contest_id, user.id)
-        .await?
-        .map(|p| p.is_judge)
-        .unwrap_or(false);
-    let is_admin = admin.is_some();
-    if is_judge || is_admin {
-        let form_template = ProblemFormTemplate {
-            problem: None,
-            test_cases: vec![],
-        };
-        let form = FormTemplateObject::get(form_template);
-        Ok(Template::render(
-            "problems/new",
-            context_with_base_authed!(user, contest, form),
-        ))
-    } else {
-        Err(Status::Forbidden.into())
-    }
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
+    let form_template = ProblemFormTemplate {
+        problem: None,
+        test_cases: vec![],
+    };
+    let form = FormTemplateObject::get(form_template);
+    Ok(Template::render(
+        "problems/new",
+        context_with_base_authed!(user, contest, form),
+    ))
 }
 
 #[post("/<contest_id>/problems/new", data = "<form>", rank = 5)]
@@ -61,15 +51,8 @@ pub async fn new_problem_post(
     leaderboard_handle: &State<LeaderboardManagerHandle>,
     mut db: DbConnection,
 ) -> FormResponse {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let is_judge = Participant::get(&mut db, contest_id, user.id)
-        .await?
-        .map(|p| p.is_judge)
-        .unwrap_or(false);
-    let is_admin = admin.is_some();
-    if !is_judge && !is_admin {
-        return Err(Status::Forbidden.into());
-    }
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
 
     if let Some(ref value) = form.value {
         let problem = Problem::temp(contest_id, value);

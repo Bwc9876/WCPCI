@@ -27,23 +27,18 @@ pub async fn participants(
     admin: Option<&Admin>,
     contest_id: i64,
 ) -> ResultResponse<Template> {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-    if allowed {
-        let just_participants = Participant::list_not_judge(&mut db, contest_id).await?;
-        let mut participants = vec![];
-        for participant in just_participants {
-            let p_user = User::get(&mut db, participant.user_id).await?;
-            if let Some(user) = p_user {
-                participants.push(Row { participant, user })
-            }
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
+    let just_participants = Participant::list_not_judge(&mut db, contest_id).await?;
+    let mut participants = vec![];
+    for participant in just_participants {
+        let p_user = User::get(&mut db, participant.user_id).await?;
+        if let Some(user) = p_user {
+            participants.push(Row { participant, user })
         }
-        let ctx = context_with_base_authed!(user, contest, participants);
-        Ok(Template::render("contests/admin/participants", ctx))
-    } else {
-        Err(Status::Forbidden.into())
     }
+    let ctx = context_with_base_authed!(user, contest, participants);
+    Ok(Template::render("contests/admin/participants", ctx))
 }
 
 #[get("/contests/<contest_id>/admin/participants/<p_id>/kick")]
@@ -55,21 +50,16 @@ pub async fn kick_participant_get(
     _token: &CsrfToken,
     admin: Option<&Admin>,
 ) -> ResultResponse<Template> {
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-    if allowed {
-        let target_participant = Participant::by_id(&mut db, p_id)
-            .await?
-            .ok_or(Status::NotFound)?;
-        let target_user = User::get(&mut db, target_participant.user_id)
-            .await?
-            .ok_or(Status::NotFound)?;
-        let ctx = context_with_base_authed!(user, contest, target_participant, target_user);
-        Ok(Template::render("contests/admin/kick", ctx))
-    } else {
-        Err(Status::Forbidden.into())
-    }
+    let (contest, _) =
+        Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
+    let target_participant = Participant::by_id(&mut db, p_id)
+        .await?
+        .ok_or(Status::NotFound)?;
+    let target_user = User::get(&mut db, target_participant.user_id)
+        .await?
+        .ok_or(Status::NotFound)?;
+    let ctx = context_with_base_authed!(user, contest, target_participant, target_user);
+    Ok(Template::render("contests/admin/kick", ctx))
 }
 
 #[post("/contests/<contest_id>/admin/participants/<p_id>/kick")]
@@ -82,24 +72,18 @@ pub async fn kick_participant_post(
     _token: &VerifyCsrfToken,
     admin: Option<&Admin>,
 ) -> ResultResponse<Redirect> {
-    Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let allowed = admin.is_some() || participant.map_or(false, |p| p.is_judge);
-    if allowed {
-        let target_participant = Participant::by_id(&mut db, p_id)
-            .await?
-            .ok_or(Status::NotFound)?;
-        target_participant.delete(&mut db).await.map_err(|e| {
-            log::error!("Failed to delete participant: {:?}", e);
-            Status::InternalServerError
-        })?;
-        let mut leaderboard_manager = leaderboards.lock().await;
-        leaderboard_manager
-            .delete_participant_for_contest(p_id, contest_id)
-            .await;
-        Ok(Message::success("Participant Kicked")
-            .to(&format!("/contests/{}/admin/participants", contest_id)))
-    } else {
-        Err(Status::Forbidden.into())
-    }
+    Contest::get_or_404_assert_can_edit(&mut db, contest_id, user, admin).await?;
+    let target_participant = Participant::by_id(&mut db, p_id)
+        .await?
+        .ok_or(Status::NotFound)?;
+    target_participant.delete(&mut db).await.map_err(|e| {
+        log::error!("Failed to delete participant: {:?}", e);
+        Status::InternalServerError
+    })?;
+    let mut leaderboard_manager = leaderboards.lock().await;
+    leaderboard_manager
+        .delete_participant_for_contest(p_id, contest_id)
+        .await;
+    Ok(Message::success("Participant Kicked")
+        .to(&format!("/contests/{}/admin/participants", contest_id)))
 }

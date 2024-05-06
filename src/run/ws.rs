@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::{
     auth::users::{Admin, User},
-    contests::{Contest, Participant},
+    contests::Contest,
     db::DbConnection,
     error::prelude::*,
     problems::{Problem, TestCase},
@@ -256,16 +256,10 @@ pub async fn ws_channel(
     manager: &State<ManagerHandle>,
     mut db: DbConnection,
 ) -> ResultResponse<rocket_ws::Channel<'static>> {
+    Contest::get_or_404_assert_started(&mut db, contest_id, Some(user), admin).await?;
     let problem = Problem::by_id(&mut db, contest_id, problem_id)
         .await?
         .ok_or(Status::NotFound)?;
-    let contest = Contest::get_or_404(&mut db, contest_id).await?;
-    let participant = Participant::get(&mut db, contest_id, user.id).await?;
-    let is_judge = participant.as_ref().map(|p| p.is_judge).unwrap_or(false);
-    let is_admin = admin.is_some();
-    if !is_admin && !is_judge && !contest.has_started() {
-        return Err(Status::Forbidden.into());
-    }
 
     let handle = (*manager).clone();
     let cases = TestCase::get_for_problem(&mut db, problem_id).await?;

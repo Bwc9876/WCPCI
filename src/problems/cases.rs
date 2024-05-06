@@ -124,10 +124,9 @@ impl TestCase {
 
 fn check_regex(pattern: &str, enabled: bool) -> Result<(), rocket::form::Errors> {
     if enabled {
-        regex::Regex::new(pattern).map(|_| ()).map_err(|e| {
-            let err = rocket::form::Error::custom(e);
-            rocket::form::Errors::from(vec![err])
-        })
+        regex::Regex::new(pattern)
+            .map(|_| ())
+            .map_err(|e| rocket::form::Error::custom(e).into())
     } else {
         Ok(())
     }
