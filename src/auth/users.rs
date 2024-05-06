@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use rocket::{
     http::{Cookie, CookieJar, SameSite, Status},
-    outcome::IntoOutcome,
+    outcome::{IntoOutcome, Outcome},
     request::{self, FromRequest},
     time::OffsetDateTime,
     FromFormField, Request, State,
@@ -234,22 +234,36 @@ impl<'r> FromRequest<'r> for &'r User {
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let user_result = req.local_cache_async(async {
-            let mut db = req.guard::<DbConnection>().await.succeeded()?;
+            let mut db = req.guard::<DbConnection>().await.succeeded().ok_or_else(|| {
+                error!("Failed to get db connection");
+                Status::InternalServerError
+            })?;
             if let Some(token) = req.cookies().get_private(Session::TOKEN_COOKIE_NAME).map(|c| c.value().to_string()) {
                 let hash = Session::hash_token(&token);
-                sqlx::query_as!(
+                let res = sqlx::query_as!(
                     User,
                     "SELECT user.* FROM user JOIN session ON user.id = session.user_id WHERE session.token = ? AND expires_at > CURRENT_TIMESTAMP",
                     hash
                 )
-                .fetch_one(&mut **db)
-                .await.ok()
+                .fetch_optional(&mut **db)
+                .await.context("Couldn't fetch user by token");
+                match res {
+                    Ok(Some(user)) => Ok(user),
+                    Ok(None) => Err(Status::Unauthorized),
+                    Err(why) => {
+                        error!("Internal server error: {:?}", why);
+                        Err(Status::InternalServerError)
+                    },
+                }
             } else {
-                None
+                Err(Status::Unauthorized)
             }
-        }).await;
+        }).await.as_ref();
 
-        user_result.as_ref().or_error((Status::Unauthorized, ()))
+        match user_result {
+            Ok(user) => Outcome::Success(user),
+            Err(status) => Outcome::Error((*status, ())),
+        }
     }
 }
 
