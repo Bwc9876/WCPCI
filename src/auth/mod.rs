@@ -8,6 +8,8 @@ use rocket::{
     http::{Cookie, CookieJar, SameSite, Status},
     response::Redirect,
     routes,
+    time::Duration,
+    Request,
 };
 use rocket_dyn_templates::Template;
 use sqlx::sqlite::SqliteQueryResult;
@@ -35,13 +37,30 @@ pub mod csrf;
 pub mod sessions;
 pub mod users;
 
+const LOGIN_URI: &str = "/auth/login";
+
 #[catch(401)]
-async fn unauthorized() -> Redirect {
-    Message::info("You need to be logged in to access this page").to("/auth/login")
+async fn unauthorized(req: &Request<'_>) -> Redirect {
+    let path = req.uri().path();
+    let msg = Message::info("You need to be logged in to access this page");
+    if path == LOGIN_URI {
+        msg.to("/")
+    } else {
+        msg.to_with_params(LOGIN_URI, vec![("redirect", path.to_string().as_str())])
+    }
 }
 
-#[get("/login")]
-async fn login(user: Option<&User>) -> Template {
+const REDIRECT_COOKIE_NAME: &str = "redirect_after_auth";
+
+#[get("/login?<redirect>")]
+async fn login(user: Option<&User>, redirect: Option<&str>, cookies: &CookieJar<'_>) -> Template {
+    if let Some(redirect) = redirect {
+        let mut cookie = Cookie::new(REDIRECT_COOKIE_NAME, redirect.to_string());
+        cookie.set_same_site(SameSite::Lax);
+        cookie.set_secure(false);
+        cookie.set_max_age(Duration::minutes(5));
+        cookies.add(cookie);
+    }
     let ctx = context_with_base!(user,);
     Template::render("auth/login", ctx)
 }
@@ -193,13 +212,27 @@ pub trait CallbackHandler {
             .await
             .with_context(|| format!("Failed to get user info from {}", Self::SERVICE_NAME))?;
 
+        let redirect = cookies
+            .get(REDIRECT_COOKIE_NAME)
+            .map(|c| c.value().to_string())
+            .unwrap_or_else(|| "/".to_string());
+
+        cookies.remove(Cookie::from(REDIRECT_COOKIE_NAME));
+
         if let Some(user) = user {
             user.login(db_conn, cookies)
                 .await
                 .with_context(|| format!("Failed to login user from {}", Self::SERVICE_NAME))?;
-            Ok(Ok(Redirect::to("/")))
+            Ok(Ok(Redirect::to(redirect)))
         } else {
-            Ok(Err(Status::Unauthorized))
+            Ok(Ok(Message::error(&format!(
+                "No account found for this {} account",
+                Self::SERVICE_NAME
+            ))
+            .to_with_params(
+                LOGIN_URI,
+                vec![(REDIRECT_COOKIE_NAME, &redirect)],
+            )))
         }
     }
 

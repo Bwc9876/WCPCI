@@ -2,7 +2,12 @@ use std::collections::HashMap;
 
 use log::{info, warn};
 use rocket::{
-    fairing::AdHoc, form::Form, get, http::CookieJar, http::Status, post, response::Redirect,
+    fairing::AdHoc,
+    form::Form,
+    get,
+    http::{CookieJar, Status},
+    post,
+    response::Redirect,
     routes, FromForm, State,
 };
 use samael::{
@@ -13,7 +18,7 @@ use serde::Deserialize;
 
 use crate::{db::DbConnection, error::prelude::*, messages::Message, run::CodeInfo};
 
-use super::users::User;
+use super::{users::User, REDIRECT_COOKIE_NAME};
 
 fn cn_oid() -> String {
     "urn:oid:2.5.4.3".to_string()
@@ -115,10 +120,7 @@ impl SamlOptions {
 }
 
 #[get("/login")]
-async fn login(
-    sp: &State<ServiceProvider>,
-    relay_url: &State<UrlPrefixGuard>,
-) -> ResultResponse<Redirect> {
+async fn login(sp: &State<ServiceProvider>, cookies: &CookieJar<'_>) -> ResultResponse<Redirect> {
     let base = sp
         .sso_binding_location(PREFERRED_SSO_BINDING)
         .ok_or_else(|| {
@@ -131,7 +133,14 @@ async fn login(
         .make_authentication_request(&base)
         .map_err(|e| anyhow!("{e:?}"))
         .context("Couldn't Create Authn Request")?;
-    let relay = relay_url.0.clone();
+
+    let relay = cookies
+        .get(REDIRECT_COOKIE_NAME)
+        .map(|c| c.value().to_string())
+        .unwrap_or_else(|| "/".to_string());
+
+    //cookies.remove(Cookie::from(REDIRECT_COOKIE_NAME));
+
     let url = if let Some(key) = sp.key.as_ref() {
         let key_der = key
             .private_key_to_der()
@@ -165,6 +174,8 @@ async fn metadata(sp: &State<ServiceProvider>) -> ResultResponse<String> {
 struct SamlAcsForm {
     #[field(name = "SAMLResponse")]
     saml_response: String,
+    #[field(name = "RelayState")]
+    relay_state: Option<String>,
 }
 
 #[post("/acs", data = "<form>")]
@@ -176,7 +187,10 @@ async fn acs(
     code_info: &State<CodeInfo>,
     cookies: &CookieJar<'_>,
 ) -> ResultResponse<Redirect> {
-    let raw = form.into_inner().saml_response;
+    let form = form.into_inner();
+
+    let raw = form.saml_response;
+    let relay_state = form.relay_state.unwrap_or_else(|| "/".to_string());
 
     let assertion = sp.parse_base64_response(&raw, None).map_err(|e| {
         warn!("Couldn't parse or validate SAML response: {e}");
@@ -219,10 +233,11 @@ async fn acs(
                 .login_or_register(&mut db, cookies)
                 .await
                 .context("Couldn't log-in / register user")?;
+
             if is_new {
                 Ok(Message::info(&format!("Welcome to WCPC, {}! Please look through your settings before joining a competition", user.default_display_name)).to("/settings/profile"))
             } else {
-                Ok(Redirect::to("/"))
+                Ok(Redirect::to(relay_state))
             }
         } else {
             warn!(
@@ -237,8 +252,6 @@ async fn acs(
         Err(Status::BadRequest.into())
     }
 }
-
-struct UrlPrefixGuard(String);
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("SAML Auth", |rocket| async {
@@ -255,7 +268,6 @@ pub fn stage() -> AdHoc {
             rocket
                 .manage(sp)
                 .manage(saml_options)
-                .manage(UrlPrefixGuard(url))
                 .mount("/auth/saml", routes![login, metadata, acs])
         } else {
             warn!("No / Invalid SAML options found, users won't be able to authenticate with SAML");

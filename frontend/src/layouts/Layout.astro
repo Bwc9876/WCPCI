@@ -491,7 +491,8 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
             });
 
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            document.cookie = `timezone=${encodeURIComponent(timezone)}; SameSite=Lax; max-age=31536000`;
+            const secure = location.protocol === "https:" ? "; Secure" : ";";
+            document.cookie = `timezone=${encodeURIComponent(timezone)}; SameSite=Lax; max-age=31536000; path=/${secure}`;
         </script>
     </body>
 </html>

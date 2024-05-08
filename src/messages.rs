@@ -47,4 +47,15 @@ impl Message {
         let formatted = format!("{url}?msg={encoded}&msg_type={}", self.msg_type);
         Redirect::to(formatted)
     }
+
+    pub fn to_with_params(&self, url: &str, params: Vec<(&str, &str)>) -> Redirect {
+        let encoded = urlencoding::encode(&self.msg).to_string();
+        let mut formatted = format!("{url}?msg={encoded}&msg_type={}", self.msg_type);
+        for (key, value) in params {
+            let encoded_key = urlencoding::encode(key);
+            let encoded_value = urlencoding::encode(value);
+            formatted.push_str(&format!("&{encoded_key}={encoded_value}"));
+        }
+        Redirect::to(formatted)
+    }
 }
