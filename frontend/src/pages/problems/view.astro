@@ -12,7 +12,7 @@ import For from "@/components/tera/For.astro";
 import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
 import ContestLayout from "@/layouts/ContestLayout.astro";
-import { themeClass, variable } from "@/lib/tera";
+import { tag, themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 
 const description = `${variable("problem.name")} from ${variable("contest.name")}, WCPC. ${variable("problem.description | truncate(length=100)")}`;
@@ -196,7 +196,10 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                         type="select"
                         options={[]}
                         ><For sourceList="languages" itemName="language" slot="options_templated">
-                            <option value={variable("language[0]")}>
+                            <option
+                                value={variable("language[0]")}
+                                data-phantom={`${tag(`if language[0] == default_language`)}${variable("fake_attr(attr='selected') | safe")}${tag("endif")}`}
+                            >
                                 <Variable expression="language[1]" />
                             </option>
                         </For></Field

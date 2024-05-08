@@ -44,9 +44,12 @@ pub struct RunConfig {
 
 impl RunConfig {
     pub fn get_languages_for_dropdown(&self) -> Vec<(&String, &String)> {
-        self.languages
+        let mut res = self
+            .languages
             .iter()
             .map(|(k, l)| (k, &l.name))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+        res.sort_by(|a, b| a.1.cmp(b.1));
+        res
     }
 }
