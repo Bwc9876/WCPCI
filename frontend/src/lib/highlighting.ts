@@ -1,33 +1,6 @@
 import "highlight.js/styles/default.css";
 import "@/styles/highlight-theme.scss";
-import hljs from "highlight.js/lib/core";
-import javascript from "highlight.js/lib/languages/javascript";
-import plaintext from "highlight.js/lib/languages/plaintext";
-import python from "highlight.js/lib/languages/python";
-import rust from "highlight.js/lib/languages/rust";
-import java from "highlight.js/lib/languages/java";
-import kotlin from "highlight.js/lib/languages/kotlin";
-import haskell from "highlight.js/lib/languages/haskell";
-import c from "highlight.js/lib/languages/c";
-import cpp from "highlight.js/lib/languages/cpp";
-import markdown from "highlight.js/lib/languages/markdown";
-
-hljs.registerLanguage("javascript", javascript);
-hljs.registerLanguage("js", javascript);
-hljs.registerLanguage("python", python);
-hljs.registerLanguage("py", python);
-hljs.registerLanguage("rust", rust);
-hljs.registerLanguage("rs", rust);
-hljs.registerLanguage("java", java);
-hljs.registerLanguage("kotlin", kotlin);
-hljs.registerLanguage("haskell", haskell);
-hljs.registerLanguage("c", c);
-hljs.registerLanguage("cpp", cpp);
-hljs.registerLanguage("cc", cpp);
-hljs.registerLanguage("cxx", cpp);
-hljs.registerLanguage("markdown", markdown);
-hljs.registerLanguage("md", markdown);
-hljs.registerLanguage("example", plaintext);
+import hljs from "highlight.js";
 
 const makePreCode = (text: string): HTMLPreElement => {
     const pre = document.createElement("pre");

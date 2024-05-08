@@ -115,3 +115,36 @@ monaco_contribution = "csharp"
 file_name = "Program.cs"
 compile_cmd = "mcs Program.cs"
 run_cmd = "mono Program.exe"
+
+[debug.run.languages.c]
+name = "C"
+default_code = """
+#include <stdio.h>
+
+int main() {
+    printf("Hello, World!");
+    return 0;
+}
+"""
+tabler_icon = "letter-c"
+monaco_contribution = "c"
+file_name = "main.c"
+compile_cmd = "gcc main.c -o main"
+run_cmd = "./main"
+
+[debug.run.languages.cpp]
+name = "C++"
+default_code = """
+#include <iostream>
+
+int main() {
+    std::cout << "Hello, World!" << std::endl;
+    return 0;
+}
+"""
+tabler_icon = "brand-cpp"
+monaco_contribution = "cpp"
+file_name = "main.cpp"
+compile_cmd = "g++ main.cpp -o main"
+run_cmd = "./main"
+
