@@ -72,7 +72,7 @@
     checks = forAllSystems checks;
     formatter = forAllSystems (system: (pkgsFor system).alejandra);
     devShells = let
-      shellPackages = pkgs: (with pkgs; [just mprocs rustfmt cargo clippy rust-analyzer]);
+      shellPackages = pkgs: (with pkgs; [just mprocs rustfmt cargo clippy rust-analyzer libtool]);
     in
       forAllSystems (system: {
         default =
@@ -85,7 +85,16 @@
               # Also prevents needless rebuilding of their -sys crates
               OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
               OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
+              LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
               LIBXML2 = "${pkgs.libxml2.out}/lib/libxml2.so";
+              BINDGEN_EXTRA_CLANG_ARGS = with pkgs; "${builtins.readFile "${stdenv.cc}/nix-support/libc-crt1-cflags"} \
+            ${builtins.readFile "${stdenv.cc}/nix-support/libc-cflags"} \
+            ${builtins.readFile "${stdenv.cc}/nix-support/cc-cflags"} \
+            ${builtins.readFile "${stdenv.cc}/nix-support/libcxx-cxxflags"} \
+            -idirafter ${libiconv}/include \
+            ${lib.optionalString stdenv.cc.isClang "-idirafter ${stdenv.cc.cc}/lib/clang/${lib.getVersion stdenv.cc.cc}/include"} \
+            ${lib.optionalString stdenv.cc.isGNU "-isystem ${stdenv.cc.cc}/include/c++/${lib.getVersion stdenv.cc.cc} -isystem ${stdenv.cc.cc}/include/c++/${lib.getVersion stdenv.cc.cc}/${stdenv.hostPlatform.config} -idirafter ${stdenv.cc.cc}/lib/gcc/${stdenv.hostPlatform.config}/${lib.getVersion stdenv.cc.cc}/include"} \
+                ";
               nativeBuildInputs = old.nativeBuildInputs ++ shellPackages pkgs;
             }
           );
