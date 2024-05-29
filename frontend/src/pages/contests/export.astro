@@ -1,0 +1,68 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Button from "@/components/Button.astro";
+import Title from "@/components/Title.astro";
+import If from "@/components/tera/If.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+import { Icon } from "astro-icon/components";
+
+const url = `${variable("url_prefix()")}/contests/${variable("contest.id")}/export/${variable("user.id")}/${variable("code")}/solutions.git`;
+---
+
+<ContestLayout
+    showAdminVar="is_admin"
+    noIndex
+    path=`/contests/${variable("contest.id")}/export`
+    title="Export Solutions"
+    makeTile
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Export Solutions", `/contests/${variable("contest.id")}/export`]
+        ]}
+    />
+    <Title>Export Solutions</Title>
+    <If expression="generated">
+        <div class="flex flex-row gap-2 text-lg font-bold text-blue-500">
+            <Icon name="tabler:info-circle" class="my-auto inline-block" />
+            <span class="my-auto">
+                This repository has been generated in the last 5 minutes, please wait another 5
+                minutes to generate a new one.
+            </span>
+        </div>
+    </If>
+    <p>
+        We've generated a git repository with all your solutions for this contest. You can export it
+        to GitHub with this button:
+    </p>
+    <Button
+        size="lg"
+        class="w-fit"
+        as="a"
+        target="_blank"
+        rel="noopener"
+        href=`https://github.com/new/import?import_url=${url}`
+        color="primary"
+        icon="tabler:brand-github">Export to GitHub</Button
+    >
+    <p>
+        The repo will contain a folder for each language with the solutions for the problem. The
+        folders will contain the source code of your most recent solution, most recent <strong
+            >successful</strong
+        > solution, and description for each problem.
+    </p>
+    <p>
+        The repo will be deleted in 5 minutes, to get another link come to this page after 5
+        minutes.
+    </p>
+    <h2 class="mt-4 text-2xl font-bold">Manual Clone</h2>
+    <p>Alternatively, you can clone the repository with the following command:</p>
+    <code class="select-auto rounded-lg bg-secondary-50 p-2">
+        git clone {url}
+    </code>
+    <p>Then you'll want to remove the remote origin as you won't be able to push to it</p>
+    <code class="select-auto rounded-lg bg-secondary-50 p-2"> git remote remove origin </code>
+</ContestLayout>

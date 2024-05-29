@@ -1,4 +1,4 @@
-
+# This is for testing; production stuff should be generated with Nix or written manually
 [default]
 ident = "WCPC"
 
@@ -7,18 +7,33 @@ url = "./database.sqlite"
 
 [default.oauth.github]
 provider = "GitHub"
-redirect_uri = "http://localhost:8000/auth/callback/github"
 
 [default.oauth.google]
 provider = "Google"
-redirect_uri = "http://localhost:8000/auth/callback/google"
+redirect_uri = "http://localhost:8000/auth/google/callback"
 
 [debug]
+url = "http://localhost:8000"
 secret_key = "12345678901234567890123456789012345678901234"
 template_dir = "frontend/dist"
 public_dir = "public"
+admins = [ "bwc9876@example.com" ]
+timezone = "America/New_York"
+
+[debug.saml]
+entity_id = "urn:wcpc:saml-debugging"
+idp_meta_url = "https://mocksaml.com/api/namespace/wcpc_testing_provider/saml/metadata"
+contact_person = "Ben"
+contact_email = "bwc9876@example.org"
+contact_telephone = "555-555-5555"
+organization = "WCPC"
+
+[debug.saml.attrs]
+display_name = "firstName"
+email = "email"
 
 [debug.run]
+max_program_length = 100000
 default_language = "python"
 
 [debug.run.languages.python]
@@ -83,3 +98,53 @@ monaco_contribution = "haskell"
 file_name = "main.hs"
 compile_cmd = "ghc main.hs"
 run_cmd = "./main"
+
+[debug.run.languages.csharp]
+name = "C#"
+default_code = """
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        System.Console.WriteLine("Hello, World!");
+    }
+}
+"""
+tabler_icon = "brand-c-sharp"
+monaco_contribution = "csharp"
+file_name = "Program.cs"
+compile_cmd = "mcs Program.cs"
+run_cmd = "mono Program.exe"
+
+[debug.run.languages.c]
+name = "C"
+default_code = """
+#include <stdio.h>
+
+int main() {
+    printf("Hello, World!");
+    return 0;
+}
+"""
+tabler_icon = "letter-c"
+monaco_contribution = "c"
+file_name = "main.c"
+compile_cmd = "gcc main.c -o main"
+run_cmd = "./main"
+
+[debug.run.languages.cpp]
+name = "C++"
+default_code = """
+#include <iostream>
+
+int main() {
+    std::cout << "Hello, World!" << std::endl;
+    return 0;
+}
+"""
+tabler_icon = "brand-cpp"
+monaco_contribution = "cpp"
+file_name = "main.cpp"
+compile_cmd = "g++ main.cpp -o main"
+run_cmd = "./main"
+

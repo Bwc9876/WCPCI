@@ -7,17 +7,34 @@ import TableCol from "@/components/table/TableCol.astro";
 import Variable from "@/components/tera/Variable.astro";
 import For from "@/components//tera/For.astro";
 import Link from "@/components/Link.astro";
-import { tag, variable } from "@/lib/tera";
+import { tag, teraIf, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 import Else from "@/components/tera/Else.astro";
 import Tag from "../tera/Tag.astro";
+import Avatar from "../Avatar.astro";
+import PlaceIndicator from "../PlaceIndicator.astro";
+import If from "../tera/If.astro";
 
 export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
     listName: string;
     itemName?: string;
     idColName?: string;
+    isMap?: boolean;
     emptyText?: string;
-    columns: string[];
+    addColSpan?: number;
+    columns: {
+        label?: string;
+        name: string;
+        forceNoPrefix?: boolean;
+        avatarVar?: string;
+        overrideList?: string;
+        class?: string;
+        placeIndicator?: string;
+        youIndicatorUserVar?: string;
+        centerHeader?: boolean;
+        makeLink?: string;
+    }[];
+    rowId?: string;
     itemLink?: {
         class?: string;
         color?: LinkColor;
@@ -31,7 +48,6 @@ export interface Props extends Omit<HTMLAttributes<"table">, "slot"> {
         icon?: string;
         action: (id: string) => string;
     }[];
-    columnNames?: Record<string, string>;
     class?: string;
 }
 
@@ -39,11 +55,13 @@ const {
     listName,
     itemName = "item",
     idColName = "id",
+    rowId,
+    isMap = false,
     emptyText = "No items to display",
+    addColSpan = 0,
     columns,
     itemLink,
     actions,
-    columnNames,
     class: className,
     ...rest
 } = Astro.props;
@@ -52,7 +70,7 @@ const makeLabel = (str: string) => {
     return str.replaceAll(/[_\-\.]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-const prettyColumns = columns.map((col) => columnNames?.[col] ?? makeLabel(col));
+const prettyColumns = columns.map((col) => col.label ?? makeLabel(col.name));
 
 type RenderAction = "static" | "template" | false;
 
@@ -70,20 +88,25 @@ const renderActionCondition =
 
 const emptyColSpan = renderAction
     ? renderAction === "static"
-        ? columns.length + 1
-        : `${tag(`if ${renderActionCondition}`)}${variable(`${columns.length} + 1`)}${tag("else")}${variable(`${columns.length}`)}${tag("endif")}`
-    : columns.length;
+        ? columns.length + 1 + addColSpan
+        : `${tag(`if ${renderActionCondition}`)}${variable(`${columns.length} + 1 + ${addColSpan}`)}${tag("else")}${variable(`${columns.length} + ${addColSpan}`)}${tag("endif")}`
+    : columns.length + addColSpan;
 ---
 
 <Table class:list={["", className ?? ""]} {...rest}>
     <Fragment slot="header">
         {
-            prettyColumns.map((col) => (
-                <TableCol scope="col" as="th" class="text-left">
+            prettyColumns.map((col, i) => (
+                <TableCol
+                    scope="col"
+                    as="th"
+                    class={columns[i].centerHeader ? "text-center" : "text-left"}
+                >
                     {col}
                 </TableCol>
             ))
         }
+        <slot name="head" />
         {
             renderAction && (
                 <>
@@ -98,32 +121,98 @@ const emptyColSpan = renderAction
             )
         }
     </Fragment>
-    <For sourceList={listName} itemName={itemName}>
-        <TableRow>
+    <For sourceList={listName} itemName={isMap ? `${itemName}_key, ${itemName}` : itemName}>
+        <TableRow id={rowId ?? `${listName}-${itemName}-${variable("loop.index0")}`}>
             {
                 columns.map((col, i) => (
-                    <TableCol scope={i === 0 ? "row" : undefined} as={i === 0 ? "th" : "td"}>
+                    <TableCol
+                        class:list={[
+                            col.youIndicatorUserVar
+                                ? teraIf(
+                                      `${col.youIndicatorUserVar}.id == user.id | default(value=-1)`,
+                                      "font-bold",
+                                      "",
+                                      "",
+                                      true
+                                  )
+                                : "",
+                            col.class ?? ""
+                        ]}
+                        scope={i === 0 ? "row" : undefined}
+                        as={i === 0 ? "th" : "td"}
+                    >
+                        {col.avatarVar && (
+                            <Avatar
+                                class:list={["me-2 inline"]}
+                                size={30}
+                                userVar={col.avatarVar}
+                            />
+                        )}
                         {i === 0 && itemLink !== undefined ? (
                             <Link
-                                class={itemLink.class}
+                                class:list={["my-auto", itemLink.class]}
                                 color={itemLink.color}
-                                href={itemLink.action(variable(`${itemName}.${idColName}`))}
+                                href={itemLink.action(
+                                    variable(
+                                        `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${idColName}`
+                                    )
+                                )}
                             >
-                                <Variable expression={`${itemName}.${col}`} />
+                                <Variable
+                                    expression={
+                                        col.overrideList
+                                            ? `${col.overrideList}[loop.index0]`
+                                            : `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`
+                                    }
+                                />
+                            </Link>
+                        ) : col.placeIndicator !== undefined ? (
+                            <PlaceIndicator
+                                class={col.placeIndicator}
+                                placeVar={`${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`}
+                            />
+                        ) : col.makeLink ? (
+                            <Link class:list={["my-auto", col.makeLink]} href={col.makeLink}>
+                                <Variable
+                                    expression={
+                                        col.overrideList
+                                            ? `${col.overrideList}[loop.index0]`
+                                            : `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`
+                                    }
+                                />
                             </Link>
                         ) : (
-                            <Variable expression={`${itemName}.${col}`} />
+                            <span class="my-auto">
+                                <Variable
+                                    expression={
+                                        col.overrideList
+                                            ? `${col.overrideList}[loop.index0]`
+                                            : `${col.forceNoPrefix ?? false ? "" : `${itemName}.`}${col.name}`
+                                    }
+                                />
+                            </span>
+                        )}
+                        {col.youIndicatorUserVar && (
+                            <If
+                                debugEval={true}
+                                expression={`${col.youIndicatorUserVar}.id == user.id | default(value=-1)`}
+                            >
+                                <span class="ms-2 hidden rounded-full bg-primary-500 px-2 py-1 font-bold text-white lg:inline">
+                                    You
+                                </span>
+                            </If>
                         )}
                     </TableCol>
                 ))
             }
+            <slot />
             {
                 renderAction && (
                     <>
                         {renderAction === "template" && (
                             <Tag expression={`if ${renderActionCondition}`} />
                         )}
-                        <TableCol class="flex flex-row gap-2">
+                        <TableCol class="flex flex-row gap-3">
                             {actions!.map((action) => (
                                 <>
                                     {action.condition && (
@@ -131,7 +220,7 @@ const emptyColSpan = renderAction
                                     )}
                                     <Link
                                         class:list={[
-                                            "flex flex-row gap-1 align-middle",
+                                            "flex flex-row align-middle",
                                             action.class ?? ""
                                         ]}
                                         color={action.color}

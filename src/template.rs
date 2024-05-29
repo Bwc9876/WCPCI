@@ -68,21 +68,19 @@ impl FormTemplateObject {
                 (
                     name.clone(),
                     val.map(|s| s.to_string())
-                        .and_then(|_| defaults.get(&name).cloned())
-                        .unwrap_or_default(),
+                        .unwrap_or_else(|| defaults.get(&name).cloned().unwrap_or_default()),
                 )
             })
             .collect::<HashMap<_, _>>();
-        let errors = value
-            .fields()
-            .map(|f| {
-                let err = value
-                    .field_errors(f)
-                    .map(|e| e.to_string())
-                    .collect::<Vec<_>>();
-                (f.to_string(), err)
-            })
-            .collect::<HashMap<_, _>>();
+        let mut errors = HashMap::with_capacity(value.fields().count());
+        for e in value.errors() {
+            if let Some(ref name) = e.name {
+                errors
+                    .entry(name.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(e.to_string());
+            }
+        }
         Self::with_data(data, errors, value.status())
     }
 }
@@ -109,6 +107,26 @@ fn fake_attr(args: FunctionArgs) -> Result<Value, tera::Error> {
     let attr = args.get("attr").and_then(|o| o.as_str()).unwrap_or("");
     let val = args.get("val").and_then(|o| o.as_str()).unwrap_or("");
     Ok(tera::Value::String(format!("\"{attr}=\"{val}")))
+}
+
+fn format_time_taken(args: FunctionArgs) -> Result<Value, tera::Error> {
+    let taken = args
+        .get("time")
+        .and_then(|o| o.as_i64())
+        .ok_or(tera::Error::msg("time not passed!"))?;
+    if taken == -1 {
+        return Ok(tera::Value::String("--".to_string()));
+    }
+
+    let hours = taken / 60;
+    let minutes = taken % 60;
+    let hours_f = if hours == 0 {
+        "".to_string()
+    } else {
+        format!("{hours}h ")
+    };
+    let minutes_f = format!("{minutes}m");
+    Ok(tera::Value::String(format!("{hours_f}{minutes_f}")))
 }
 
 fn render_markdown(args: FunctionArgs) -> Result<Value, tera::Error> {
@@ -151,25 +169,30 @@ fn len_of_form_data_list(args: FunctionArgs) -> Result<Value, tera::Error> {
         .and_then(|s| s.as_str())
         .ok_or(tera::Error::msg("list not passed!"))?;
 
-    Ok(tera::Value::Number(
-        data.into_iter()
-            .filter_map(|name| {
-                if name.starts_with(&format!("{list}[")) {
-                    Some(
-                        name[list.len() + 1..]
-                            .split(']')
-                            .next()
-                            .and_then(|s| s.parse().ok())
-                            .map(|g: i64| g + 1)
-                            .unwrap_or(0),
-                    )
-                } else {
-                    None
-                }
-            })
-            .max()
-            .unwrap_or(0)
-            .into(),
+    let mut dat = data
+        .into_iter()
+        .filter_map(|name| {
+            if name.starts_with(&format!("{list}[")) {
+                Some(
+                    name[list.len() + 1..]
+                        .split(']')
+                        .next()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0),
+                )
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    dat.sort();
+    dat.dedup();
+
+    Ok(tera::Value::Array(
+        dat.into_iter()
+            .map(|i| tera::Value::Number(i.into()))
+            .collect::<Vec<_>>(),
     ))
 }
 
@@ -201,13 +224,40 @@ macro_rules! context_with_base_authed {
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Templating", |rocket| async {
-        rocket.attach(Template::custom(|e| {
+        let figment = rocket.figment();
+        let url_prefix = figment.extract_inner::<String>("url").unwrap_or_default();
+        let admins = figment
+            .extract_inner::<Vec<String>>("admins")
+            .unwrap_or_default();
+
+        rocket.attach(Template::custom(move |e| {
+            let url_prefix = url_prefix.clone();
+            let admins = admins.clone();
             e.tera.register_function("in_debug", in_debug);
             e.tera.register_function("gravatar", gravatar_function);
             e.tera.register_function("fake_attr", fake_attr);
+            e.tera
+                .register_function("format_time_taken", format_time_taken);
             e.tera.register_function("render_markdown", render_markdown);
             e.tera
+                .register_function("url_prefix", move |_: FunctionArgs| {
+                    Ok(tera::Value::String(url_prefix.clone()))
+                });
+            e.tera
                 .register_function("len_of_form_data_list", len_of_form_data_list);
+            e.tera
+                .register_function("is_admin", move |args: FunctionArgs| {
+                    if let Some(user) = args.get("user").and_then(|o| o.as_object()) {
+                        Ok(tera::Value::Bool(
+                            user.get("email")
+                                .and_then(|e| e.as_str())
+                                .map(|e| admins.contains(&e.to_string()))
+                                .unwrap_or_default(),
+                        ))
+                    } else {
+                        Err(tera::Error::msg("user object not passed!"))
+                    }
+                });
         }))
     })
 }

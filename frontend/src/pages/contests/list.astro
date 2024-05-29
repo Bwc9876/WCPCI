@@ -1,0 +1,44 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import Button from "@/components/Button.astro";
+import If from "@/components/tera/If.astro";
+import Title from "@/components/Title.astro";
+---
+
+<Layout path=`/contests` description="View WCPC Contests" title="Contests" makeTile>
+    <Title>Contests</Title>
+    <TemplatedTable
+        listName="contests"
+        emptyText="No Contests"
+        itemLink={{
+            action: (id: string) => `/contests/${id}`
+        }}
+        actions={[
+            {
+                name: "Edit",
+                icon: "tabler:pencil",
+                action: (id: string) => `/contests/${id}/edit`,
+                condition: "is_admin"
+            },
+            {
+                name: "Delete",
+                icon: "tabler:trash",
+                color: "danger",
+                action: (id: string) => `/contests/${id}/delete`,
+                condition: "is_admin"
+            }
+        ]}
+        columns={[
+            { name: "name" },
+            { name: "start_time", overrideList: "start_times" },
+            { name: "registration_deadline", overrideList: "registration_deadlines" },
+            { name: 'max_participants | default(value="None")', label: "Max Participants" }
+        ]}
+    />
+    <If debugEval={true} expression="is_admin">
+        <Button icon="tabler:plus" class="w-fit self-end" as="a" href={`/contests/new`}
+            >Create New Contest</Button
+        >
+    </If>
+</Layout>

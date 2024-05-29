@@ -1,0 +1,193 @@
+---
+import Form from "@/components/Form.astro";
+import Field from "@/components/Field.astro";
+import For from "../tera/For.astro";
+import { variable } from "@/lib/tera";
+import Avatar, { getSrc } from "../Avatar.astro";
+import Variable from "../tera/Variable.astro";
+import Button from "../Button.astro";
+---
+
+<Form class="!w-full !max-w-full">
+    <div class="flex w-full flex-col gap-2 lg:flex-row">
+        <div class="flex grow flex-col lg:w-2/6">
+            <Field
+                name="name"
+                type="text"
+                help="Friendly name for the contest"
+                minlength={1}
+                maxlength={100}
+                required
+            />
+            <Field
+                name="description"
+                type="textarea"
+                help="Description of the contest"
+                minlength={1}
+                maxlength={1000}
+                required
+            />
+            <Field
+                name="registration_deadline"
+                type="datetime-local"
+                help="Deadline for registration"
+                required
+            />
+            <Field
+                name="start_time"
+                type="datetime-local"
+                help="Start date and time of the contest"
+                required
+            />
+            <Field
+                name="end_time"
+                type="datetime-local"
+                help="End date and time of the contest"
+                required
+            />
+            <Field
+                name="freeze_time"
+                label="Freeze Time (minutes)"
+                type="number"
+                min={0}
+                help="How many minutes before the contest ends should the leaderboard be frozen. Leave as 0 to not freeze the leaderboard"
+            />
+            <Field
+                name="penalty"
+                label="Penalty (minutes)"
+                type="number"
+                help="Penalty in minutes for each wrong submission. This will not be applied on compile or judge errors"
+                min={0}
+            />
+            <Field
+                name="max_participants"
+                type="number"
+                help="Maximum number of participants, leave blank for unlimited"
+                min={1}
+                max={1000}
+            />
+        </div>
+        <div class="flex flex-col gap-4 lg:w-1/2 lg:px-8">
+            <Field
+                name="add-judge"
+                label="Judges"
+                type="select"
+                id="new-judge-input"
+                options={[["~~Add~~", "Select a User To Add"]]}
+                noTemplate
+                value="~~Add~~"
+            >
+                <For sourceList="all_users" itemName="the_user" slot="options_templated">
+                    <option
+                        data-name={variable(
+                            "the_user.display_name | default(value=the_user.default_display_name)"
+                        )}
+                        data-avatar-url={getSrc("the_user", 35)}
+                        value={variable("the_user.id")}
+                    >
+                        <Variable
+                            expression="the_user.display_name | default(value=the_user.default_display_name)"
+                        />
+                        (<Variable expression="the_user.email" />)
+                    </option>
+                </For>
+            </Field>
+            <li id="judge-template" class="hidden flex-row gap-2">
+                <input type="hidden" name="JUDGE_ID" value="true" />
+                <Avatar noTemplate size={35} class="my-auto" name="NAME" />
+                <span class="my-auto grow">NAME</span>
+                <Button
+                    class="remove-judge-button"
+                    as="button"
+                    type="button"
+                    color="danger"
+                    size="sm"
+                    justIcon
+                    icon="tabler:trash"
+                    aria-label="Remove Judge"
+                />
+            </li>
+            <ul id="judge-list" class="flex flex-col gap-2 overflow-auto">
+                <For itemName="participant" sourceList="judges">
+                    <li id={`judge-li-${variable("participant.id")}`} class="flex flex-row gap-2">
+                        <input
+                            type="hidden"
+                            name=`judges[${variable("participant.id")}]`
+                            value="true"
+                        />
+                        <Avatar
+                            size={35}
+                            class="my-auto"
+                            name={variable("participant.display_name")}
+                            userVar="participant"
+                        />
+                        <span class="my-auto grow"
+                            ><Variable
+                                expression="participant.display_name | default(value=participant.default_display_name)"
+                            /></span
+                        >
+                        <Button
+                            class="remove-judge-button"
+                            as="button"
+                            type="button"
+                            color="danger"
+                            size="sm"
+                            justIcon
+                            icon="tabler:trash"
+                            aria-label="Remove Judge"
+                        />
+                    </li>
+                </For>
+            </ul>
+        </div>
+    </div>
+</Form>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        const addJudgeSelect = document.getElementById("new-judge-input") as HTMLSelectElement;
+        const judgeList = document.getElementById("judge-list") as HTMLUListElement;
+
+        if (!addJudgeSelect || !judgeList) return;
+
+        const removeJudgeCallback = (e: Event) => {
+            const target = e.target as HTMLButtonElement;
+            const judgeLi = target.closest("li") as HTMLLIElement;
+            judgeLi.remove();
+        };
+
+        document.querySelectorAll(".remove-judge-button").forEach((button) => {
+            button.addEventListener("click", removeJudgeCallback);
+        });
+
+        addJudgeSelect.value = "~~Add~~";
+
+        addJudgeSelect.onchange = () => {
+            const selectedOption = addJudgeSelect.options[addJudgeSelect.selectedIndex];
+            if (selectedOption.value === "~~Add~~") return;
+
+            addJudgeSelect.value = "~~Add~~";
+
+            if (document.getElementById(`judge-li-${selectedOption.value}`)) {
+                addJudgeSelect.value = "~~Add~~";
+                return;
+            }
+
+            const judgeTemplate = document.getElementById("judge-template") as HTMLLIElement;
+            const newJudge = judgeTemplate.cloneNode(true) as HTMLLIElement;
+            const avatarImg = newJudge.querySelector("img") as HTMLImageElement;
+
+            newJudge.id = `judge-li-${selectedOption.value}`;
+            avatarImg.src = selectedOption.dataset.avatarUrl!;
+            avatarImg.alt = selectedOption.dataset.name!;
+            newJudge.querySelector("span")!.textContent = selectedOption.dataset.name!;
+            newJudge.querySelector("button")!.addEventListener("click", removeJudgeCallback);
+            newJudge.querySelector("input")!.name = `judges[${selectedOption.value}]`;
+
+            judgeList.appendChild(newJudge);
+
+            newJudge.classList.remove("hidden");
+            newJudge.classList.add("flex");
+        };
+    });
+</script>

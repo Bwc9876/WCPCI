@@ -1,42 +1,18 @@
-use super::{
-    users::{User, UserMigration},
-    CallbackHandler,
-};
+use super::prelude::*;
 
 pub struct GoogleLogin(pub String);
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Name {
-    pub given_name: String,
-    pub family_name: String,
-}
+const SCOPES: [&str; 2] = [
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+];
 
 #[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EmailAddress {
-    pub value: String,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UserInfo {
-    pub email_addresses: Vec<EmailAddress>,
-    pub names: Vec<Name>,
+    pub user_id: String,
 }
 
-impl UserMigration for UserInfo {
-    fn migrate(self, default_language: &str) -> User {
-        let email = self.email_addresses.first().unwrap().value.clone();
-        let name = self
-            .names
-            .first()
-            .map(|n| format!("{} {}", n.given_name, n.family_name))
-            .unwrap_or_else(|| email.clone());
-        User::temporary(email, name, default_language)
-    }
-}
-
+#[rocket::async_trait]
 impl CallbackHandler for GoogleLogin {
     type IntermediateUserInfo = UserInfo;
 
@@ -44,9 +20,62 @@ impl CallbackHandler for GoogleLogin {
 
     fn get_request_client(&self) -> reqwest::RequestBuilder {
         reqwest::Client::new()
-            .get("https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses")
+            .get(format!(
+                "https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}",
+                self.0
+            ))
             .header("User-Agent", "Test-App")
             .header("Accept", "application/json")
             .header("Authorization", format!("Bearer {}", self.0))
     }
+
+    async fn get_user(
+        &self,
+        db: &mut DbPoolConnection,
+        user: Self::IntermediateUserInfo,
+    ) -> Result<Option<User>> {
+        let res = sqlx::query_as!(User, "SELECT * FROM user WHERE google_id = ?", user.user_id)
+            .fetch_optional(&mut **db)
+            .await?;
+        Ok(res)
+    }
+
+    async fn link_to(
+        &self,
+        db: &mut DbPoolConnection,
+        user: &User,
+        user_info: Self::IntermediateUserInfo,
+    ) -> Result<bool> {
+        let other_exists = sqlx::query!(
+            "SELECT * FROM user WHERE google_id = ? AND id != ?",
+            user_info.user_id,
+            user.id
+        )
+        .fetch_optional(&mut **db)
+        .await?
+        .is_some();
+
+        if other_exists {
+            return Ok(false);
+        }
+
+        let res = sqlx::query!(
+            "UPDATE user SET google_id = ? WHERE id = ?",
+            user_info.user_id,
+            user.id
+        )
+        .execute(&mut **db)
+        .await
+        .map(|r| r.rows_affected() == 1)?;
+        Ok(res)
+    }
+
+    async fn unlink(db: &mut DbPoolConnection, user: &User) -> Result<SqliteQueryResult> {
+        sqlx::query!("UPDATE user SET github_id = NULL WHERE id = ?", user.id)
+            .execute(&mut **db)
+            .await
+            .context("Error unlinking Google account")
+    }
 }
+
+oauth_fairing!("Google", google, GoogleLogin, SCOPES);

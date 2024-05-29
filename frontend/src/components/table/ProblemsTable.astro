@@ -1,0 +1,73 @@
+---
+import { variable } from "@/lib/tera";
+import TemplatedTable from "./TemplatedTable.astro";
+import If from "../tera/If.astro";
+import Button from "../Button.astro";
+
+export type Props = {
+    class?: string;
+    overrideEmptyText?: string;
+};
+
+const { overrideEmptyText, class: className } = Astro.props;
+---
+
+<TemplatedTable
+    class={className ?? ""}
+    idColName="slug"
+    itemLink={{ action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}` }}
+    actions={[
+        {
+            name: "Edit",
+            condition: "logged_in and can_edit",
+            action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/edit`,
+            icon: "tabler:pencil"
+        },
+        {
+            name: "Export",
+            condition: "logged_in and can_edit",
+            action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/export`,
+            icon: "tabler:database-export"
+        },
+        {
+            name: "Delete",
+            condition: "logged_in and can_edit",
+            action: (id: string) => `/contests/${variable("contest.id")}/problems/${id}/delete`,
+            icon: "tabler:trash",
+            class: "text-red-500"
+        }
+    ]}
+    listName="problems"
+    itemName="problem"
+    columns={[{ name: "name" }, { name: "cpu_time", label: "CPU Time (seconds)" }]}
+    emptyText={overrideEmptyText ?? "No Problems Have Been Made Yet."}
+/>
+<div class="flex flex-row gap-2">
+    <span class="grow"></span>
+    <If debugEval={true} expression="can_edit">
+        <Button
+            class="w-fit self-end"
+            as="a"
+            icon="tabler:plus"
+            href={`/contests/${variable("contest.id")}/problems/new`}>Create New Problem</Button
+        >
+    </If>
+    <If debugEval={true} expression="logged_in and participant or can_edit">
+        <Button
+            color="secondary"
+            class="w-fit self-end"
+            as="a"
+            icon="tabler:package-export"
+            href={`/contests/${variable("contest.id")}/export`}>Export Solutions</Button
+        >
+    </If>
+    <If debugEval={true} expression="can_edit">
+        <Button
+            class="w-fit self-end"
+            as="a"
+            icon="tabler:database-import"
+            color="secondary"
+            href={`/contests/${variable("contest.id")}/problems/import`}>Import Problem</Button
+        >
+    </If>
+</div>

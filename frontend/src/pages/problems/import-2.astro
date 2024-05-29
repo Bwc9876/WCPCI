@@ -1,0 +1,26 @@
+---
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import ProblemForm from "@/components/forms/ProblemForm.astro";
+import { variable } from "@/lib/tera";
+import Title from "@/components/Title.astro";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    path=`/contests/${variable("contest.id")}/problems/import`
+    title="Import Problem"
+    makeTile
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Problems", `/contests/${variable("contest.id")}/problems`],
+            ["Import", `/contests/${variable("contest.id")}/problems/import`]
+        ]}
+    />
+    <Title>Create Problem</Title>
+    <ProblemForm action={`/contests/${variable("contest.id")}/problems/new`} submitWord="Create" />
+</ContestLayout>

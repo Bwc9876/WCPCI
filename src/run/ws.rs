@@ -7,22 +7,21 @@ use rocket::{
 };
 use rocket_ws::{stream::DuplexStream, WebSocket};
 use serde::Deserialize;
-use tokio::select;
+use tokio::{
+    select,
+    time::{self, Duration, Instant},
+};
 
 use crate::{
-    auth::users::User,
+    auth::users::{Admin, User},
+    contests::Contest,
     db::DbConnection,
+    error::prelude::*,
     problems::{Problem, TestCase},
     run::job::{JobOperation, JobRequest},
 };
 
 use super::{JobState, JobStateReceiver, ManagerHandle};
-
-#[derive(Responder)]
-pub enum WsHttpResponse {
-    Accept(rocket_ws::Channel<'static>),
-    Reject(Status),
-}
 
 // Keep in sync with TypeScript type
 #[derive(Deserialize)]
@@ -70,6 +69,7 @@ enum LoopRes {
     ChangeJobRx(JobStateReceiver),
     JobStart(JobRequest),
     Pong(Vec<u8>),
+    Ping,
     Break,
     NoOp,
 }
@@ -81,9 +81,10 @@ async fn websocket_loop(
     test_cases: Vec<TestCase>,
     user_id: i64,
 ) {
-    let _manager = manager.lock().await;
+    let mut _manager = manager.lock().await;
     let mut started_rx = _manager.subscribe();
-    let mut shutdown_rx = _manager.subscribe_shutdown();
+    let mut shutdown_rx = _manager.subscribe_shutdown(&user_id).await;
+    let mut updated_rx = _manager.get_handle_for_problem(problem.id);
     let state_rx = _manager.get_handle(user_id, problem.id).await;
     drop(_manager);
     // Fake receiver to start the loop, will be replaced by the real one
@@ -110,8 +111,15 @@ async fn websocket_loop(
         }
     }
 
+    let sleep = time::sleep(Duration::from_secs(10));
+    tokio::pin!(sleep);
+
     loop {
         let res = select! {
+            () = &mut sleep => {
+                sleep.as_mut().reset(Instant::now() + Duration::from_secs(10));
+                LoopRes::Ping
+            },
             Ok((user_id_incoming, problem_id, rx)) = started_rx.recv() => {
                 if user_id_incoming == user_id && problem_id == problem.id {
                     LoopRes::ChangeJobRx(rx)
@@ -132,6 +140,7 @@ async fn websocket_loop(
                                     let job_to_start = JobRequest {
                                         user_id,
                                         problem_id: problem.id,
+                                        contest_id: problem.contest_id,
                                         program: request.program().to_string(),
                                         language: request.language().to_string(),
                                         cpu_time: problem.cpu_time,
@@ -166,6 +175,9 @@ async fn websocket_loop(
             Ok(()) = shutdown_rx.changed() => {
                 LoopRes::Break
             }
+            Ok(()) = updated_rx.changed() => {
+                LoopRes::Break
+            }
         };
 
         let mut state_rx_changed_msg = None;
@@ -193,6 +205,14 @@ async fn websocket_loop(
                 let res = stream.send(rocket_ws::Message::Text(msg)).await;
                 if let Err(e) = res {
                     error!("Error sending message: {:?}", e);
+                }
+            }
+            LoopRes::Ping => {
+                let res = stream
+                    .send(rocket_ws::Message::Ping(vec![5, 4, 2, 6, 7, 3, 2, 5, 3]))
+                    .await;
+                if let Err(e) = res {
+                    error!("Error sending ping: {:?}", e);
                 }
             }
             LoopRes::Pong(e) => {
@@ -226,31 +246,32 @@ async fn websocket_loop(
     }
 }
 
-#[get("/ws/<problem_id>")]
+#[get("/ws/<contest_id>/<problem_id>")]
 pub async fn ws_channel(
     ws: WebSocket,
+    contest_id: i64,
     problem_id: i64,
     user: &User,
+    admin: Option<&Admin>,
     manager: &State<ManagerHandle>,
     mut db: DbConnection,
-) -> WsHttpResponse {
-    if let Some(problem) = Problem::get(&mut db, problem_id).await {
+) -> ResultResponse<rocket_ws::Channel<'static>> {
+    Contest::get_or_404_assert_started(&mut db, contest_id, Some(user), admin).await?;
+    let problem = Problem::by_id(&mut db, contest_id, problem_id)
+        .await?
+        .ok_or(Status::NotFound)?;
+
+    let handle = (*manager).clone();
+    let cases = TestCase::get_for_problem(&mut db, problem_id).await?;
+    if !cases.is_empty() {
         let user_id = user.id;
-        let handle = (*manager).clone();
-        let cases = TestCase::get_for_problem(&mut db, problem_id)
-            .await
-            .unwrap_or(vec![]);
-        if !cases.is_empty() {
-            WsHttpResponse::Accept(ws.channel(move |stream| {
-                Box::pin(async move {
-                    websocket_loop(stream, handle, problem, cases, user_id).await;
-                    Ok(())
-                })
-            }))
-        } else {
-            WsHttpResponse::Reject(Status::NotFound)
-        }
+        Ok(ws.channel(move |stream| {
+            Box::pin(async move {
+                websocket_loop(stream, handle, problem, cases, user_id).await;
+                Ok(())
+            })
+        }))
     } else {
-        WsHttpResponse::Reject(Status::NotFound)
+        Err(Status::NotFound.into())
     }
 }

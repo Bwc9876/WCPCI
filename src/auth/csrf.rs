@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use log::info;
-use rand::{rngs::OsRng, RngCore};
+use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
 use rocket::{
     fairing::AdHoc,
     futures::lock::Mutex,
@@ -13,7 +13,7 @@ use rocket::{
 };
 use serde::Serialize;
 
-use crate::auth::sessions::Session;
+use crate::{auth::sessions::Session, error::prelude::*};
 
 #[derive(Debug)]
 pub struct CsrfTokens {
@@ -101,16 +101,13 @@ impl CsrfToken {
     pub const TOKEN_COOKIE_LIFETIME_MINUTES: i64 = 60;
 
     pub fn generate() -> Self {
-        let mut token = Vec::with_capacity(Self::TOKEN_LENGTH);
-
-        let mut rng = OsRng;
-
-        for _ in 0..Self::TOKEN_LENGTH {
-            let random_byte = (rng.next_u32() % 256) as u8;
-            token.push(format!("{:02x}", random_byte));
-        }
-
-        Self(token.join(""))
+        Self(
+            OsRng
+                .sample_iter(&Alphanumeric)
+                .take(Self::TOKEN_LENGTH)
+                .map(char::from)
+                .collect(),
+        )
     }
 }
 
@@ -125,13 +122,19 @@ impl Serialize for CsrfToken {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for &'r CsrfToken {
-    type Error = String;
+    type Error = &'r anyhow::Error;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        let token_result = req
+        let token_result: &Result<CsrfToken> = req
             .local_cache_async(async {
-                let cookies = req.guard::<&CookieJar<'_>>().await.succeeded()?;
-                let tokens = req.guard::<&State<ArCsrfTokens>>().await.succeeded()?;
+                let cookies = req
+                    .guard::<&CookieJar<'_>>()
+                    .await
+                    .success_or_else(|| anyhow!("Couldn't get cookies"))?;
+                let tokens = req
+                    .guard::<&State<ArCsrfTokens>>()
+                    .await
+                    .success_or_else(|| anyhow!("Couldn't get tokens"))?;
                 let session_token = cookies
                     .get_private(Session::TOKEN_COOKIE_NAME)
                     .map(|c| c.value().to_string());
@@ -143,7 +146,7 @@ impl<'r> FromRequest<'r> for &'r CsrfToken {
                         .same_site(SameSite::Strict)
                         .max_age(Duration::minutes(CsrfToken::TOKEN_COOKIE_LIFETIME_MINUTES)),
                 );
-                Some(token)
+                Ok(token)
             })
             .await;
 
@@ -157,7 +160,7 @@ pub struct VerifyCsrfToken();
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for &'r VerifyCsrfToken {
-    type Error = String;
+    type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let token_result = req

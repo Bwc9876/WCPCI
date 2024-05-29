@@ -6,32 +6,41 @@
         "dev": "astro dev",
         "start": "astro dev",
         "check": "astro check",
-        "build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\"",
+        "format-check": "prettier --check .",
+        "build": "astro build && renamer -s --find html --replace html.tera \"./dist/**\" && node cspOutputer.mjs",
+        "csp": "node cspOutputer.mjs",
         "preview": "astro preview",
         "astro": "astro",
         "format": "prettier --write .",
-        "watch": "pnpm build && chokidar \"**/*.astro\" \"**/*.mjs\" \"public/**\" -i \"node_modules\" -i \"dist\" -c \"pnpm build\""
+        "watch": "npm run build && chokidar \"**/*.astro\" \"**/*.mjs\" \"public/**\" -i \"node_modules\" -i \"src/generated\" -i \"dist\" -c \"npm run build\""
     },
     "dependencies": {
-        "@astrojs/check": "^0.5.9",
+        "@astrojs/check": "^0.5.10",
         "@astrojs/tailwind": "^5.1.0",
         "@monaco-editor/loader": "^1.4.0",
-        "astro": "^4.5.8",
+        "astro": "^4.6.3",
         "astro-icon": "^1.1.0",
+        "canvas-confetti": "^1.9.2",
         "chokidar-cli": "^3.0.0",
         "highlight.js": "^11.9.0",
-        "katex": "^0.16.9",
+        "katex": "^0.16.10",
         "lorem-ipsum": "^2.0.8",
         "monaco-editor": "^0.47.0",
         "renamer": "^5.0.0",
-        "tailwindcss": "^3.4.1",
-        "typescript": "^5.4.3"
+        "tailwindcss": "^3.4.3",
+        "typescript": "^5.4.5"
     },
     "devDependencies": {
-        "@iconify-json/tabler": "^1.1.109",
+        "@fontsource/roboto": "^5.0.13",
+        "@fontsource/roboto-mono": "^5.0.18",
+        "@iconify-json/tabler": "^1.1.110",
+        "@kindspells/astro-shield": "^1.3.5",
+        "@types/canvas-confetti": "^1.6.4",
         "@types/katex": "^0.16.7",
         "prettier": "^3.2.5",
         "prettier-plugin-astro": "^0.13.0",
-        "prettier-plugin-tailwindcss": "^0.5.12"
+        "prettier-plugin-tailwindcss": "^0.5.14",
+        "sass": "^1.75.0",
+        "sharp": "^0.33.3"
     }
 }

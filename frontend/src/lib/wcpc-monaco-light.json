@@ -38,7 +38,7 @@
         "terminal.foreground": "#3a2a3c",
         "tab.inactiveForeground": "#3a2a3c",
         "breadcrumb.foreground": "#3a2a3c",
-        "editor.background": "#eae1ea",
+        "editor.background": "#f6eef7",
         "activityBar.activeBackground": "#eae1ea",
         "activityBar.background": "#eae1ea",
         "titleBar.inactiveBackground": "#eae1ea",

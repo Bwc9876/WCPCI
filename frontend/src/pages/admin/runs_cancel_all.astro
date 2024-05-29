@@ -1,0 +1,18 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
+---
+
+<Layout noIndex makeTile title="Cancel Run" path="/admin/users">
+    <DeleteForm
+        title="Cancel All Runs"
+        breadcrumb={[
+            ["Admin", "/admin"],
+            ["Runs", "/admin/runs"],
+            ["Cancel", `/admin/runs/cancel-all`]
+        ]}
+        backLink="/admin/runs"
+        noAppendWarning
+        prompt={`Are you sure you want to cancel ALL runs? They will not be written to the database nor count as a penalty.`}
+    />
+</Layout>

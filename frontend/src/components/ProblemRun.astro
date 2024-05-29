@@ -12,9 +12,10 @@ export interface Props extends HTMLAttributes<"div"> {
     objName: string;
     casesName: string;
     size?: number;
+    timeExpr?: string;
 }
 
-const { class: className, objName, casesName, size = 30, ...rest } = Astro.props;
+const { class: className, objName, casesName, timeExpr, size = 30, ...rest } = Astro.props;
 
 const listExpr = `range(end=${objName}.total_cases | default(value=${casesName}))`;
 const statusExprExists = `${tag(`if ${objName}.error and i == ${objName}.amount_run`)}error${tag(`elif ${objName}.error and i > ${objName}.amount_run or not ${objName}.error and ${objName}.amount_run == 0`)}empty${tag("else")}success${tag("endif")}`;
@@ -23,6 +24,13 @@ const statusExpr = `${tag(`if ${objName}`)}${statusExprExists}${tag("else")}empt
 
 <div class:list={["flex flex-row gap-2 rounded-2xl", className ?? ""]} {...rest}>
     <div class="my-auto flex flex-row flex-wrap gap-2">
+        {
+            timeExpr && (
+                <span class="my-auto text-lg font-bold">
+                    <Variable expression={timeExpr} />
+                </span>
+            )
+        }
         <For sourceList={listExpr} itemName="i">
             <CaseIndicator size={size} data-case-number={variable("i")} status={statusExpr} />
         </For>
@@ -39,7 +47,7 @@ const statusExpr = `${tag(`if ${objName}`)}${statusExprExists}${tag("else")}empt
         <span id="runs-msg" class="my-auto">
             <If expression={`${objName}.error`}>
                 <Variable expression={`${objName}.error`} />
-                <ElseIf expression={`${objName}`}> Passed! </ElseIf>
+                <ElseIf expression={`${objName}`}>All Tests Passed!</ElseIf>
             </If>
         </span>
         <Icon name="tabler:x" class="my-auto hidden group-data-[status=error]:inline" size={25} />

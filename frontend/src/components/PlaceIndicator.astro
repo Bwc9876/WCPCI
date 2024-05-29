@@ -1,0 +1,63 @@
+---
+import { variable } from "@/lib/tera";
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
+import Variable from "./tera/Variable.astro";
+
+export interface Props extends HTMLAttributes<"span"> {
+    placeVar: string;
+}
+
+const { placeVar, class: className, ...rest } = Astro.props;
+---
+
+<span
+    data-place={variable(placeVar)}
+    class:list={[
+        "group relative flex flex-row justify-center gap-2 text-center align-middle",
+        className ?? ""
+    ]}
+    {...rest}
+>
+    <Icon
+        size={35}
+        name="tabler:trophy-filled"
+        class:list={[
+            "hidden",
+            "m-auto",
+            "relative",
+            "group-[[data-place='1']]:inline",
+            "group-[[data-place='2']]:inline",
+            "group-[[data-place='3']]:inline",
+            "group-[[data-place='1']]:text-[var(--first-color)]",
+            "group-[[data-place='2']]:text-[var(--second-color)]",
+            "group-[[data-place='3']]:text-[var(--third-color)]"
+        ]}
+    />
+    <span
+        class:list={[
+            "m-auto",
+            "font-black",
+            "text-xl",
+            "inset-0",
+            "flex",
+            "align-middle",
+            "justify-center",
+            "group-[[data-place='1']]:text-text-100",
+            "group-[[data-place='1']]:text-sm",
+            "group-[[data-place='1']]:absolute",
+            "group-[[data-place='2']]:text-text-100",
+            "group-[[data-place='2']]:text-sm",
+            "group-[[data-place='2']]:absolute",
+            "group-[[data-place='3']]:text-text-100",
+            "group-[[data-place='3']]:text-sm",
+            "group-[[data-place='3']]:absolute"
+        ]}
+    >
+        <span
+            class="place-text relative group-[[data-place='1']]:top-[6px] group-[[data-place='2']]:top-[6px] group-[[data-place='3']]:top-[6px]"
+        >
+            <Variable expression={placeVar} />
+        </span>
+    </span>
+</span>

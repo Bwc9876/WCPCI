@@ -1,0 +1,70 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Link from "@/components/Link.astro";
+import Title from "@/components/Title.astro";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import Variable from "@/components/tera/Variable.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    makeTile
+    title={`Completions for ${variable("problem.name")}`}
+    path=`/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}`
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Admin", `/contests/${variable("contest.id")}/admin`],
+            ["Runs", `/contests/${variable("contest.id")}/admin/runs`],
+            [
+                "Completions",
+                `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}`
+            ]
+        ]}
+    />
+    <Title>Completions for <Variable expression="problem.name" /></Title>
+    <p>
+        This page outlines how / if contestants have completed this problem, you can override their
+        completion time, times failed, etc.
+    </p>
+    <TemplatedTable
+        listName="rows"
+        itemName="row"
+        idColName="participant.p_id"
+        columns={[
+            {
+                name: "user.display_name | default(value=row.user.default_display_name)",
+                label: "User",
+                avatarVar: "row.user",
+                makeLink: `/profile/${variable("row.user.id")}`
+            },
+            {
+                name: "completion_time",
+                overrideList: "formatted_times"
+            },
+            {
+                name: "completion.number_wrong",
+                label: "Wrong Submissions"
+            }
+        ]}
+        actions={[
+            {
+                name: "Edit",
+                icon: "tabler:pencil",
+                action: (id) =>
+                    `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}/edit/${id}`
+            },
+            {
+                name: "View Code",
+                icon: "tabler:code",
+                action: (id) =>
+                    `/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}/view/${id}`
+            }
+        ]}
+    />
+</ContestLayout>

@@ -1,0 +1,19 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { variable } from "@/lib/tera";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
+---
+
+<Layout noIndex makeTile title="Cancel Run" path="/admin/users">
+    <DeleteForm
+        title="Cancel Run"
+        breadcrumb={[
+            ["Admin", "/admin"],
+            ["Runs", "/admin/runs"],
+            ["Cancel", `/admin/runs/${variable("target_user.id")}/${variable("problem_id")}/cancel`]
+        ]}
+        backLink="/admin/runs"
+        noAppendWarning
+        prompt={`Are you sure you want to cancel the run started by ${variable("target_user.email")}? It will not be written to the database nor count as a penalty.`}
+    />
+</Layout>

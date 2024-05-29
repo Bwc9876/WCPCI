@@ -1,0 +1,47 @@
+---
+import Link from "@/components/Link.astro";
+import If from "@/components/tera/If.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Layout from "@/layouts/Layout.astro";
+import type { Props as LayoutProps } from "@/layouts/Layout.astro";
+import { teraIf, variable } from "@/lib/tera";
+
+export type Props = { showAdminVar: string } & LayoutProps;
+
+const { title, navSpacerClass, showAdminVar, ...rest } = Astro.props;
+---
+
+<Layout
+    title={title ? `${title} - ${variable("contest.name")}` : variable("contest.name")}
+    navSpacerClass={`${teraIf("logged_in", "md:block", "lg:block", "md:block", true)}${navSpacerClass ? ` ${navSpacerClass}` : ""}`}
+    {...rest}
+>
+    <Fragment slot="head">
+        <slot name="head" />
+    </Fragment>
+    <Fragment slot="nav-left">
+        <Link
+            color="white"
+            class="my-auto lg:border-l-2 lg:border-l-secondary-200 lg:ps-4"
+            href={`/contests/${variable("contest.id")}`}
+        >
+            <Variable expression="contest.name" />
+        </Link>
+        <Link color="white" class="my-auto" href={`/contests/${variable("contest.id")}/problems`}>
+            Problems
+        </Link>
+        <Link
+            color="white"
+            class="my-auto"
+            href={`/contests/${variable("contest.id")}/leaderboard`}
+        >
+            Leaderboard
+        </Link>
+        <If expression={showAdminVar}>
+            <Link color="white" class="my-auto" href={`/contests/${variable("contest.id")}/admin`}>
+                Contest Admin
+            </Link>
+        </If>
+    </Fragment>
+    <slot />
+</Layout>

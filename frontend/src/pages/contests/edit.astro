@@ -1,0 +1,26 @@
+---
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import ContestForm from "@/components/forms/ContestForm.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import { variable } from "@/lib/tera";
+import Title from "@/components/Title.astro";
+import Variable from "@/components/tera/Variable.astro";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    path=`/contests/${variable("contest.id")}/edit`
+    title="Edit Contest"
+    makeTile
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}/`],
+            ["Edit", `/contests/${variable("contest.id")}/edit`]
+        ]}
+    />
+    <Title><Variable expression="contest.name" /></Title>
+    <ContestForm />
+</ContestLayout>

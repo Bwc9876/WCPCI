@@ -1,4 +1,8 @@
-/target
+target/
+result
+result-*
+saml_testing/
 database.sqlite*
 .sqlx/
-.dev.env
+.*.env
+*.qcow2

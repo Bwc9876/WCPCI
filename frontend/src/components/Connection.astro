@@ -1,0 +1,44 @@
+---
+import { Icon } from "astro-icon/components";
+import Button from "./Button.astro";
+import If from "./tera/If.astro";
+import Else from "./tera/Else.astro";
+
+export type Props = {
+    label: string;
+    name: string;
+    icon: string;
+    userVar?: string;
+};
+
+const { label, name, icon, userVar = "user" } = Astro.props;
+---
+
+<div class="flex flex-row gap-2 rounded-2xl bg-background-200 p-2">
+    <Icon class="hidden" name="tabler:link-off" />
+    <Icon class="hidden" name="tabler:link" />
+    <Icon class="my-auto" name={icon} size={32} />
+    <span class="my-auto grow text-xl">{label}</span>
+    <If expression=`${userVar}.${name}_id`>
+        <Button
+            class="my-auto"
+            as="a"
+            href={`/auth/${name}/unlink`}
+            color="danger"
+            icon="tabler:link-off"
+        >
+            Unlink
+        </Button>
+        <Else slot="else">
+            <Button
+                class="my-auto bg-secondary-500 hover:bg-secondary-600"
+                as="a"
+                href={`/auth/${name}/link`}
+                color="custom"
+                icon="tabler:link"
+            >
+                Link
+            </Button>
+        </Else>
+    </If>
+</div>

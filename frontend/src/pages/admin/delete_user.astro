@@ -1,0 +1,18 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { variable } from "@/lib/tera";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
+---
+
+<Layout noIndex makeTile title="Delete User" path="/admin/users">
+    <DeleteForm
+        title="Delete User"
+        breadcrumb={[
+            ["Admin", "/admin"],
+            ["Users", "/admin/users"],
+            ["Delete User", `/admin/users/${variable("target_user.id")}/delete`]
+        ]}
+        backLink="/admin/users"
+        prompt={`Are you sure you want to delete user ${variable("user.email")} from WCPC? This will also clear all their submissions and scores.`}
+    />
+</Layout>

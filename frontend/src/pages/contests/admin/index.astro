@@ -1,0 +1,86 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Button from "@/components/Button.astro";
+import Tile from "@/components/Tile.astro";
+import Title from "@/components/Title.astro";
+import If from "@/components/tera/If.astro";
+import Variable from "@/components/tera/Variable.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    class="flex flex-col gap-4"
+    path={`/contests/${variable("contest.id")}/admin`}
+    title="Contest Admin"
+>
+    <Tile>
+        <BreadCrumb
+            entries={[
+                ["Contests", "/contests"],
+                [variable("contest.name"), `/contests/${variable("contest.id")}`],
+                ["Admin", `/contests/${variable("contest.id")}/admin`]
+            ]}
+        />
+        <Title>Contest Admin - <Variable expression="contest.name" /></Title>
+    </Tile>
+    <Tile class="flex flex-col gap-2">
+        <h2 class="text-2xl font-bold">Actions</h2>
+        <div class="flex flex-row flex-wrap gap-2">
+            <Button
+                color="secondary"
+                class="w-fit"
+                size="lg"
+                as="a"
+                href={`/contests/${variable("contest.id")}`}
+                icon="tabler:eye"
+            >
+                View Contest
+            </Button>
+            <If expression="is_admin(user=user)">
+                <Button
+                    color="secondary"
+                    class="w-fit"
+                    size="lg"
+                    as="a"
+                    href={`/contests/${variable("contest.id")}/edit`}
+                    icon="tabler:pencil"
+                >
+                    Edit Contest
+                </Button>
+            </If>
+            <Button
+                color="secondary"
+                class="w-fit"
+                size="lg"
+                as="a"
+                href={`/contests/${variable("contest.id")}/problems`}
+                icon="tabler:puzzle"
+            >
+                Manage Problems
+            </Button>
+            <Button
+                color="secondary"
+                class="w-fit"
+                size="lg"
+                as="a"
+                href={`/contests/${variable("contest.id")}/admin/participants`}
+                icon="tabler:user"
+            >
+                Manage Participants
+            </Button>
+            <Button
+                color="secondary"
+                class="w-fit"
+                size="lg"
+                as="a"
+                href={`/contests/${variable("contest.id")}/admin/runs`}
+                icon="tabler:player-play"
+            >
+                Manage Runs
+            </Button>
+        </div>
+    </Tile>
+</ContestLayout>

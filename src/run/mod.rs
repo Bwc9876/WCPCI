@@ -5,7 +5,7 @@ use rocket::{fairing::AdHoc, routes};
 use rocket_db_pools::Database as R_Database;
 use tokio::sync::Mutex;
 
-use crate::db::Database;
+use crate::{db::Database, leaderboard::LeaderboardManagerHandle};
 
 use self::manager::RunManager;
 
@@ -39,9 +39,12 @@ pub fn stage() -> AdHoc {
             None => return Err(rocket),
         };
 
-        let shutdown_fairing = AdHoc::on_shutdown("Shutdown Runners / Sockets", |_| {
+        let shutdown_fairing = AdHoc::on_shutdown("Shutdown Runners / Sockets", |rocket| {
             Box::pin(async move {
                 tx.send(true).ok();
+                if let Some(manager) = rocket.state::<ManagerHandle>() {
+                    manager.lock().await.shutdown().await;
+                }
             })
         });
 
@@ -66,7 +69,10 @@ pub fn stage() -> AdHoc {
                     }
                 };
                 let code_info = serde_json::to_string(&config.languages).unwrap();
-                let manager = manager::RunManager::new(config.clone(), pool, rx);
+                let leaderboard_manager =
+                    rocket.state::<LeaderboardManagerHandle>().unwrap().clone();
+                let manager =
+                    manager::RunManager::new(config.clone(), leaderboard_manager, pool, rx);
                 Ok(rocket
                     .attach(shutdown_fairing)
                     .manage::<CodeInfo>(CodeInfo {

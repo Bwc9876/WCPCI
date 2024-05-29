@@ -1,0 +1,38 @@
+---
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import type { Props as TemplatedTableProps } from "@/components/table/TemplatedTable.astro";
+
+import { variable } from "@/lib/tera";
+
+export type Props = {
+    rowVar?: string;
+    actions: TemplatedTableProps["actions"];
+    addCols?: TemplatedTableProps["columns"];
+};
+
+const { actions, addCols, rowVar } = Astro.props;
+
+const colPrefix = rowVar ? `${rowVar}.` : "";
+---
+
+<TemplatedTable
+    emptyText="No Active Runs"
+    idColName="user.id"
+    actions={actions}
+    listName="rows"
+    itemName="row"
+    columns={[
+        {
+            name: `${colPrefix}user.display_name | default(value=row.${colPrefix}user.default_display_name)`,
+            label: "User",
+            avatarVar: `${colPrefix}row.user`,
+            makeLink: `/profile/${variable(`row.${colPrefix}user.id`)}`
+        },
+        {
+            name: `${colPrefix}problem.slug`,
+            label: "Problem",
+            makeLink: `/contests/${variable(`row.${colPrefix}problem.contest_id`)}/problems/${variable(`row.${colPrefix}problem.slug`)}`
+        },
+        ...(addCols ?? [])
+    ]}
+/>

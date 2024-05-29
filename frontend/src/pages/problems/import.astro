@@ -1,0 +1,73 @@
+---
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Button from "@/components/Button.astro";
+import Field from "@/components/Field.astro";
+import Form from "@/components/Form.astro";
+import Title from "@/components/Title.astro";
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { variable } from "@/lib/tera";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    makeTile
+    title="Import Problem"
+    path={`/contests/${variable("contest.id")}/problems/import`}
+>
+    <BreadCrumb
+        entries={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Problems", `/contests/${variable("contest.id")}/problems`],
+            ["Import", `/contests/${variable("contest.id")}/problems/import`]
+        ]}
+    />
+    <Title>Import Problem from JSON</Title>
+    <Form>
+        <Field
+            help="Enter the JSON for the problem when you exported it"
+            type="textarea"
+            name="data"
+            id="data"
+            rows="10"
+            label="Problem JSON"
+            required
+        />
+        <Button
+            id="upload-file"
+            class="w-fit"
+            as="button"
+            type="button"
+            icon="tabler:file"
+            color="secondary"
+        >
+            Upload File
+        </Button>
+    </Form>
+</ContestLayout>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        const uploadButton = document.getElementById("upload-file")! as HTMLButtonElement;
+        const dataField = document.getElementById("data")! as HTMLTextAreaElement;
+
+        uploadButton.onclick = () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".json";
+            input.onchange = () => {
+                const file = input.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const data = reader.result as string;
+                    dataField.value = data;
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+    });
+</script>

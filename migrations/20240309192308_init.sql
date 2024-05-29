@@ -3,13 +3,17 @@
 
 CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY NOT NULL,
+    sso_id TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
+    profile_picture_source TEXT NOT NULL DEFAULT 'gravatar',
     bio TEXT NOT NULL DEFAULT '',
-    default_display_name VARCHAR(100) NOT NULL,
+    default_display_name TEXT NOT NULL,
     display_name VARCHAR(32),
     default_language TEXT NOT NULL,
     color_scheme TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    github_id INTEGER UNIQUE,
+    google_id TEXT UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS session (
@@ -27,28 +31,36 @@ CREATE TABLE IF NOT EXISTS contest (
     description TEXT,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
+    freeze_time INTEGER NOT NULL,
     registration_deadline TIMESTAMP NOT NULL,
+    penalty INTEGER NOT NULL,
     max_participants INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS participant (
-    id INTEGER PRIMARY KEY NOT NULL,
+    p_id INTEGER PRIMARY KEY NOT NULL, -- sqlx is stupid
     user_id INTEGER NOT NULL,
     contest_id INTEGER NOT NULL,
+    is_judge BOOLEAN NOT NULL,
     registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     FOREIGN KEY (contest_id) REFERENCES contest(id) ON DELETE CASCADE
+    UNIQUE (user_id, contest_id)
 );
 
 CREATE TABLE IF NOT EXISTS problem (
     id INTEGER PRIMARY KEY NOT NULL,
+    contest_id INTEGER NOT NULL,
     name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
     description TEXT NOT NULL,
-    cpu_time INTEGER NOT NULL
+    cpu_time INTEGER NOT NULL,
+    FOREIGN KEY (contest_id) REFERENCES contest(id) ON DELETE CASCADE
+    UNIQUE (contest_id, slug)
 );
 
-CREATE TABLE test_case (
+CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER PRIMARY KEY NOT NULL,
     problem_id INTEGER NOT NULL,
     ord INTEGER NOT NULL,
@@ -60,13 +72,27 @@ CREATE TABLE test_case (
     UNIQUE (problem_id, ord)
 );
 
-CREATE TABLE judge_run (
+CREATE TABLE IF NOT EXISTS judge_run (
     id INTEGER PRIMARY KEY NOT NULL,
     problem_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     amount_run INTEGER NOT NULL,
     total_cases INTEGER NOT NULL,
     error TEXT,
-    ran_at TIMESTAMP NOT NULL
+    program VARCHAR(100000) NOT NULL,
+    language TEXT NOT NULL,
+    ran_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+    UNIQUE (problem_id, user_id, ran_at)
 );
 
+CREATE TABLE IF NOT EXISTS problem_completion (
+    problem_id INTEGER NOT NULL,
+    participant_id INTEGER NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    number_wrong INTEGER NOT NULL,
+    FOREIGN KEY (problem_id) REFERENCES problem(id) ON DELETE CASCADE,
+    FOREIGN KEY (participant_id) REFERENCES participant(p_id) ON DELETE CASCADE,
+    UNIQUE (problem_id, participant_id)
+);

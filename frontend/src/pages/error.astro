@@ -1,0 +1,45 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Variable from "@/components/tera/Variable.astro";
+import Button from "@/components/Button.astro";
+---
+
+<Layout
+    noIndex
+    path="/"
+    title="Error"
+    class="flex flex-col justify-center gap-8 align-middle"
+    noTemplate
+    makeTile
+>
+    <h1 class="text-center text-5xl"><Variable expression="message" /></h1>
+    <div class="flex flex-row justify-center gap-4">
+        <Button
+            id="error-back-button"
+            color="primary"
+            icon="tabler:arrow-left"
+            size="2xl"
+            class="w-fit px-8 py-4"
+            as="a">Back</Button
+        >
+        <Button
+            color="secondary"
+            icon="tabler:home"
+            size="2xl"
+            class="w-fit px-8 py-4"
+            as="a"
+            href="/">Home</Button
+        >
+    </div>
+</Layout>
+
+<script>
+    document.addEventListener("astro:page-load", () => {
+        const backButton = document.getElementById("error-back-button");
+        if (backButton) {
+            backButton.addEventListener("click", () => {
+                window.history.back();
+            });
+        }
+    });
+</script>

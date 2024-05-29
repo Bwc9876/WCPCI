@@ -1,0 +1,24 @@
+---
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import DeleteForm from "@/components/forms/DeleteForm.astro";
+import { variable } from "@/lib/tera";
+---
+
+<ContestLayout
+    showAdminVar="true"
+    noIndex
+    path=`/contests/${variable("contest.id")}/delete`
+    title=`Delete ${variable("contest.name")}`
+    makeTile
+>
+    <DeleteForm
+        title=`Delete ${variable("contest.name")}`
+        prompt="Are you sure you want to delete this contest? This will also delete any associated problems and submissions."
+        backLink=`/contests`
+        breadcrumb={[
+            ["Contests", "/contests"],
+            [variable("contest.name"), `/contests/${variable("contest.id")}`],
+            ["Delete", `/contests/${variable("contest.id")}/delete`]
+        ]}
+    />
+</ContestLayout>

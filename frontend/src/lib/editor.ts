@@ -53,11 +53,15 @@ export const makeIconUrl = (name: string) =>
 export default (
     codeInfo: CodeInfo,
     defaultLanguage: string,
+    contestId: string,
     problemId: string,
     languageDropdown: HTMLSelectElement,
     colorScheme: string,
     editorElem: HTMLElement,
-    languageIcon: HTMLImageElement
+    languageIcon: HTMLImageElement,
+    saveIndicator: HTMLElement,
+    resetButton: HTMLButtonElement,
+    mostRecentCode: [string, string] | null
 ) => {
     let editor: monaco.editor.IStandaloneCodeEditor | null = null;
     let currentLanguage = defaultLanguage;
@@ -70,12 +74,14 @@ export default (
             languageIcon.src = makeIconUrl(langInfo.tablerIcon);
             if (editor) {
                 const storedCode = JSON.parse(
-                    window.localStorage.getItem(`problem-${problemId}-${lang}-code`) ?? "null"
+                    window.localStorage.getItem(
+                        `contest-${contestId}-problem-${problemId}-${lang}-code`
+                    ) ?? "null"
                 );
                 editor.setValue(storedCode ?? langInfo.defaultCode);
                 monaco.editor.setModelLanguage(editor.getModel()!, langInfo.monacoContribution);
                 window.localStorage.setItem(
-                    `problem-${problemId}-code`,
+                    `contest-${contestId}-problem-${problemId}-code`,
                     JSON.stringify([storedCode, lang])
                 );
             }
@@ -83,12 +89,15 @@ export default (
     };
 
     const [storedCode, storedLang] = JSON.parse(
-        window.localStorage.getItem(`problem-${problemId}-code`) ?? "[null, null]"
+        window.localStorage.getItem(`contest-${contestId}-problem-${problemId}-code`) ??
+            "[null, null]"
     );
 
     currentLanguage = Object.keys(codeInfo).includes(storedLang ?? "")
         ? storedLang
-        : defaultLanguage;
+        : mostRecentCode && Object.keys(codeInfo).includes(mostRecentCode[1])
+          ? mostRecentCode[1]
+          : defaultLanguage;
 
     const langInfo = codeInfo[currentLanguage];
 
@@ -109,7 +118,7 @@ export default (
     }
 
     editor = monaco.editor.create(editorElem as HTMLElement, {
-        value: storedCode ?? langInfo.defaultCode,
+        value: storedCode ?? mostRecentCode?.[0] ?? langInfo.defaultCode,
         theme: `wcpc-${themeVariant}`,
         language: langInfo.monacoContribution,
         automaticLayout: true,
@@ -125,27 +134,81 @@ export default (
 
     let currentTimeout: number | undefined = undefined;
     let oldLang = currentLanguage;
+
+    const saveChanges = () => {
+        if (!editor) return;
+        const text = editor.getValue();
+        const language = editor.getModel()?.getLanguageId();
+        if (!language) return;
+        window.localStorage.setItem(
+            `contest-${contestId}-problem-${problemId}-code`,
+            JSON.stringify([text, language])
+        );
+        window.localStorage.setItem(
+            `contest-${contestId}-problem-${problemId}-${currentLanguage}-code`,
+            JSON.stringify(text)
+        );
+        saveIndicator.dataset.saveState = "saved";
+        saveIndicator.ariaLabel = "Changes Saved!";
+    };
+
     editor!.onDidChangeModelContent(() => {
+        saveIndicator.dataset.saveState = "saving";
+        saveIndicator.ariaLabel = "Saving Changes...";
         if (currentTimeout) {
             clearTimeout(currentTimeout);
         }
         currentTimeout = setTimeout(() => {
             if (editor && oldLang === currentLanguage) {
-                const text = editor.getValue();
-                const language = editor.getModel()?.getLanguageId();
-                window.localStorage.setItem(
-                    `problem-${problemId}-code`,
-                    JSON.stringify([text, language])
-                );
-                window.localStorage.setItem(
-                    `problem-${problemId}-${currentLanguage}-code`,
-                    JSON.stringify(text)
-                );
+                saveChanges();
             }
         }, 1000) as unknown as number;
         oldLang = currentLanguage!;
     });
+
+    document.addEventListener("astro:before-preparation", () => {
+        if (editor && saveIndicator && saveIndicator.dataset.saveState === "saving") {
+            saveChanges();
+        }
+    });
+
+    window.onbeforeunload = (e) => {
+        if (editor && saveIndicator && saveIndicator.dataset.saveState === "saving") {
+            saveChanges();
+        }
+    };
+
+    document.onkeydown = (e) => {
+        if (e.ctrlKey && e.key === "s" && editor && saveIndicator) {
+            e.preventDefault();
+            saveChanges();
+            if (currentTimeout) {
+                clearTimeout(currentTimeout);
+            }
+        }
+    };
+
     console.debug("Instantiated Monaco editor");
+
+    resetButton.onclick = () => {
+        if (editor) {
+            if (
+                window.confirm(
+                    "Are you sure you want to reset your code? This will erase your changes for the current language."
+                )
+            ) {
+                editor.setValue(codeInfo[currentLanguage].defaultCode);
+            }
+        }
+    };
+
+    document.addEventListener(
+        "astro:after-swap",
+        () => {
+            editor = null;
+        },
+        { once: true }
+    );
 
     return [editor, () => currentLanguage];
 };

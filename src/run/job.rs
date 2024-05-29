@@ -1,5 +1,5 @@
+use chrono::NaiveDateTime;
 use log::{error, info};
-use rocket::time::OffsetDateTime;
 
 use crate::{problems::TestCase, run::runner::CaseError};
 
@@ -16,7 +16,7 @@ pub enum CaseStatus {
     Running,
     Passed(Option<String>),
     NotRun,
-    Failed(String),
+    Failed(bool, String),
 }
 
 impl CaseStatus {
@@ -26,7 +26,7 @@ impl CaseStatus {
             Self::Running => "Running",
             Self::Passed(_) => "Passed",
             Self::NotRun => "NotRun",
-            Self::Failed(_) => "Failed",
+            Self::Failed(_, _) => "Failed",
         }
     }
 }
@@ -57,24 +57,24 @@ impl JobState {
         }
     }
 
-    pub fn last_error(&self) -> (usize, Option<String>) {
+    pub fn last_error(&self) -> (usize, bool, Option<String>) {
         match self {
             Self::Judging { cases, .. } => cases
                 .iter()
                 .enumerate()
                 .find_map(|(i, c)| {
-                    if let CaseStatus::Failed(e) = c {
-                        Some((i, Some(e.clone())))
+                    if let CaseStatus::Failed(penalty, e) = c {
+                        Some((i, *penalty, Some(e.clone())))
                     } else {
                         None
                     }
                 })
-                .unwrap_or_else(|| (self.len(), None)),
+                .unwrap_or_else(|| (self.len(), false, None)),
             Self::Testing { status } => {
-                if let CaseStatus::Failed(e) = status {
-                    (0, Some(e.clone()))
+                if let CaseStatus::Failed(penalty, e) = status {
+                    (0, *penalty, Some(e.clone()))
                 } else {
-                    (0, None)
+                    (0, false, None)
                 }
             }
         }
@@ -92,7 +92,7 @@ impl JobState {
             Self::Judging { complete, .. } => *complete,
             Self::Testing { status } => matches!(
                 status,
-                CaseStatus::Passed(_) | CaseStatus::Failed(_) | CaseStatus::NotRun
+                CaseStatus::Passed(_) | CaseStatus::Failed(_, _) | CaseStatus::NotRun
             ),
         }
     }
@@ -113,7 +113,7 @@ impl JobState {
             Self::Judging { cases, complete } => {
                 if idx == cases.len() - 1 {
                     *complete = true;
-                } else if matches!(&status, CaseStatus::Failed(_)) {
+                } else if matches!(&status, CaseStatus::Failed(_, _)) {
                     cases
                         .iter_mut()
                         .skip(idx + 1)
@@ -138,6 +138,7 @@ pub enum JobOperation {
 
 pub struct JobRequest {
     pub user_id: i64,
+    pub contest_id: i64,
     pub problem_id: i64,
     pub program: String,
     pub language: String,
@@ -152,7 +153,7 @@ pub struct Job {
     op: JobOperation,
     pub state: JobState,
     state_tx: JobStateSender,
-    started_at: OffsetDateTime,
+    started_at: NaiveDateTime,
     shutdown_rx: ShutdownReceiver,
 }
 
@@ -175,6 +176,7 @@ impl Job {
             &config.file_name,
             &request.program,
             request.cpu_time,
+            shutdown_rx.clone(),
         )
         .await;
         match res {
@@ -189,7 +191,7 @@ impl Job {
                         state_tx,
                         user_id: request.user_id,
                         op: request.op,
-                        started_at: OffsetDateTime::now_utc(),
+                        started_at: chrono::offset::Utc::now().naive_utc(),
                         shutdown_rx,
                     },
                     state_rx,
@@ -202,7 +204,7 @@ impl Job {
         }
     }
 
-    pub async fn run(mut self) -> (JobState, OffsetDateTime) {
+    pub async fn run(mut self) -> (JobState, NaiveDateTime) {
         self.state.start_first();
         self.publish_state();
         if let Err(why) = self.runner.compile().await {
@@ -210,8 +212,10 @@ impl Job {
             if matches!(&self.state, JobState::Testing { .. }) {
                 match why {
                     CaseError::Compilation(e) => {
-                        self.state
-                            .complete_case(0, CaseStatus::Failed(format!("Compile Error: {}", e)));
+                        self.state.complete_case(
+                            0,
+                            CaseStatus::Failed(false, format!("Compile Error: {}", e)),
+                        );
                     }
                     _ => {
                         self.state.complete_case(0, why.into());
@@ -221,6 +225,7 @@ impl Job {
                 self.state.complete_case(0, why.into());
             }
             self.publish_state();
+            self.runner.cleanup().await;
             return (self.state, self.started_at);
         }
         info!(
@@ -259,6 +264,7 @@ impl Job {
                     }
                     if self.shutdown_rx.has_changed().unwrap_or(false) {
                         info!("Job {} Received Shutdown Signal, Cancelling", self.id);
+                        self.runner.cleanup().await;
                         return (self.state, self.started_at);
                     }
                 }
@@ -273,7 +279,7 @@ impl Job {
                             e.into()
                         }
                         CaseError::Runtime(ref msg) => {
-                            CaseStatus::Failed(format!("Runtime Error: {}", msg))
+                            CaseStatus::Failed(true, format!("Runtime Error: {}", msg))
                         }
                         _ => e.into(),
                     },
@@ -289,6 +295,7 @@ impl Job {
         }
 
         info!("Job {} Finished", self.id);
+        self.runner.cleanup().await;
         (self.state, self.started_at)
     }
 

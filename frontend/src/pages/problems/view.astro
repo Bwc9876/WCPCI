@@ -3,17 +3,31 @@ import BreadCrumb from "@/components/BreadCrumb.astro";
 import Button from "@/components/Button.astro";
 import CaseIndicator from "@/components/CaseIndicator.astro";
 import Field from "@/components/Field.astro";
+import Label from "@/components/Label.astro";
 import ProblemRun from "@/components/ProblemRun.astro";
 import Tile from "@/components/Tile.astro";
+import Title from "@/components/Title.astro";
+import Else from "@/components/tera/Else.astro";
 import For from "@/components/tera/For.astro";
+import If from "@/components/tera/If.astro";
 import Variable from "@/components/tera/Variable.astro";
-import Layout from "@/layouts/Layout.astro";
-import { themeClass, variable } from "@/lib/tera";
+import ContestLayout from "@/layouts/ContestLayout.astro";
+import { tag, themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
+
+const description = `${variable("problem.name")} from ${variable("contest.name")}, WCPC. ${variable("problem.description | truncate(length=100)")}`;
+const path = `/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`;
 ---
 
-<Layout noGrow class="flex flex-col justify-stretch gap-4" title=`${variable("problem.name")}`>
+<ContestLayout
+    showAdminVar="logged_in and can_edit"
+    path={path}
+    class="flex flex-col gap-4 lg:overflow-y-hidden"
+    title=`${variable("problem.name")}`
+    description={description}
+>
     <textarea class="hidden" id="code-info">{variable("code_info | safe")}</textarea>
+    <textarea class="hidden" id="most-recent-code">{variable("most_recent_code | safe")}</textarea>
     <Button
         class="example-button absolute right-2 top-4 mx-auto mb-1 hidden w-fit"
         disabled
@@ -26,53 +40,142 @@ import { Icon } from "astro-icon/components";
     <Tile class="flex flex-col gap-2">
         <BreadCrumb
             entries={[
-                ["Problems", "/problems"],
-                [variable("problem.name"), "/problems/" + variable("problem.id", "view")]
+                ["Contests", "/contests"],
+                [variable("contest.name"), `/contests/${variable("problem.contest_id")}`],
+                ["Problems", `/contests/${variable("problem.contest_id")}/problems`],
+                [
+                    variable("problem.name"),
+                    `/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}`
+                ]
             ]}
         />
-        <div class="flex flex-row gap-4">
-            <span class="my-auto text-xl">Progress:</span>
-            <ProblemRun casesName="case_count" class="grow" objName="last_run" />
+        <div class="flex flex-row flex-wrap gap-4">
+            <Title class="my-auto"><Variable expression="problem.name" /></Title>
+            <span class="grow"></span>
             <div class="flex flex-row gap-1">
-                <Button
-                    as="button"
-                    disabled
-                    data-problem-id={variable("problem.id")}
-                    data-default-language={variable("default_language")}
-                    data-color-preference={themeClass("light", "dark", "system")}
-                    class="my-auto w-fit"
-                    id="submit"
-                    color="primary"
-                    icon="tabler:star">Submit!</Button
-                >
-                <Button
-                    size="lg"
-                    as="a"
-                    href=`/problems/${variable("problem.id")}/runs`
-                    class="my-auto w-fit"
-                    justIcon
-                    icon="tabler:clock"
-                    color="secondary"
-                />
+                <If expression="not participating">
+                    <span class="my-auto me-1 flex flex-row gap-1 text-accent">
+                        <Icon name="tabler:info-circle" size={24} />
+                        You're not participating in this contest, solutions won't count towards your
+                        score.
+                    </span>
+                </If>
+                <If expression="participating and ended">
+                    <span class="my-auto me-1 flex flex-row gap-1 text-accent">
+                        <Icon name="tabler:info-circle" size={24} />
+                        This contest is over, solutions won't count towards your score.
+                    </span>
+                </If>
+                <If expression="can_edit">
+                    <Button
+                        size="lg"
+                        as="a"
+                        href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/edit`
+                        class="my-auto w-fit"
+                        justIcon
+                        aria-label="Edit Problem"
+                        icon="tabler:pencil"
+                        color="secondary"
+                    />
+                    <Button
+                        class="my-auto w-fit"
+                        color="secondary"
+                        justIcon
+                        aria-label="View Participant Runs"
+                        icon="tabler:badge-filled"
+                        size="lg"
+                        as="a"
+                        href={`/contests/${variable("contest.id")}/admin/runs/problems/${variable("problem.slug")}`}
+                    />
+                </If>
             </div>
         </div>
     </Tile>
-    <div class="flex grow flex-row gap-4 overflow-hidden">
-        <Tile class="flex w-2/5 flex-col gap-2 overflow-hidden">
-            <h1 class="text-2xl"><Variable expression="problem.name" /></h1>
-            <small class="text-gray-500">CPU Time: <Variable expression="problem.cpu_time" /></small
+    <Tile class="flex flex-row gap-2">
+        <h2 class="my-auto text-2xl">Your Progress</h2>
+        <If expression="logged_in">
+            <ProblemRun casesName="case_count" objName="last_run" class="grow" />
+            <Else slot="else">
+                <span class="grow"></span>
+                <Button
+                    size="lg"
+                    as="a"
+                    href=`/auth/login?redirect=${path}`
+                    class="my-auto w-fit"
+                    icon="tabler:login-2"
+                    color="secondary">Login or Register to Submit</Button
+                >
+            </Else>
+        </If>
+        <Button
+            as="button"
+            disabled
+            data-contest-id={variable("problem.contest_id")}
+            data-problem-id={variable("problem.id")}
+            data-problem-slug={variable("problem.slug")}
+            data-default-language={variable("default_language")}
+            data-logged-in={variable("logged_in")}
+            data-color-preference={themeClass("light", "dark", "system")}
+            class:list={["my-auto w-fit data-[logged-in='false']:hidden"]}
+            id="submit"
+            color="primary"
+            icon="tabler:star">Submit!</Button
+        >
+        <If expression="logged_in">
+            <Button
+                size="lg"
+                as="a"
+                href=`/contests/${variable("problem.contest_id")}/problems/${variable("problem.slug")}/runs`
+                class="my-auto w-fit"
+                justIcon
+                aria-label="View Past Runs"
+                icon="tabler:clock"
+                color="secondary"
+            />
+        </If>
+    </Tile>
+    <div class="flex min-h-0 grow flex-col gap-4 lg:min-h-[100vh] lg:flex-row">
+        <Tile
+            class="group flex max-h-[100vh] flex-row gap-1 overflow-hidden lg:!p-0 lg:has-[[data-expanded='true']]:w-2/5"
+        >
+            <div
+                class="flex grow flex-col gap-2 overflow-hidden group-has-[[data-expanded='false']]:hidden lg:mb-4 lg:ms-4 lg:mt-4"
             >
-            <div class="overflow-y-auto">
-                <div class="overflow-y-scroll pe-2" id="rendered-md">
-                    <Variable
-                        expression="render_markdown(md=problem.description) | safe"
-                        debugLorem={50}
-                    />
+                <h2 class="text-2xl">Description</h2>
+                <small class="text-gray-500"
+                    >CPU Time: <Variable expression="problem.cpu_time" /> second<Variable
+                        expression="problem.cpu_time | pluralize"
+                    /></small
+                >
+                <div class="h-96 overflow-y-auto pe-2 lg:h-full">
+                    <div class="overflow-y-auto" id="rendered-md">
+                        <Variable
+                            expression="render_markdown(md=problem.description) | safe"
+                            debugLorem={50}
+                        />
+                    </div>
                 </div>
             </div>
+            <div
+                data-expanded="true"
+                id="description-section-chevron"
+                class="group hidden justify-center self-stretch px-2 align-middle lg:flex"
+            >
+                <Icon
+                    class="my-auto hidden group-[[data-expanded='true']]:inline"
+                    name="tabler:chevron-left"
+                    size={32}
+                />
+                <Icon
+                    class="my-auto hidden group-[[data-expanded='false']]:inline"
+                    name="tabler:chevron-right"
+                    size={32}
+                />
+            </div>
         </Tile>
-        <div class="flex w-3/5 grow flex-col gap-4">
-            <Tile class="flex h-[60%] flex-col gap-2">
+        <div class="group flex grow flex-col gap-4 lg:w-3/5">
+            <Tile class="flex min-h-72 grow flex-col gap-2 lg:h-[60%]">
+                <h2 class="text-2xl">Editor</h2>
                 <div class="flex flex-row gap-2">
                     <img
                         class:list={[
@@ -82,9 +185,11 @@ import { Icon } from "astro-icon/components";
                         width="32"
                         height="32"
                         id="language-icon"
+                        alt="Language Icon"
                     />
                     <Field
                         hideLabel
+                        aria-label="Select Language"
                         noTemplate
                         id="language-dropdown"
                         name="Language"
@@ -92,15 +197,37 @@ import { Icon } from "astro-icon/components";
                         type="select"
                         options={[]}
                         ><For sourceList="languages" itemName="language" slot="options_templated">
-                            <option value={variable("language[0]")}>
+                            <option
+                                value={variable("language[0]")}
+                                data-phantom={`${tag(`if language[0] == default_language`)}${variable("fake_attr(attr='selected') | safe")}${tag("endif")}`}
+                            >
                                 <Variable expression="language[1]" />
                             </option>
                         </For></Field
                     >
+                    <div
+                        id="save-indicator"
+                        aria-label="Changes Saved!"
+                        data-save-state="saved"
+                        class="group my-auto"
+                    >
+                        <Icon
+                            class="my-auto text-green-600 group-[[data-save-state=saving]]:animate-pulse group-[[data-save-state=saving]]:text-accent"
+                            name="tabler:device-floppy"
+                            size={32}
+                        />
+                    </div>
+                    <Button
+                        aria-label="Reset Code"
+                        id="reset-button"
+                        icon="tabler:restore"
+                        justIcon
+                        color="secondary"
+                    />
                 </div>
                 <div
                     id="editor"
-                    class="align-center flex h-full w-full justify-center rounded-2xl bg-background-50 p-2"
+                    class="align-center flex min-h-0 w-full grow justify-center rounded-2xl bg-background-50 p-2"
                 >
                     <Icon
                         class="my-auto animate-pulse text-blue-300"
@@ -109,55 +236,99 @@ import { Icon } from "astro-icon/components";
                     />
                 </div>
             </Tile>
-            <Tile class="align-center flex h-[40%] w-full flex-row gap-4">
-                <div class="flex h-full grow flex-col gap-2">
-                    <Field
-                        spellcheck="false"
-                        data-gramm="false"
-                        data-gramm_editor="false"
-                        data-enable-grammarly="false"
-                        rows={10}
-                        class="h-full"
-                        type="textarea"
-                        noTemplate
-                        id="debug-input"
-                        label="Input"
+            <Tile
+                class="group flex flex-col gap-2 max-lg:h-96 lg:has-[[data-expanded='true']]:h-[40%]"
+            >
+                <div
+                    data-expanded="true"
+                    id="test-section-heading"
+                    class="group hidden flex-row justify-center gap-2 self-stretch align-middle lg:flex"
+                >
+                    <Icon
+                        class="my-auto hidden group-[[data-expanded='true']]:inline"
+                        size={25}
+                        name="tabler:chevron-down"
                     />
+                    <Icon
+                        class="my-auto hidden group-[[data-expanded='false']]:inline"
+                        size={25}
+                        name="tabler:chevron-up"
+                    />
+                    <h2 class="select-none text-center text-2xl">Test Solution</h2>
                 </div>
-                <div class="flex basis-1/6 flex-col justify-center gap-2 align-middle">
-                    <CaseIndicator
-                        class="mx-auto -mb-8 mt-auto"
-                        id="test-indicator"
-                        status="idle"
-                        size={40}
-                    />
-                    <Button
-                        class="mx-auto mb-1 mt-auto w-fit"
-                        as="button"
-                        disabled
-                        id="run-debug"
-                        color="secondary"
-                        icon="tabler:bug">Test</Button
+                <h2 class="text-2xl lg:hidden">Test Solution</h2>
+                <div
+                    class="flex w-full grow flex-row gap-4 lg:group-has-[[data-expanded='false']]:hidden"
+                >
+                    <div class="flex h-full grow flex-col gap-2">
+                        <Field
+                            spellcheck="false"
+                            autocomplete="false"
+                            data-gramm="false"
+                            data-gramm_editor="false"
+                            data-enable-grammarly="false"
+                            class="h-full font-mono"
+                            labelClass="grow"
+                            wrapperClass="h-full"
+                            labelSpanClass="h-full"
+                            type="textarea"
+                            noTemplate
+                            id="debug-input"
+                            label="Input"
+                        />
+                    </div>
+                    <Label
+                        label=" "
+                        innerSpanClass="h-full"
+                        class="flex flex-col gap-1 self-stretch text-center"
                     >
-                </div>
-                <div class="flex h-full grow flex-col gap-2">
-                    <Field
-                        id="debug-output"
-                        rows={10}
-                        type="textarea"
-                        noTemplate
-                        readonly
-                        label="Output"
-                    />
+                        <span class="grow"></span>
+                        <CaseIndicator
+                            class="mx-auto"
+                            id="test-indicator"
+                            status="idle"
+                            size={40}
+                            iconMap={{
+                                idle: "tabler:circle-dashed",
+                                loading: "tabler:circle-dashed",
+                                success: "tabler:circle-arrow-right",
+                                error: "tabler:circle-x",
+                                empty: "tabler:circle-dot"
+                            }}
+                        />
+                        <span class="grow"></span>
+                        <Button
+                            class="mx-auto mb-1 mt-auto w-fit"
+                            as="button"
+                            disabled
+                            id="run-debug"
+                            color="secondary"
+                            icon="tabler:bug">Test</Button
+                        >
+                    </Label>
+                    <div class="flex h-full grow flex-col gap-2">
+                        <Field
+                            id="debug-output"
+                            class="h-full p-2 font-mono"
+                            labelClass="grow text-right"
+                            wrapperClass="h-full"
+                            labelSpanClass="h-full"
+                            type="textarea"
+                            noTemplate
+                            readonly
+                            label="Output"
+                        />
+                    </div>
                 </div>
             </Tile>
         </div>
     </div>
-</Layout>
+</ContestLayout>
 
 <script>
     import type { CodeInfo } from "@/lib/editor";
-    import type { WebSocketRequest } from "@/lib/ws";
+    import type { WebSocketRequest } from "@/lib/problem_ws";
+    import confetti from "canvas-confetti";
     import type * as monaco from "monaco-editor";
 
     let ws: WebSocket | null = null;
@@ -165,26 +336,40 @@ import { Icon } from "astro-icon/components";
     let getLang: (() => string) | null = null;
 
     document.addEventListener("astro:page-load", () => {
-        if (!window.location.pathname.match(/\/problems\/\d+\/?$/)) {
+        if (
+            import.meta.env.PROD &&
+            !window.location.pathname.match(/\/contests\/\d+\/problems\/.+\/?$/)
+        ) {
             return;
         }
 
-        const submitButton = (document.querySelector("#submit") as HTMLButtonElement)!;
-        const codeInfoElem = (document.querySelector("#code-info") as HTMLTextAreaElement)!;
-        const editorElem = (document.querySelector("#editor") as HTMLElement)!;
-        const runDebugButton = (document.querySelector("#run-debug") as HTMLButtonElement)!;
-        const testInput = (document.querySelector("#debug-input") as HTMLTextAreaElement)!;
-        const testOutput = (document.querySelector("#debug-output") as HTMLTextAreaElement)!;
-        const debugCaseIndicator = (document.querySelector("#test-indicator") as HTMLElement)!;
-        const runMessage = (document.querySelector("#runs-msg") as HTMLElement)!;
-        const languageDropdown = (document.querySelector(
-            "#language-dropdown"
-        ) as HTMLSelectElement)!;
-        const languageIcon = (document.querySelector("#language-icon") as HTMLImageElement)!;
-        const runMessageWrapper = (document.querySelector("#runs-msg-wrapper") as HTMLElement)!;
-        const testButtonTemplate = (document.querySelector(
+        const submitButton = document.querySelector("#submit") as HTMLButtonElement;
+        const codeInfoElem = document.querySelector("#code-info") as HTMLTextAreaElement;
+        const mostRecentCodeElem = document.querySelector(
+            "#most-recent-code"
+        ) as HTMLTextAreaElement;
+        const editorElem = document.querySelector("#editor") as HTMLElement;
+        const runDebugButton = document.querySelector("#run-debug") as HTMLButtonElement;
+        const testInput = document.querySelector("#debug-input") as HTMLTextAreaElement;
+        const testOutput = document.querySelector("#debug-output") as HTMLTextAreaElement;
+        const debugCaseIndicator = document.querySelector("#test-indicator") as HTMLElement;
+        const runMessage = document.querySelector("#runs-msg") as HTMLElement;
+        const languageDropdown = document.querySelector("#language-dropdown") as HTMLSelectElement;
+        const languageIcon = document.querySelector("#language-icon") as HTMLImageElement;
+        const runMessageWrapper = document.querySelector("#runs-msg-wrapper") as HTMLElement;
+        const testButtonTemplate = document.querySelector(
             "#test-debug-template"
-        ) as HTMLButtonElement)!;
+        ) as HTMLButtonElement;
+        const saveIndicator = document.querySelector("#save-indicator") as HTMLElement;
+        const resetButton = document.querySelector("#reset-button") as HTMLButtonElement;
+        const testSectionHeader = document.querySelector("#test-section-heading") as HTMLElement;
+        const descriptionSectionChevron = document.querySelector(
+            "#description-section-chevron"
+        ) as HTMLElement;
+
+        if (!submitButton || !codeInfoElem || !editorElem || !runDebugButton) {
+            return;
+        }
 
         const toggleButtons = (disabled: boolean) => {
             submitButton.disabled = disabled;
@@ -194,34 +379,115 @@ import { Icon } from "astro-icon/components";
             });
         };
 
+        const contestId = submitButton.dataset.contestId!;
         const problemId = submitButton.dataset.problemId!;
+        //const problemSlug = submitButton.dataset.problemSlug!;
         const defaultLanguage = submitButton.dataset.defaultLanguage!;
         const colorScheme = submitButton.dataset.colorPreference!;
-        const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
+        const loggedIn = submitButton.dataset.loggedIn === "true";
 
-        import("@/lib/ws").then((c) => {
-            ws = c.default(
-                problemId,
-                runMessageWrapper,
-                runMessage,
-                debugCaseIndicator,
-                testOutput,
-                toggleButtons
+        testSectionHeader.onclick = () => {
+            const expanded = testSectionHeader.dataset.expanded === "true";
+            testSectionHeader.dataset.expanded = expanded ? "false" : "true";
+            window.localStorage.setItem(
+                `testSectionExpanded-${contestId}-${problemId}`,
+                expanded ? "false" : "true"
             );
-        });
+        };
+
+        descriptionSectionChevron.onclick = () => {
+            const expanded = descriptionSectionChevron.dataset.expanded === "true";
+            descriptionSectionChevron.dataset.expanded = expanded ? "false" : "true";
+            window.localStorage.setItem(
+                `descriptionSectionExpanded-${contestId}-${problemId}`,
+                expanded ? "false" : "true"
+            );
+        };
+
+        if (
+            window.localStorage.getItem(`testSectionExpanded-${contestId}-${problemId}`) === "false"
+        ) {
+            testSectionHeader.dataset.expanded = "false";
+        }
+
+        if (
+            window.localStorage.getItem(`descriptionSectionExpanded-${contestId}-${problemId}`) ===
+            "false"
+        ) {
+            descriptionSectionChevron.dataset.expanded = "false";
+        }
+
+        const codeInfo = JSON.parse(codeInfoElem.value ?? "{}") as CodeInfo;
+        const mostRecentCode = JSON.parse(mostRecentCodeElem.value ?? "null") as
+            | [string, string]
+            | null;
+
+        if (loggedIn) {
+            import("@/lib/problem_ws").then((c) => {
+                console.debug("Preparing to connect to WebSocket");
+                ws = c.default(
+                    contestId,
+                    problemId,
+                    runMessageWrapper,
+                    runMessage,
+                    debugCaseIndicator,
+                    testOutput,
+                    toggleButtons
+                );
+            });
+        }
 
         import("@/lib/editor").then((c) => {
+            console.debug("Creating editor");
             const [newEditor, _getLang] = c.default(
                 codeInfo,
                 defaultLanguage,
+                contestId,
                 problemId,
                 languageDropdown,
                 colorScheme,
                 editorElem,
-                languageIcon
+                languageIcon,
+                saveIndicator,
+                resetButton,
+                mostRecentCode
             );
             editor = newEditor as monaco.editor.IStandaloneCodeEditor;
             getLang = _getLang as () => string;
+        });
+
+        function trimByChar(string: string, character: string) {
+            const arr = Array.from(string);
+            const first = arr.findIndex((char) => char !== character);
+            const last = arr.reverse().findIndex((char) => char !== character);
+            return first === -1 && last === -1 ? "" : string.substring(first, string.length - last);
+        }
+
+        const trimLineEndings = (str: string) => trimByChar(trimByChar(str, "\n"), "\r");
+
+        import("@/lib/highlighting").then((c) => {
+            console.debug("Setting Up Code Block Highlighting");
+            c.default(
+                "#rendered-md",
+                (input) => {
+                    if (editor) {
+                        testInput.value = trimLineEndings(input);
+                        runDebugButton.click();
+                    }
+                    if (testSectionHeader) {
+                        testSectionHeader.dataset.expanded = "true";
+                    }
+                },
+                testButtonTemplate,
+                (input) => {
+                    testInput.value = trimLineEndings(input);
+                }
+            );
+        });
+
+        import("@/lib/math").then((c) => {
+            console.debug("Setting Up Math Block Highlighting");
+            c.default();
         });
 
         runDebugButton.onclick = () => {
@@ -250,17 +516,10 @@ import { Icon } from "astro-icon/components";
                 toggleButtons(true);
             }
         };
+    });
 
-        import("@/lib/highlighting").then((c) =>
-            c.default((input) => {
-                if (editor) {
-                    testInput.value = input;
-                    runDebugButton.click();
-                }
-            }, testButtonTemplate)
-        );
-
-        import("@/lib/math").then((c) => c.default());
+    document.addEventListener("astro:before-swap", () => {
+        confetti.reset();
     });
 
     document.addEventListener("astro:after-swap", () => {

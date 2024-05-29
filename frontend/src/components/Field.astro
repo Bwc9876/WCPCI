@@ -4,6 +4,9 @@ import type { HTMLAttributes } from "astro/types";
 
 type BaseProps = {
     label?: string;
+    wrapperClass?: string;
+    labelClass?: string;
+    labelSpanClass?: string;
     noTemplate?: boolean;
     fieldName?: string;
     formObj?: string;
@@ -35,6 +38,9 @@ const {
     formObj = "form",
     fieldName = name,
     label = (name && makeLabel(name)) || "",
+    wrapperClass,
+    labelClass,
+    labelSpanClass,
     help,
     type,
     options,
@@ -100,7 +106,8 @@ const bigRightTypes: (astroHTML.JSX.HTMLInputTypeAttribute | "textarea" | "selec
 ---
 
 <Label
-    class:list={["w-full"]}
+    class:list={["w-full", labelClass ?? ""]}
+    innerSpanClass={labelSpanClass}
     hideText={hideLabel}
     errorVar={noTemplate ? undefined : errorVar}
     label={label}
@@ -108,7 +115,7 @@ const bigRightTypes: (astroHTML.JSX.HTMLInputTypeAttribute | "textarea" | "selec
     isCheckbox={isCheckbox}
     isRequired={required}
 >
-    <div class="relative">
+    <div class:list={["relative", wrapperClass ?? ""]}>
         {
             type === "textarea" ? (
                 <textarea

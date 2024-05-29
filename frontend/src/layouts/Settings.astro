@@ -6,6 +6,8 @@ import Avatar from "@/components/Avatar.astro";
 import Variable from "@/components/tera/Variable.astro";
 import Button from "@/components/Button.astro";
 import Tile from "@/components/Tile.astro";
+import { variable } from "@/lib/tera";
+import Title from "@/components/Title.astro";
 
 export interface Props extends LayoutProps {}
 
@@ -13,28 +15,39 @@ const { title, ...rest } = Astro.props;
 ---
 
 <Layout
-    class="flex h-full w-full flex-col gap-3 lg:flex-row"
+    noIndex
+    class="flex h-full w-full flex-col gap-3 md:flex-row"
     animate={false}
     title={`Settings - ${title}`}
     {...rest}
 >
-    <div class="flex basis-60 flex-col justify-between gap-3">
+    <div class="flex basis-96 flex-col justify-between gap-3 lg:basis-64">
         <Tile
-            class="flex flex-col justify-center gap-2 overflow-hidden text-center align-middle text-2xl lg:max-w-sm lg:py-4"
+            class="flex flex-col justify-center gap-2 overflow-hidden text-center align-middle text-2xl md:py-4"
         >
-            <Avatar class="mx-auto w-1/4 lg:w-1/2" size={150} />
+            <Avatar class="mx-auto w-1/4 md:w-1/2" size={150} />
             <span class="w-100 break-words">
                 <Variable expression="name" debugEval={"Ben C"} />
             </span>
         </Tile>
-        <Tile class="flex w-full flex-col justify-center gap-2 align-middle">
+        <Tile class="flex w-full flex-row justify-center gap-2 align-middle md:flex-col">
+            <Button
+                as="a"
+                size="md"
+                color="secondary"
+                icon="tabler:user"
+                href=`/profile/${variable("user.id")}`
+                class="group flex w-full justify-center px-2 align-middle"
+            >
+                View Profile
+            </Button>
             <Button
                 as="a"
                 size="md"
                 color="secondary"
                 icon="tabler:switch-horizontal"
                 href="/auth/login"
-                class="group flex w-full justify-center align-middle"
+                class="group flex w-full justify-center px-2 align-middle"
             >
                 Switch Accounts
             </Button>
@@ -44,7 +57,7 @@ const { title, ...rest } = Astro.props;
                 color="secondary"
                 icon="tabler:logout-2"
                 href="/auth/logout"
-                class="group flex w-full justify-center align-middle"
+                class="group flex w-full justify-center px-2 align-middle"
             >
                 Logout
             </Button>
@@ -71,8 +84,12 @@ const { title, ...rest } = Astro.props;
         </Tile>
         <span class="hidden md:inline md:grow"></span>
     </div>
-    <Tile transition:animate="fade" transition:name="settings-section" class="grow">
-        <h1 class="mb-5 text-3xl font-bold">{title} Settings</h1>
+    <Tile
+        transition:animate="fade"
+        transition:name="settings-section"
+        class="flex grow flex-col gap-2"
+    >
+        <Title>{title} Settings</Title>
         <slot />
     </Tile>
 </Layout>

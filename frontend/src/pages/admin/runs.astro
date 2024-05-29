@@ -1,0 +1,50 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import BreadCrumb from "@/components/BreadCrumb.astro";
+import Title from "@/components/Title.astro";
+import RunAdminActiveTable from "@/components/table/RunAdminActiveTable.astro";
+import { variable } from "@/lib/tera";
+import TemplatedTable from "@/components/table/TemplatedTable.astro";
+import Button from "@/components/Button.astro";
+import If from "@/components/tera/If.astro";
+---
+
+<Layout noIndex makeTile title="Runs Admin" path="/admin/runs">
+    <BreadCrumb
+        entries={[
+            ["Admin", "/admin"],
+            ["Run", "/admin/runs"]
+        ]}
+    />
+    <Title>Runs</Title>
+    <h2 class="text-2xl font-bold">Active Runs</h2>
+    <RunAdminActiveTable
+        actions={[
+            {
+                name: "Stop",
+                icon: "tabler:player-stop-filled",
+                color: "danger",
+                action: () =>
+                    `/admin/runs/${variable("row.user.id")}/${variable("row.problem.id")}/cancel`
+            }
+        ]}
+    />
+    <If debugEval={true} expression="rows | length > 0">
+        <div class="flex flex-row gap-2">
+            <span class="grow"></span>
+            <Button class="w-fit" as="a" size="lg" href="/admin/runs/cancel-all" color="danger"
+                >Cancel All Active Runs</Button
+            >
+        </div>
+    </If>
+    <h2 class="text-2xl font-bold">Completions</h2>
+    <p>Go to a specific contest to view completions.</p>
+    <TemplatedTable
+        listName="contests"
+        emptyText="No Contests"
+        itemLink={{
+            action: (id: string) => `/contests/${id}/admin/runs`
+        }}
+        columns={[{ name: "name", label: "Contest Name" }]}
+    />
+</Layout>

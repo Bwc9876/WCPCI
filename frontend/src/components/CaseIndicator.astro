@@ -4,13 +4,28 @@ import type { HTMLAttributes } from "astro/types";
 
 export type Status = "idle" | "loading" | "success" | "error" | "empty" | string;
 
+export const defaultIconMap: Record<Status, string> = {
+    idle: "tabler:circle-dashed",
+    loading: "tabler:circle-dashed",
+    success: "tabler:circle-check",
+    error: "tabler:circle-x",
+    empty: "tabler:circle-dot"
+};
+
 export interface Props extends HTMLAttributes<"span"> {
     class?: string;
     size?: number;
     status?: Status;
+    iconMap?: Record<Status, string>;
 }
 
-const { size = 25, class: className, status = "idle", ...rest } = Astro.props;
+const {
+    size = 25,
+    class: className,
+    status = "idle",
+    iconMap = defaultIconMap,
+    ...rest
+} = Astro.props;
 
 const baseClass = ["hidden"].join(" ");
 
@@ -39,8 +54,8 @@ const emptyClass = [
 ---
 
 <span class:list={["group", className ?? ""]} data-status={status} {...rest}>
-    <Icon size={size} name="tabler:circle-dashed" class:list={[baseClass, idleLoadClass]} />
-    <Icon size={size} name="tabler:circle-check" class:list={[baseClass, successClass]} />
-    <Icon size={size} name="tabler:circle-x" class:list={[baseClass, errorClass]} />
-    <Icon size={size} name="tabler:circle-dot" class:list={[baseClass, emptyClass]} />
+    <Icon size={size} name={iconMap["idle"]} class:list={[baseClass, idleLoadClass]} />
+    <Icon size={size} name={iconMap["success"]} class:list={[baseClass, successClass]} />
+    <Icon size={size} name={iconMap["error"]} class:list={[baseClass, errorClass]} />
+    <Icon size={size} name={iconMap["empty"]} class:list={[baseClass, emptyClass]} />
 </span>

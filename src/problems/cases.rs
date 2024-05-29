@@ -1,7 +1,7 @@
 use rocket::FromForm;
 use sqlx::prelude::FromRow;
 
-use crate::db::DbPoolConnection;
+use crate::{db::DbPoolConnection, error::prelude::*};
 
 #[derive(Serialize, FromRow, Clone, Debug)]
 pub struct TestCase {
@@ -37,13 +37,15 @@ impl TestCase {
 
     pub async fn save_for_problem(
         db: &mut DbPoolConnection,
+        problem_id: i64,
         cases: Vec<Self>,
-    ) -> Result<Vec<Self>, sqlx::Error> {
+    ) -> Result<Vec<Self>> {
         sqlx::query("DELETE FROM test_case WHERE problem_id = ? AND ord >= ?")
-            .bind(cases[0].problem_id)
+            .bind(problem_id)
             .bind(cases.len() as i64)
             .execute(&mut **db)
-            .await?;
+            .await
+            .context("Failed to delete old test cases")?;
         let values_str = cases
             .iter()
             .map(|_| "(?, ?, ?, ?, ?, ?)")
@@ -61,17 +63,19 @@ impl TestCase {
                 .bind(c.case_insensitive);
         }
         let res = query.fetch_all(&mut **db).await;
-        res.and_then(|rows| {
-            rows.into_iter()
-                .map(|row| TestCase::from_row(&row))
-                .collect()
-        })
+        res.context("Failed to upsert new test cases for problem")
+            .and_then(|rows| {
+                rows.into_iter()
+                    .enumerate()
+                    .map(|(i, row)| {
+                        TestCase::from_row(&row)
+                            .with_context(|| format!("Failed to parse row {}", i))
+                    })
+                    .collect()
+            })
     }
 
-    pub async fn get_for_problem(
-        db: &mut DbPoolConnection,
-        problem_id: i64,
-    ) -> Result<Vec<Self>, sqlx::Error> {
+    pub async fn get_for_problem(db: &mut DbPoolConnection, problem_id: i64) -> Result<Vec<Self>> {
         sqlx::query_as!(
             TestCase,
             "SELECT * FROM test_case WHERE problem_id = ? ORDER BY ord",
@@ -79,16 +83,15 @@ impl TestCase {
         )
         .fetch_all(&mut **db)
         .await
+        .with_context(|| format!("Failed to get test cases for problem {}", problem_id))
     }
 
-    pub async fn count_for_problem(
-        db: &mut DbPoolConnection,
-        problem_id: i64,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn count_for_problem(db: &mut DbPoolConnection, problem_id: i64) -> Result<i64> {
         sqlx::query!("SELECT id FROM test_case WHERE problem_id = ?", problem_id)
             .fetch_all(&mut **db)
             .await
             .map(|rows| rows.len() as i64)
+            .with_context(|| format!("Failed to count test cases for problem {}", problem_id))
     }
 
     pub fn to_form(&self) -> TestCaseForm {
@@ -107,7 +110,7 @@ impl TestCase {
             let re = builder
                 .build()
                 .map_err(|e| format!("Couldn't build regex: {e:?}"))?;
-            Ok(re.is_match(output))
+            Ok(re.is_match(output.trim()))
         } else {
             let (output, expected) = (output.trim(), expected.trim());
             if self.case_insensitive {
@@ -121,17 +124,15 @@ impl TestCase {
 
 fn check_regex(pattern: &str, enabled: bool) -> Result<(), rocket::form::Errors> {
     if enabled {
-        regex::Regex::new(pattern).map(|_| ()).map_err(|e| {
-            let err = rocket::form::Error::custom(e);
-            rocket::form::Errors::from(vec![err])
-        })
+        regex::Regex::new(pattern)
+            .map(|_| ())
+            .map_err(|e| rocket::form::Error::custom(e).into())
     } else {
         Ok(())
     }
 }
 
 #[derive(Debug, FromForm, Serialize)]
-#[form(validate = validate_regex())]
 pub struct TestCaseForm<'r> {
     #[field(validate = len(1..))]
     pub stdin: &'r str,
