@@ -456,13 +456,22 @@ const path = `/contests/${variable("contest.id")}/problems/${variable("problem.s
             getLang = _getLang as () => string;
         });
 
+        function trimByChar(string: string, character: string) {
+            const arr = Array.from(string);
+            const first = arr.findIndex((char) => char !== character);
+            const last = arr.reverse().findIndex((char) => char !== character);
+            return first === -1 && last === -1 ? "" : string.substring(first, string.length - last);
+        }
+
+        const trimLineEndings = (str: string) => trimByChar(trimByChar(str, "\n"), "\r");
+
         import("@/lib/highlighting").then((c) => {
             console.debug("Setting Up Code Block Highlighting");
             c.default(
                 "#rendered-md",
                 (input) => {
                     if (editor) {
-                        testInput.value = input.trim();
+                        testInput.value = trimLineEndings(input);
                         runDebugButton.click();
                     }
                     if (testSectionHeader) {
@@ -471,7 +480,7 @@ const path = `/contests/${variable("contest.id")}/problems/${variable("problem.s
                 },
                 testButtonTemplate,
                 (input) => {
-                    testInput.value = input.trim();
+                    testInput.value = trimLineEndings(input);
                 }
             );
         });

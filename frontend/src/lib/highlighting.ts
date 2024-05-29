@@ -1,6 +1,9 @@
 import "highlight.js/styles/default.css";
 import "@/styles/highlight-theme.scss";
 import hljs from "highlight.js";
+import text from "highlight.js/lib/languages/plaintext";
+
+hljs.registerLanguage("example", text);
 
 const makePreCode = (text: string): HTMLPreElement => {
     const pre = document.createElement("pre");
