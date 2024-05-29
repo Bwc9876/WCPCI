@@ -4,7 +4,10 @@
 in
   pkgs.mkShell {
     name = "wcpc-shell";
-    LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+    OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
+    OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
+    LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+    LIBXML2 = "${pkgs.libxml2.out}/lib/libxml2.so";
     BINDGEN_EXTRA_CLANG_ARGS = "${builtins.readFile "${stdenv.cc}/nix-support/libc-crt1-cflags"} \
         ${builtins.readFile "${stdenv.cc}/nix-support/libc-cflags"} \
         ${builtins.readFile "${stdenv.cc}/nix-support/cc-cflags"} \

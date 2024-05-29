@@ -205,7 +205,7 @@ const metaTitle = title ? `${title} - WCPC` : "WCPC - Compete and Earn Prizes";
                                 <Else slot="else">
                                     <Button
                                         as="a"
-                                        href="/auth/login"
+                                        href={`/auth/login?redirect=${urlSuffix}`}
                                         color="primary"
                                         icon="tabler:login-2"
                                         class="my-auto w-fit"

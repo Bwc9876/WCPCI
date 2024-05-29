@@ -16,11 +16,12 @@ import { tag, themeClass, variable } from "@/lib/tera";
 import { Icon } from "astro-icon/components";
 
 const description = `${variable("problem.name")} from ${variable("contest.name")}, WCPC. ${variable("problem.description | truncate(length=100)")}`;
+const path = `/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`;
 ---
 
 <ContestLayout
     showAdminVar="logged_in and can_edit"
-    path=`/contests/${variable("contest.id")}/problems/${variable("problem.slug")}`
+    path={path}
     class="flex flex-col gap-4 lg:overflow-y-hidden"
     title=`${variable("problem.name")}`
     description={description}
@@ -99,7 +100,7 @@ const description = `${variable("problem.name")} from ${variable("contest.name")
                 <Button
                     size="lg"
                     as="a"
-                    href=`/auth/login`
+                    href=`/auth/login?redirect=${path}`
                     class="my-auto w-fit"
                     icon="tabler:login-2"
                     color="secondary">Login or Register to Submit</Button
